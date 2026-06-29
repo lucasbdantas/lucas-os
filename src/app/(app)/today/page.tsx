@@ -1,10 +1,15 @@
+import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { TaskList, type TaskListItem } from "@/components/tasks/task-list";
-import { formatDate, toDateOnly } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { requireSession } from "@/lib/supabase/require-session";
+
+type DomainRow = {
+  id: string;
+  name: string;
+};
 
 type ProjectRow = {
   id: string;
@@ -12,6 +17,7 @@ type ProjectRow = {
   status: string;
   type: string;
   target_date: string | null;
+  domain_id: string;
 };
 
 type TaskRow = {
@@ -33,6 +39,8 @@ type CountResult = {
   error: { message: string } | null;
 };
 
+const openTaskStatuses = ["todo", "doing", "waiting"];
+
 const priorityRank: Record<string, number> = {
   critical: 0,
   high: 1,
@@ -47,6 +55,18 @@ function addDays(date: Date, days: number) {
   return nextDate;
 }
 
+function toSaoPauloDateOnly(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+  }).formatToParts(date);
+  const valueByType = new Map(parts.map((part) => [part.type, part.value]));
+
+  return `${valueByType.get("year")}-${valueByType.get("month")}-${valueByType.get("day")}`;
+}
+
 async function getCount(query: PromiseLike<CountResult>) {
   const { count, error } = await query;
 
@@ -57,66 +77,153 @@ async function getCount(query: PromiseLike<CountResult>) {
   return count ?? 0;
 }
 
-function sortPriorityTasks(tasks: TaskRow[]) {
-  return [...tasks].sort((first, second) => {
-    const priorityDelta =
-      (priorityRank[first.priority] ?? 99) -
-      (priorityRank[second.priority] ?? 99);
+function sortByDueDateAndPriority<
+  T extends { due_date: string | null; priority: string },
+>(rows: T[]) {
+  return [...rows].sort((first, second) => {
+    const dateDelta = (first.due_date ?? "9999-12-31").localeCompare(
+      second.due_date ?? "9999-12-31",
+    );
 
-    if (priorityDelta !== 0) {
-      return priorityDelta;
+    if (dateDelta !== 0) {
+      return dateDelta;
     }
 
-    return (first.due_date ?? "9999-12-31").localeCompare(
-      second.due_date ?? "9999-12-31",
+    return (
+      (priorityRank[first.priority] ?? 99) -
+      (priorityRank[second.priority] ?? 99)
     );
   });
 }
 
-function toTaskListItems(tasks: TaskRow[]): TaskListItem[] {
-  return tasks.map((task) => ({ ...task }));
+function getPriorityTone(priority: string) {
+  if (priority === "critical") return "red";
+  if (priority === "high") return "amber";
+  if (priority === "medium") return "blue";
+
+  return "default";
+}
+
+function getProjectTone(status: string) {
+  if (status === "active") return "green";
+  if (status === "waiting") return "amber";
+  if (status === "canceled") return "red";
+
+  return "default";
+}
+
+function TaskSection({
+  description,
+  emptyDescription,
+  emptyTitle,
+  tasks,
+  title,
+  domainNameById,
+  projectNameById,
+}: {
+  description?: string;
+  emptyDescription: string;
+  emptyTitle: string;
+  tasks: TaskRow[];
+  title: string;
+  domainNameById: Map<string, string>;
+  projectNameById: Map<string, string>;
+}) {
+  return (
+    <section>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-semibold text-zinc-950">{title}</h2>
+          {description ? (
+            <p className="mt-1 text-sm text-zinc-600">{description}</p>
+          ) : null}
+        </div>
+        <StatusBadge label={`${tasks.length}`} />
+      </div>
+
+      {tasks.length === 0 ? (
+        <EmptyState title={emptyTitle} description={emptyDescription} />
+      ) : (
+        <div className="grid gap-3">
+          {tasks.map((task) => (
+            <article
+              className="rounded-md border border-zinc-200 bg-white p-4"
+              key={task.id}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-medium text-zinc-950">
+                      {task.title}
+                    </h3>
+                    <StatusBadge
+                      label={task.priority}
+                      tone={getPriorityTone(task.priority)}
+                    />
+                    {task.status !== "todo" ? (
+                      <StatusBadge label={task.status} />
+                    ) : null}
+                  </div>
+                  {task.notes ? (
+                    <p className="mt-2 text-sm leading-6 text-zinc-600">
+                      {task.notes}
+                    </p>
+                  ) : null}
+                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-600">
+                    <span>Data: {formatDate(task.due_date)}</span>
+                    {task.due_time ? (
+                      <span>Horario: {task.due_time.slice(0, 5)}</span>
+                    ) : null}
+                    <span>
+                      Dominio:{" "}
+                      {domainNameById.get(task.domain_id) ?? "Sem dominio"}
+                    </span>
+                    {task.project_id ? (
+                      <span>
+                        Projeto:{" "}
+                        {projectNameById.get(task.project_id) ?? "Sem projeto"}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function QuickLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      className="rounded-md border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-800 hover:bg-zinc-100"
+      href={href}
+    >
+      {label}
+    </Link>
+  );
 }
 
 export default async function TodayPage() {
   const { supabase } = await requireSession();
-  const soon = addDays(new Date(), 7);
+  const today = toSaoPauloDateOnly();
+  const tomorrow = toSaoPauloDateOnly(addDays(new Date(), 1));
+  const nextSevenDays = toSaoPauloDateOnly(addDays(new Date(), 7));
+  const nextFourteenDays = toSaoPauloDateOnly(addDays(new Date(), 14));
 
   const [
-    activeDomainsCount,
-    activeOrWaitingProjectsCount,
-    openTasksCount,
-    dueSoonTasksCount,
     pendingCapturesCount,
+    overdueTasksResult,
+    todayTasksResult,
+    nextTasksResult,
     upcomingProjectsResult,
-    inboxResult,
-    openTasksResult,
-    dueSoonTasksResult,
+    activeProjectsResult,
+    openProjectTasksResult,
+    domainsResult,
+    projectsForNamesResult,
   ] = await Promise.all([
-    getCount(
-      supabase
-        .from("domains")
-        .select("id", { count: "exact", head: true })
-        .eq("active", true),
-    ),
-    getCount(
-      supabase
-        .from("projects")
-        .select("id", { count: "exact", head: true })
-        .in("status", ["active", "waiting"]),
-    ),
-    getCount(
-      supabase
-        .from("tasks")
-        .select("id", { count: "exact", head: true })
-        .in("status", ["todo", "doing", "waiting"]),
-    ),
-    getCount(
-      supabase
-        .from("tasks")
-        .select("id", { count: "exact", head: true })
-        .in("status", ["todo", "doing", "waiting"])
-        .lte("due_date", toDateOnly(soon)),
-    ),
     getCount(
       supabase
         .from("pending_captures")
@@ -124,173 +231,270 @@ export default async function TodayPage() {
         .eq("status", "pending"),
     ),
     supabase
+      .from("tasks")
+      .select(
+        "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id",
+      )
+      .in("status", openTaskStatuses)
+      .lt("due_date", today)
+      .order("due_date", { ascending: true })
+      .returns<TaskRow[]>(),
+    supabase
+      .from("tasks")
+      .select(
+        "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id",
+      )
+      .in("status", openTaskStatuses)
+      .eq("due_date", today)
+      .order("due_time", { ascending: true, nullsFirst: false })
+      .returns<TaskRow[]>(),
+    supabase
+      .from("tasks")
+      .select(
+        "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id",
+      )
+      .in("status", openTaskStatuses)
+      .gte("due_date", tomorrow)
+      .lte("due_date", nextSevenDays)
+      .order("due_date", { ascending: true })
+      .order("due_time", { ascending: true, nullsFirst: false })
+      .returns<TaskRow[]>(),
+    supabase
       .from("projects")
-      .select("id,name,status,type,target_date")
+      .select("id,name,status,type,target_date,domain_id")
       .in("status", ["active", "waiting"])
       .not("target_date", "is", null)
-      .lte("target_date", toDateOnly(addDays(new Date(), 14)))
+      .gte("target_date", today)
+      .lte("target_date", nextFourteenDays)
       .order("target_date", { ascending: true, nullsFirst: false })
       .order("name", { ascending: true })
-      .limit(5)
+      .limit(10)
       .returns<ProjectRow[]>(),
     supabase
-      .from("domains")
-      .select("id,name")
-      .eq("name", "Inbox")
-      .eq("is_system", true)
-      .maybeSingle<{ id: string; name: string }>(),
+      .from("projects")
+      .select("id,name,status,type,target_date,domain_id")
+      .eq("status", "active")
+      .order("name", { ascending: true })
+      .returns<ProjectRow[]>(),
     supabase
       .from("tasks")
-      .select(
-        "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id",
-      )
-      .in("status", ["todo", "doing", "waiting"])
-      .limit(20)
-      .returns<TaskRow[]>(),
+      .select("project_id")
+      .in("status", openTaskStatuses)
+      .not("project_id", "is", null)
+      .returns<Array<{ project_id: string | null }>>(),
+    supabase.from("domains").select("id,name").returns<DomainRow[]>(),
     supabase
-      .from("tasks")
-      .select(
-        "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id",
-      )
-      .in("status", ["todo", "doing", "waiting"])
-      .lte("due_date", toDateOnly(soon))
-      .order("due_date", { ascending: true })
-      .limit(5)
-      .returns<TaskRow[]>(),
+      .from("projects")
+      .select("id,name,status,type,target_date,domain_id")
+      .returns<ProjectRow[]>(),
   ]);
 
+  if (overdueTasksResult.error) {
+    throw new Error(overdueTasksResult.error.message);
+  }
+  if (todayTasksResult.error) {
+    throw new Error(todayTasksResult.error.message);
+  }
+  if (nextTasksResult.error) {
+    throw new Error(nextTasksResult.error.message);
+  }
   if (upcomingProjectsResult.error) {
     throw new Error(upcomingProjectsResult.error.message);
   }
-
-  if (inboxResult.error) {
-    throw new Error(inboxResult.error.message);
+  if (activeProjectsResult.error) {
+    throw new Error(activeProjectsResult.error.message);
+  }
+  if (openProjectTasksResult.error) {
+    throw new Error(openProjectTasksResult.error.message);
+  }
+  if (domainsResult.error) {
+    throw new Error(domainsResult.error.message);
+  }
+  if (projectsForNamesResult.error) {
+    throw new Error(projectsForNamesResult.error.message);
   }
 
-  if (openTasksResult.error) {
-    throw new Error(openTasksResult.error.message);
-  }
+  const domainNameById = new Map(
+    domainsResult.data.map((domain) => [domain.id, domain.name]),
+  );
+  const projectNameById = new Map(
+    projectsForNamesResult.data.map((project) => [project.id, project.name]),
+  );
+  const projectIdsWithOpenTasks = new Set(
+    openProjectTasksResult.data
+      .map((task) => task.project_id)
+      .filter((projectId): projectId is string => Boolean(projectId)),
+  );
+  const projectsWithoutNextAction = activeProjectsResult.data
+    .filter((project) => !projectIdsWithOpenTasks.has(project.id))
+    .slice(0, 10);
 
-  if (dueSoonTasksResult.error) {
-    throw new Error(dueSoonTasksResult.error.message);
-  }
-
-  const inboxOpenTasksCount = inboxResult.data
-    ? await getCount(
-        supabase
-          .from("tasks")
-          .select("id", { count: "exact", head: true })
-          .eq("domain_id", inboxResult.data.id)
-          .in("status", ["todo", "doing", "waiting"]),
-      )
-    : 0;
-
-  const priorityTasks = sortPriorityTasks(openTasksResult.data).slice(0, 3);
+  const overdueTasks = sortByDueDateAndPriority(overdueTasksResult.data);
+  const todayTasks = sortByDueDateAndPriority(todayTasksResult.data);
+  const nextTasks = sortByDueDateAndPriority(nextTasksResult.data);
 
   return (
     <main className="px-6 py-8">
       <PageHeader
         eyebrow="Lucas OS"
         title="Today"
-        description="Leitura básica do estado operacional usando Supabase Auth e RLS."
+        description="Painel operacional do dia com capturas, tarefas, prazos e projetos que precisam de proxima acao."
       />
 
-      <section className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <StatCard label="Domínios ativos" value={activeDomainsCount} />
+      <section className="mt-8 grid gap-3 md:grid-cols-[1fr_auto]">
         <StatCard
-          label="Projetos ativos/waiting"
-          value={activeOrWaitingProjectsCount}
-        />
-        <StatCard label="Tarefas abertas" value={openTasksCount} />
-        <StatCard
+          detail="Texto bruto aguardando triagem"
           label="Capturas pendentes"
           value={pendingCapturesCount}
-          detail="Texto bruto aguardando triagem"
         />
-        <StatCard
-          label="Prazos próximos"
-          value={dueSoonTasksCount}
-          detail="Tarefas abertas vencidas ou nos próximos 7 dias"
-        />
+        <Link
+          className="inline-flex items-center justify-center rounded-md bg-zinc-950 px-4 py-3 text-sm font-medium text-white hover:bg-zinc-800"
+          href="/capture"
+        >
+          Abrir Capture
+        </Link>
       </section>
 
-      <section className="mt-8 grid gap-4 xl:grid-cols-[2fr_1fr]">
-        <div className="rounded-md border border-zinc-200 bg-white p-4">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="font-semibold text-zinc-950">
-              Projetos com deadline próximo
-            </h2>
-            <StatusBadge label="até 5" />
+      <section className="mt-8 grid gap-3 sm:grid-cols-3">
+        <StatCard label="Vencidas" value={overdueTasks.length} />
+        <StatCard label="Hoje" value={todayTasks.length} />
+        <StatCard label="Proximos 7 dias" value={nextTasks.length} />
+      </section>
+
+      <div className="mt-8 grid gap-8">
+        <TaskSection
+          description="Tasks abertas com data anterior a hoje."
+          domainNameById={domainNameById}
+          emptyDescription="Nada vencido agora. Bom sinal operacional."
+          emptyTitle="Nenhuma tarefa vencida"
+          projectNameById={projectNameById}
+          tasks={overdueTasks}
+          title="Tarefas vencidas"
+        />
+
+        <TaskSection
+          description="Tasks abertas com data de hoje."
+          domainNameById={domainNameById}
+          emptyDescription="Nenhuma tarefa com data de hoje. Use Capture ou Tasks para planejar o dia."
+          emptyTitle="Nenhuma tarefa para hoje"
+          projectNameById={projectNameById}
+          tasks={todayTasks}
+          title="Tarefas de hoje"
+        />
+
+        <TaskSection
+          description="Tasks abertas entre amanha e os proximos 7 dias."
+          domainNameById={domainNameById}
+          emptyDescription="Nenhuma task proxima nos proximos 7 dias."
+          emptyTitle="Sem proximos prazos"
+          projectNameById={projectNameById}
+          tasks={nextTasks}
+          title="Proximos 7 dias"
+        />
+
+        <section>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-semibold text-zinc-950">
+                Projetos com prazo proximo
+              </h2>
+              <p className="mt-1 text-sm text-zinc-600">
+                Projetos ativos ou waiting com target nos proximos 14 dias.
+              </p>
+            </div>
+            <StatusBadge label={`${upcomingProjectsResult.data.length}`} />
           </div>
 
           {upcomingProjectsResult.data.length === 0 ? (
-            <div className="mt-4">
-              <EmptyState
-                title="Nenhum deadline de projeto próximo"
-                description="Projetos ativos ou waiting com data alvo nos próximos 14 dias aparecerão aqui."
-              />
-            </div>
+            <EmptyState
+              description="Projetos com target nos proximos 14 dias aparecerao aqui."
+              title="Nenhum projeto com prazo proximo"
+            />
           ) : (
-            <div className="mt-4 divide-y divide-zinc-100">
+            <div className="grid gap-3">
               {upcomingProjectsResult.data.map((project) => (
-                <div
-                  className="flex flex-wrap items-center justify-between gap-3 py-3"
+                <article
+                  className="rounded-md border border-zinc-200 bg-white p-4"
                   key={project.id}
                 >
-                  <div>
-                    <p className="font-medium text-zinc-950">{project.name}</p>
-                    <p className="mt-1 text-sm text-zinc-600">
-                      {project.type} · {formatDate(project.target_date)}
-                    </p>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-medium text-zinc-950">
+                        {project.name}
+                      </h3>
+                      <p className="mt-1 text-sm text-zinc-600">
+                        {domainNameById.get(project.domain_id) ?? "Sem dominio"}{" "}
+                        - {formatDate(project.target_date)}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <StatusBadge
+                        label={project.status}
+                        tone={getProjectTone(project.status)}
+                      />
+                      <StatusBadge label={project.type} />
+                    </div>
                   </div>
-                  <StatusBadge
-                    label={project.status}
-                    tone={project.status === "waiting" ? "amber" : "green"}
-                  />
-                </div>
+                </article>
               ))}
             </div>
           )}
-        </div>
+        </section>
 
-        <div className="rounded-md border border-zinc-200 bg-white p-4">
-          <h2 className="font-semibold text-zinc-950">Inbox</h2>
-          <p className="mt-3 text-3xl font-semibold text-zinc-950">
-            {inboxOpenTasksCount}
-          </p>
-          <p className="mt-2 text-sm text-zinc-600">
-            {inboxResult.data
-              ? inboxOpenTasksCount === 0
-                ? "Inbox vazia."
-                : "Itens abertos aguardando triagem."
-              : "Domínio Inbox não encontrado."}
-          </p>
-        </div>
-      </section>
+        <section>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-semibold text-zinc-950">
+                Projetos ativos sem proxima acao
+              </h2>
+              <p className="mt-1 text-sm text-zinc-600">
+                Projetos ativos que nao possuem nenhuma task aberta associada.
+              </p>
+            </div>
+            <StatusBadge label={`${projectsWithoutNextAction.length}`} />
+          </div>
 
-      <section className="mt-8">
-        <h2 className="mb-3 font-semibold text-zinc-950">
-          Top 3 tarefas abertas
-        </h2>
-        <TaskList
-          emptyDescription="Crie tarefas em Tasks ou Inbox para vê-las aqui."
-          emptyTitle="Nenhuma tarefa aberta"
-          returnTo="/today"
-          showActions={false}
-          tasks={toTaskListItems(priorityTasks)}
-        />
-      </section>
+          {projectsWithoutNextAction.length === 0 ? (
+            <EmptyState
+              description="Todos os projetos ativos encontrados tem pelo menos uma task aberta."
+              title="Nenhum projeto morto detectado"
+            />
+          ) : (
+            <div className="grid gap-3">
+              {projectsWithoutNextAction.map((project) => (
+                <article
+                  className="rounded-md border border-zinc-200 bg-white p-4"
+                  key={project.id}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-medium text-zinc-950">
+                        {project.name}
+                      </h3>
+                      <p className="mt-1 text-sm text-zinc-600">
+                        {domainNameById.get(project.domain_id) ?? "Sem dominio"}
+                        {project.target_date
+                          ? ` - alvo ${formatDate(project.target_date)}`
+                          : ""}
+                      </p>
+                    </div>
+                    <StatusBadge label="sem proxima acao" tone="amber" />
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
 
-      <section className="mt-8">
-        <h2 className="mb-3 font-semibold text-zinc-950">Deadlines próximos</h2>
-        <TaskList
-          emptyDescription="Nenhuma tarefa aberta vencida ou com prazo nos próximos 7 dias."
-          emptyTitle="Sem deadlines próximos"
-          returnTo="/today"
-          showActions={false}
-          tasks={toTaskListItems(dueSoonTasksResult.data)}
-        />
-      </section>
+        <section>
+          <h2 className="mb-3 font-semibold text-zinc-950">Acoes rapidas</h2>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <QuickLink href="/capture" label="Nova captura" />
+            <QuickLink href="/tasks" label="Abrir Tasks" />
+            <QuickLink href="/projects" label="Abrir Projects" />
+          </div>
+        </section>
+      </div>
     </main>
   );
 }
