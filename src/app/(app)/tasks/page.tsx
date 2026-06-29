@@ -63,7 +63,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     supabase
       .from("domains")
       .select("id,name,is_system")
-      .eq("active", true)
+      .or("active.eq.true,and(name.eq.Inbox,is_system.eq.true)")
       .order("is_system", { ascending: false })
       .order("name", { ascending: true })
       .returns<DomainRow[]>(),

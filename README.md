@@ -65,7 +65,19 @@ npm run db:seed:phase1
 ```
 
 O seed é idempotente para domínios e projetos. Ele cria apenas a estrutura
-inicial da Fase 1; tarefas e CRUD ficam para passos posteriores.
+inicial da Fase 1; tarefas, projects, milestones e domains podem ser criados
+manualmente pelo app depois do login.
+
+## Checklist Fase 1
+
+- Auth com Supabase email/senha.
+- Rotas operacionais protegidas por sessão.
+- Seed inicial de domains e projects.
+- Leitura real via Supabase Auth + RLS.
+- CRUD manual mínimo de tasks.
+- CRUD manual mínimo de projects e milestones.
+- CRUD manual mínimo de domains, sem delete.
+- Today básico com contadores, Inbox, tasks e projects próximos.
 
 ## Fora do Escopo Agora
 
