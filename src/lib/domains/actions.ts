@@ -12,7 +12,13 @@ const optionalText = (maxLength: number) =>
     .max(maxLength)
     .transform((value) => (value === "" ? null : value));
 
-const domainStyleValue = z
+const domainColorValue = z
+  .string()
+  .trim()
+  .max(32)
+  .transform((value) => (value === "" ? null : value));
+
+const domainIconValue = z
   .string()
   .trim()
   .max(64)
@@ -21,16 +27,16 @@ const domainStyleValue = z
 const createDomainSchema = z.object({
   name: z.string().trim().min(1, "Informe o nome do domínio.").max(120),
   description: optionalText(4000),
-  color: domainStyleValue,
-  icon: domainStyleValue,
+  color: domainColorValue,
+  icon: domainIconValue,
   returnTo: z.string().optional(),
 });
 
 const updateDomainSchema = z.object({
   domainId: z.string().uuid(),
   description: optionalText(4000),
-  color: domainStyleValue,
-  icon: domainStyleValue,
+  color: domainColorValue,
+  icon: domainIconValue,
   returnTo: z.string().optional(),
 });
 

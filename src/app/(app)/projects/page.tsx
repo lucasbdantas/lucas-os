@@ -17,6 +17,7 @@ type ProjectsPageProps = {
 type DomainRow = {
   id: string;
   name: string;
+  active: boolean;
 };
 
 type ProjectRow = {
@@ -38,8 +39,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const [domainsResult, projectsResult, milestonesResult] = await Promise.all([
     supabase
       .from("domains")
-      .select("id,name")
-      .eq("active", true)
+      .select("id,name,active")
       .order("name", { ascending: true })
       .returns<DomainRow[]>(),
     supabase
@@ -65,6 +65,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const domainNameById = new Map(
     domainsResult.data.map((domain) => [domain.id, domain.name]),
   );
+  const activeDomains = domainsResult.data.filter((domain) => domain.active);
   const milestonesByProjectId = new Map<string, MilestoneListItem[]>();
 
   for (const milestone of milestonesResult.data) {
@@ -99,7 +100,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
           <h2 className="font-semibold text-zinc-950">Novo projeto</h2>
           <StatusBadge label="manual" />
         </div>
-        <ProjectForm domains={domainsResult.data} returnTo="/projects" />
+        <ProjectForm domains={activeDomains} returnTo="/projects" />
       </section>
 
       <section className="mt-10">

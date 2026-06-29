@@ -14,6 +14,7 @@ type DomainRow = {
   id: string;
   name: string;
   is_system: boolean;
+  active: boolean;
 };
 
 type ProjectRow = {
@@ -62,8 +63,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
   ] = await Promise.all([
     supabase
       .from("domains")
-      .select("id,name,is_system")
-      .or("active.eq.true,and(name.eq.Inbox,is_system.eq.true)")
+      .select("id,name,is_system,active")
       .order("is_system", { ascending: false })
       .order("name", { ascending: true })
       .returns<DomainRow[]>(),
@@ -108,6 +108,9 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     ...project,
     domainName: domainNameById.get(project.domain_id),
   }));
+  const selectableDomains = domainsResult.data.filter(
+    (domain) => domain.active || (domain.is_system && domain.name === "Inbox"),
+  );
 
   return (
     <main className="px-6 py-8">
@@ -129,7 +132,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
           <StatusBadge label="manual" />
         </div>
         <TaskForm
-          domains={domainsResult.data}
+          domains={selectableDomains}
           projects={projectOptions}
           returnTo="/tasks"
         />

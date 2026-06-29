@@ -38,7 +38,7 @@ export function DomainForm({ returnTo }: DomainFormProps) {
             <span className="text-sm font-medium text-zinc-700">Cor</span>
             <input
               className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
-              maxLength={64}
+              maxLength={32}
               name="color"
               placeholder="#2563eb"
               type="text"

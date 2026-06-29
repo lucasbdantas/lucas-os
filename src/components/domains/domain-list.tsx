@@ -106,7 +106,7 @@ export function DomainList({ domains, returnTo }: DomainListProps) {
               <input
                 className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
                 defaultValue={domain.color ?? ""}
-                maxLength={64}
+                maxLength={32}
                 name="color"
                 placeholder="Cor"
                 type="text"
