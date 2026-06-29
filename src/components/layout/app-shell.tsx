@@ -3,6 +3,7 @@ import { logout } from "@/lib/auth/actions";
 
 const navItems = [
   { href: "/today", label: "Today" },
+  { href: "/capture", label: "Capture" },
   { href: "/inbox", label: "Inbox" },
   { href: "/domains", label: "Domains" },
   { href: "/projects", label: "Projects" },
@@ -61,7 +62,7 @@ export function AppShell({ children, userEmail }: AppShellProps) {
 
       <div className="min-h-screen pb-20 md:pl-64 md:pb-0">{children}</div>
 
-      <nav className="fixed inset-x-0 bottom-0 grid grid-cols-6 border-t border-zinc-200 bg-white md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 grid grid-cols-7 border-t border-zinc-200 bg-white md:hidden">
         {navItems.map((item) => (
           <Link
             className="px-1 py-3 text-center text-xs font-medium text-zinc-700"

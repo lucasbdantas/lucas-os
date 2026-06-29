@@ -74,6 +74,23 @@ export const notificationStatusEnum = pgEnum("notification_status", [
   "dismissed",
 ]);
 
+export const pendingCaptureSourceEnum = pgEnum("pending_capture_source", [
+  "manual",
+  "web",
+  "ios_shortcut",
+  "android_shortcut",
+  "voice",
+  "email",
+  "webhook",
+]);
+
+export const pendingCaptureStatusEnum = pgEnum("pending_capture_status", [
+  "pending",
+  "resolved",
+  "dismissed",
+  "expired",
+]);
+
 export const domains = pgTable(
   "domains",
   {
@@ -259,5 +276,49 @@ export const appSettings = pgTable(
   },
   (table) => [
     uniqueIndex("app_settings_user_key_unique").on(table.userId, table.key),
+  ],
+);
+
+export const pendingCaptures = pgTable(
+  "pending_captures",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    rawText: text("raw_text").notNull(),
+    source: pendingCaptureSourceEnum("source").notNull().default("manual"),
+    capturedAt: timestamp("captured_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    parsedIntent: jsonb("parsed_intent")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    candidates: jsonb("candidates")
+      .$type<unknown[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    status: pendingCaptureStatusEnum("status").notNull().default("pending"),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    dismissedAt: timestamp("dismissed_at", { withTimezone: true }),
+    expiredAt: timestamp("expired_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("pending_captures_user_status_captured_idx").on(
+      table.userId,
+      table.status,
+      table.capturedAt,
+    ),
+    index("pending_captures_user_captured_idx").on(
+      table.userId,
+      table.capturedAt,
+    ),
   ],
 );

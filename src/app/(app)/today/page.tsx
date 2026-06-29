@@ -86,6 +86,7 @@ export default async function TodayPage() {
     activeOrWaitingProjectsCount,
     openTasksCount,
     dueSoonTasksCount,
+    pendingCapturesCount,
     upcomingProjectsResult,
     inboxResult,
     openTasksResult,
@@ -115,6 +116,12 @@ export default async function TodayPage() {
         .select("id", { count: "exact", head: true })
         .in("status", ["todo", "doing", "waiting"])
         .lte("due_date", toDateOnly(soon)),
+    ),
+    getCount(
+      supabase
+        .from("pending_captures")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending"),
     ),
     supabase
       .from("projects")
@@ -188,13 +195,18 @@ export default async function TodayPage() {
         description="Leitura básica do estado operacional usando Supabase Auth e RLS."
       />
 
-      <section className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard label="Domínios ativos" value={activeDomainsCount} />
         <StatCard
           label="Projetos ativos/waiting"
           value={activeOrWaitingProjectsCount}
         />
         <StatCard label="Tarefas abertas" value={openTasksCount} />
+        <StatCard
+          label="Capturas pendentes"
+          value={pendingCapturesCount}
+          detail="Texto bruto aguardando triagem"
+        />
         <StatCard
           label="Prazos próximos"
           value={dueSoonTasksCount}
