@@ -1,5 +1,10 @@
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
+import {
+  CaptureTaskForm,
+  type CaptureDomainOption,
+  type CaptureProjectOption,
+} from "@/components/capture/capture-task-form";
 import { PendingCaptureActions } from "@/components/capture/pending-capture-actions";
 
 export type PendingCaptureListItem = {
@@ -12,6 +17,8 @@ export type PendingCaptureListItem = {
 
 type PendingCaptureListProps = {
   captures: PendingCaptureListItem[];
+  domains: CaptureDomainOption[];
+  projects: CaptureProjectOption[];
   returnTo: string;
 };
 
@@ -24,6 +31,8 @@ function formatCapturedAt(value: string) {
 
 export function PendingCaptureList({
   captures,
+  domains,
+  projects,
   returnTo,
 }: PendingCaptureListProps) {
   if (captures.length === 0) {
@@ -60,6 +69,13 @@ export function PendingCaptureList({
               returnTo={returnTo}
             />
           </div>
+          <CaptureTaskForm
+            captureId={capture.id}
+            domains={domains}
+            projects={projects}
+            rawText={capture.raw_text}
+            returnTo={returnTo}
+          />
         </article>
       ))}
     </div>
