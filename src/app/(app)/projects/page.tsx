@@ -1,8 +1,18 @@
 import { PageHeader } from "@/components/layout/page-header";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ProjectForm } from "@/components/projects/project-form";
+import {
+  ProjectList,
+  type MilestoneListItem,
+  type ProjectListItem,
+} from "@/components/projects/project-list";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { formatDate } from "@/lib/format";
 import { requireSession } from "@/lib/supabase/require-session";
+
+type ProjectsPageProps = {
+  searchParams: Promise<{
+    error?: string;
+  }>;
+};
 
 type DomainRow = {
   id: string;
@@ -12,95 +22,89 @@ type DomainRow = {
 type ProjectRow = {
   id: string;
   name: string;
+  description: string | null;
   status: string;
   type: string;
   target_date: string | null;
   domain_id: string;
+  success_definition: string | null;
+  failure_mode: string | null;
 };
 
-function getProjectTone(status: string) {
-  if (status === "active") return "green";
-  if (status === "waiting") return "amber";
-  if (status === "completed") return "blue";
-  if (status === "canceled") return "red";
-
-  return "default";
-}
-
-export default async function ProjectsPage() {
+export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
+  const { error: pageError } = await searchParams;
   const { supabase } = await requireSession();
 
-  const [{ data: projects, error: projectsError }, { data: domains }] =
-    await Promise.all([
-      supabase
-        .from("projects")
-        .select("id,name,status,type,target_date,domain_id")
-        .order("name", { ascending: true })
-        .returns<ProjectRow[]>(),
-      supabase.from("domains").select("id,name").returns<DomainRow[]>(),
-    ]);
+  const [domainsResult, projectsResult, milestonesResult] = await Promise.all([
+    supabase
+      .from("domains")
+      .select("id,name")
+      .eq("active", true)
+      .order("name", { ascending: true })
+      .returns<DomainRow[]>(),
+    supabase
+      .from("projects")
+      .select(
+        "id,name,description,status,type,target_date,domain_id,success_definition,failure_mode",
+      )
+      .order("target_date", { ascending: true, nullsFirst: false })
+      .order("name", { ascending: true })
+      .returns<ProjectRow[]>(),
+    supabase
+      .from("milestones")
+      .select("id,project_id,title,status,weight,due_date")
+      .order("due_date", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: true })
+      .returns<MilestoneListItem[]>(),
+  ]);
 
-  if (projectsError) {
-    throw new Error(projectsError.message);
-  }
+  if (domainsResult.error) throw new Error(domainsResult.error.message);
+  if (projectsResult.error) throw new Error(projectsResult.error.message);
+  if (milestonesResult.error) throw new Error(milestonesResult.error.message);
 
   const domainNameById = new Map(
-    (domains ?? []).map((domain) => [domain.id, domain.name]),
+    domainsResult.data.map((domain) => [domain.id, domain.name]),
   );
+  const milestonesByProjectId = new Map<string, MilestoneListItem[]>();
+
+  for (const milestone of milestonesResult.data) {
+    const currentMilestones =
+      milestonesByProjectId.get(milestone.project_id) ?? [];
+    currentMilestones.push(milestone);
+    milestonesByProjectId.set(milestone.project_id, currentMilestones);
+  }
+
+  const projects: ProjectListItem[] = projectsResult.data.map((project) => ({
+    ...project,
+    domainName: domainNameById.get(project.domain_id) ?? "Sem domínio",
+    milestones: milestonesByProjectId.get(project.id) ?? [],
+  }));
 
   return (
     <main className="px-6 py-8">
       <PageHeader
         eyebrow="Operacional"
         title="Projects"
-        description="Projetos reais do usuário, ligados aos domínios seedados."
+        description="CRUD manual mínimo de projetos e milestones via Supabase Auth + RLS."
       />
 
+      {pageError ? (
+        <p className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {pageError}
+        </p>
+      ) : null}
+
       <section className="mt-8">
-        {projects.length === 0 ? (
-          <EmptyState
-            title="Nenhum projeto encontrado"
-            description="Rode o seed inicial da Fase 1 para criar os projetos base."
-          />
-        ) : (
-          <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="border-b border-zinc-200 bg-zinc-50 text-zinc-500">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Projeto</th>
-                  <th className="px-4 py-3 font-medium">Domínio</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Tipo</th>
-                  <th className="px-4 py-3 font-medium">Data alvo</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100">
-                {projects.map((project) => (
-                  <tr key={project.id}>
-                    <td className="px-4 py-3 font-medium text-zinc-950">
-                      {project.name}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-600">
-                      {domainNameById.get(project.domain_id) ?? "Sem domínio"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge
-                        label={project.status}
-                        tone={getProjectTone(project.status)}
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-zinc-600">
-                      {project.type}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-600">
-                      {formatDate(project.target_date)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="mb-3 flex items-center gap-2">
+          <h2 className="font-semibold text-zinc-950">Novo projeto</h2>
+          <StatusBadge label="manual" />
+        </div>
+        <ProjectForm domains={domainsResult.data} returnTo="/projects" />
+      </section>
+
+      <section className="mt-10">
+        <h2 className="mb-3 font-semibold text-zinc-950">Projetos</h2>
+        <ProjectList projects={projects} returnTo="/projects" />
       </section>
     </main>
   );

@@ -10,6 +10,7 @@ export type ProjectOption = {
   id: string;
   name: string;
   domain_id: string;
+  domainName?: string;
 };
 
 type TaskFormProps = {
@@ -90,7 +91,9 @@ export function TaskForm({
                 <option value="">Sem projeto</option>
                 {projects.map((project) => (
                   <option key={project.id} value={project.id}>
-                    {project.name}
+                    {project.domainName
+                      ? `${project.name} — ${project.domainName}`
+                      : project.name}
                   </option>
                 ))}
               </select>

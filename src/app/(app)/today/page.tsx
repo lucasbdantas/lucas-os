@@ -86,7 +86,7 @@ export default async function TodayPage() {
     activeOrWaitingProjectsCount,
     openTasksCount,
     dueSoonTasksCount,
-    mainProjectsResult,
+    upcomingProjectsResult,
     inboxResult,
     openTasksResult,
     dueSoonTasksResult,
@@ -120,6 +120,8 @@ export default async function TodayPage() {
       .from("projects")
       .select("id,name,status,type,target_date")
       .in("status", ["active", "waiting"])
+      .not("target_date", "is", null)
+      .lte("target_date", toDateOnly(addDays(new Date(), 14)))
       .order("target_date", { ascending: true, nullsFirst: false })
       .order("name", { ascending: true })
       .limit(5)
@@ -150,8 +152,8 @@ export default async function TodayPage() {
       .returns<TaskRow[]>(),
   ]);
 
-  if (mainProjectsResult.error) {
-    throw new Error(mainProjectsResult.error.message);
+  if (upcomingProjectsResult.error) {
+    throw new Error(upcomingProjectsResult.error.message);
   }
 
   if (inboxResult.error) {
@@ -204,21 +206,21 @@ export default async function TodayPage() {
         <div className="rounded-md border border-zinc-200 bg-white p-4">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-semibold text-zinc-950">
-              Projetos principais
+              Projetos com deadline próximo
             </h2>
             <StatusBadge label="até 5" />
           </div>
 
-          {mainProjectsResult.data.length === 0 ? (
+          {upcomingProjectsResult.data.length === 0 ? (
             <div className="mt-4">
               <EmptyState
-                title="Nenhum projeto ativo"
-                description="Rode o seed inicial ou ative projetos para vê-los no Today."
+                title="Nenhum deadline de projeto próximo"
+                description="Projetos ativos ou waiting com data alvo nos próximos 14 dias aparecerão aqui."
               />
             </div>
           ) : (
             <div className="mt-4 divide-y divide-zinc-100">
-              {mainProjectsResult.data.map((project) => (
+              {upcomingProjectsResult.data.map((project) => (
                 <div
                   className="flex flex-wrap items-center justify-between gap-3 py-3"
                   key={project.id}

@@ -104,6 +104,10 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
   const projectNameById = new Map(
     projectsResult.data.map((project) => [project.id, project.name]),
   );
+  const projectOptions = projectsResult.data.map((project) => ({
+    ...project,
+    domainName: domainNameById.get(project.domain_id),
+  }));
 
   return (
     <main className="px-6 py-8">
@@ -126,7 +130,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
         </div>
         <TaskForm
           domains={domainsResult.data}
-          projects={projectsResult.data}
+          projects={projectOptions}
           returnTo="/tasks"
         />
       </section>
