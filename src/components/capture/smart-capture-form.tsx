@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type {
   CaptureDomainOption,
@@ -8,8 +8,10 @@ import type {
 } from "@/components/capture/capture-task-form";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
+  type AICapturePreviewState,
   createPendingCapture,
   createTaskFromSmartCapture,
+  previewCaptureWithAI,
 } from "@/lib/captures/actions";
 import { parseSimpleCapture } from "@/lib/captures/simple-parser";
 
@@ -47,12 +49,34 @@ function TaskSubmitButton() {
   );
 }
 
+function AISubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      className="rounded-md border border-blue-200 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:bg-blue-50 disabled:text-blue-400"
+      disabled={pending}
+      type="submit"
+    >
+      {pending ? "Sugerindo..." : "Sugerir com IA"}
+    </button>
+  );
+}
+
+const initialAIState: AICapturePreviewState = {
+  status: "idle",
+};
+
 export function SmartCaptureForm({
   domains,
   projects,
   returnTo,
 }: SmartCaptureFormProps) {
   const [rawText, setRawText] = useState("");
+  const [aiState, aiAction] = useActionState(
+    previewCaptureWithAI,
+    initialAIState,
+  );
   const parsed = useMemo(() => parseSimpleCapture(rawText), [rawText]);
   const parsedTitle = parsed.kind === "task" ? parsed.title : "";
   const statusLabel =
@@ -231,6 +255,174 @@ export function SmartCaptureForm({
             </button>
           </div>
         </form>
+      ) : null}
+
+      <form action={aiAction} className="mt-4">
+        <input name="rawText" type="hidden" value={rawText} />
+        <AISubmitButton />
+      </form>
+
+      {aiState.status !== "idle" ? (
+        <div className="mt-4 rounded-md border border-blue-100 bg-blue-50 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge
+              label={aiState.status === "task" ? "preview IA" : aiState.status}
+              tone={aiState.status === "task" ? "blue" : "amber"}
+            />
+            {aiState.message ? (
+              <p className="text-sm text-blue-900">{aiState.message}</p>
+            ) : null}
+          </div>
+          {aiState.status === "task" && aiState.preview ? (
+            <form
+              action={createTaskFromSmartCapture}
+              className="mt-4 grid gap-4"
+            >
+              <input name="returnTo" type="hidden" value={returnTo} />
+
+              <label className="block">
+                <span className="text-sm font-medium text-zinc-700">
+                  Titulo
+                </span>
+                <input
+                  className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+                  defaultValue={aiState.preview.title}
+                  maxLength={220}
+                  name="title"
+                  required
+                  type="text"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-medium text-zinc-700">
+                  Notas
+                </span>
+                <textarea
+                  className="mt-2 min-h-20 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+                  defaultValue={aiState.preview.notes ?? ""}
+                  maxLength={4000}
+                  name="notes"
+                />
+              </label>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="text-sm font-medium text-zinc-700">
+                    Dominio
+                  </span>
+                  <select
+                    className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+                    defaultValue={aiState.preview.domainId ?? ""}
+                    name="domainId"
+                  >
+                    <option value="">Inbox automatica</option>
+                    {domains.map((domain) => (
+                      <option key={domain.id} value={domain.id}>
+                        {domain.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-medium text-zinc-700">
+                    Projeto opcional
+                  </span>
+                  <select
+                    className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+                    defaultValue={aiState.preview.projectId ?? ""}
+                    name="projectId"
+                  >
+                    <option value="">Sem projeto</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.domainName
+                          ? `${project.name} - ${project.domainName}`
+                          : project.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-sm font-medium text-zinc-700">
+                    Data
+                  </span>
+                  <input
+                    className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+                    defaultValue={aiState.preview.dueDate ?? ""}
+                    name="dueDate"
+                    type="date"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-zinc-700">
+                    Horario
+                  </span>
+                  <input
+                    className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+                    defaultValue={aiState.preview.dueTime ?? ""}
+                    name="dueTime"
+                    type="time"
+                  />
+                </label>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <label className="block">
+                  <span className="text-sm font-medium text-zinc-700">
+                    Prioridade
+                  </span>
+                  <select
+                    className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+                    defaultValue={aiState.preview.priority}
+                    name="priority"
+                  >
+                    <option value="low">low</option>
+                    <option value="medium">medium</option>
+                    <option value="high">high</option>
+                    <option value="critical">critical</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-zinc-700">
+                    Energia
+                  </span>
+                  <select
+                    className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+                    name="energyRequired"
+                  >
+                    <option value="">Sem definir</option>
+                    <option value="low">low</option>
+                    <option value="medium">medium</option>
+                    <option value="high">high</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-zinc-700">
+                    Contexto
+                  </span>
+                  <input
+                    className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+                    maxLength={80}
+                    name="context"
+                    placeholder="computador, casa..."
+                    type="text"
+                  />
+                </label>
+              </div>
+
+              <p className="text-sm text-blue-900">
+                Motivo da IA: {aiState.preview.reason}
+              </p>
+
+              <TaskSubmitButton />
+            </form>
+          ) : null}
+        </div>
       ) : null}
 
       <form action={createPendingCapture} className="mt-4">

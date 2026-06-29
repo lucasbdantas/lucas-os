@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { parseCaptureWithAI } from "@/lib/captures/ai-parser";
 import { requireSession } from "@/lib/supabase/require-session";
 
 const captureSourceValues = [
@@ -92,6 +93,21 @@ type DomainIdentity = {
 type ProjectIdentity = {
   id: string;
   domain_id: string;
+};
+
+export type AICapturePreviewState = {
+  status: "idle" | "error" | "low_confidence" | "none" | "task";
+  message?: string;
+  preview?: {
+    title: string;
+    notes: string | null;
+    domainId: string | null;
+    projectId: string | null;
+    dueDate: string | null;
+    dueTime: string | null;
+    priority: "low" | "medium" | "high" | "critical";
+    reason: string;
+  };
 };
 
 function getReturnTo(value: string | undefined, fallback = "/capture") {
@@ -192,6 +208,19 @@ async function validateProject(
   }
 
   return data;
+}
+
+function toSaoPauloDateOnly(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+  }).formatToParts(date);
+
+  const valueByType = new Map(parts.map((part) => [part.type, part.value]));
+
+  return `${valueByType.get("year")}-${valueByType.get("month")}-${valueByType.get("day")}`;
 }
 
 export async function createPendingCapture(formData: FormData) {
@@ -458,4 +487,151 @@ export async function createTaskFromSmartCapture(formData: FormData) {
 
   revalidateCaptureViews();
   redirect(returnTo);
+}
+
+export async function previewCaptureWithAI(
+  _previousState: AICapturePreviewState,
+  formData: FormData,
+): Promise<AICapturePreviewState> {
+  const rawText = String(formData.get("rawText") ?? "").trim();
+
+  if (!rawText) {
+    return {
+      status: "error",
+      message: "Digite algo antes de pedir preview com IA.",
+    };
+  }
+
+  const { supabase } = await requireSession();
+
+  const [domainsResult, projectsResult] = await Promise.all([
+    supabase
+      .from("domains")
+      .select("id,name,is_system,active")
+      .order("name", { ascending: true })
+      .returns<Array<DomainIdentity>>(),
+    supabase
+      .from("projects")
+      .select("id,name,domain_id")
+      .in("status", ["active", "waiting"])
+      .order("name", { ascending: true })
+      .returns<Array<{ id: string; name: string; domain_id: string }>>(),
+  ]);
+
+  if (domainsResult.error) {
+    return { status: "error", message: domainsResult.error.message };
+  }
+
+  if (projectsResult.error) {
+    return { status: "error", message: projectsResult.error.message };
+  }
+
+  const selectableDomains = domainsResult.data.filter(
+    (domain) => domain.active || (domain.is_system && domain.name === "Inbox"),
+  );
+  const domainByName = new Map(
+    selectableDomains.map((domain) => [domain.name, domain]),
+  );
+  const domainNameById = new Map(
+    domainsResult.data.map((domain) => [domain.id, domain.name]),
+  );
+  const projects = projectsResult.data
+    .map((project) => ({
+      ...project,
+      domainName: domainNameById.get(project.domain_id),
+    }))
+    .filter(
+      (project): project is typeof project & { domainName: string } =>
+        Boolean(project.domainName),
+    );
+  const projectByName = new Map(projects.map((project) => [project.name, project]));
+
+  const aiResult = await parseCaptureWithAI({
+    currentDate: toSaoPauloDateOnly(),
+    domains: selectableDomains.map((domain) => ({ name: domain.name })),
+    projects: projects.map((project) => ({
+      domainName: project.domainName,
+      name: project.name,
+    })),
+    rawText,
+    timezone: "America/Sao_Paulo",
+  });
+
+  if (!aiResult.ok) {
+    return { status: "error", message: aiResult.reason };
+  }
+
+  const { suggestion } = aiResult;
+
+  if (suggestion.kind !== "task") {
+    return {
+      status: "none",
+      message:
+        suggestion.reason || "A IA nao identificou uma task clara. Salve como pending.",
+    };
+  }
+
+  if (suggestion.confidence < 0.75) {
+    return {
+      status: "low_confidence",
+      message:
+        suggestion.reason ||
+        "A IA ficou com baixa confianca. Salve como pending.",
+    };
+  }
+
+  const title = suggestion.title?.trim();
+
+  if (!title) {
+    return {
+      status: "none",
+      message: "A IA nao retornou titulo suficiente. Salve como pending.",
+    };
+  }
+
+  const domain = suggestion.domain_name
+    ? domainByName.get(suggestion.domain_name)
+    : null;
+
+  if (suggestion.domain_name && !domain) {
+    return {
+      status: "low_confidence",
+      message:
+        "A IA sugeriu um dominio que nao existe no contexto. Salve como pending.",
+    };
+  }
+
+  const project = suggestion.project_name
+    ? projectByName.get(suggestion.project_name)
+    : null;
+
+  if (suggestion.project_name && !project) {
+    return {
+      status: "low_confidence",
+      message:
+        "A IA sugeriu um projeto que nao existe no contexto. Salve como pending.",
+    };
+  }
+
+  if (project && domain && project.domain_id !== domain.id) {
+    return {
+      status: "low_confidence",
+      message:
+        "A IA sugeriu projeto e dominio inconsistentes. Salve como pending.",
+    };
+  }
+
+  return {
+    preview: {
+      domainId: domain?.id ?? null,
+      dueDate: suggestion.due_date ?? null,
+      dueTime: suggestion.due_time ?? null,
+      notes: suggestion.notes?.trim() || null,
+      priority: suggestion.priority ?? "medium",
+      projectId: project?.id ?? null,
+      reason: suggestion.reason,
+      title: title.slice(0, 220),
+    },
+    status: "task",
+  };
 }

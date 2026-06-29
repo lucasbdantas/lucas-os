@@ -86,7 +86,7 @@ export default async function CapturePage({ searchParams }: CapturePageProps) {
       <PageHeader
         eyebrow="Fase 2"
         title="Capture"
-        description="Captura manual de texto bruto para triagem posterior, sem IA e sem voz nesta etapa."
+        description="Captura manual de texto bruto com preview determinístico e IA opcional, sempre com confirmação humana."
       />
 
       {pageError ? (

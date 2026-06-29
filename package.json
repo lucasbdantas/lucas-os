@@ -10,7 +10,6 @@
     "db:seed:phase1": "tsx src/db/seed/phase-1.ts"
   },
   "dependencies": {
-    "@next/env": "^16.2.9",
     "@hookform/resolvers": "^5.4.0",
     "@next/env": "^16.2.9",
     "@supabase/ssr": "^0.12.0",
@@ -19,6 +18,7 @@
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.22.0",
     "next": "16.2.9",
+    "openai": "^6.45.0",
     "postgres": "^3.4.9",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -35,7 +35,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
-    "tsx": "^4.22.4",
     "tsx": "^4.21.0",
     "typescript": "^5"
   }
