@@ -78,6 +78,10 @@ const createTaskFromCaptureSchema = z.object({
   returnTo: z.string().optional(),
 });
 
+const createTaskFromSmartCaptureSchema = createTaskFromCaptureSchema.omit({
+  captureId: true,
+});
+
 type DomainIdentity = {
   id: string;
   name: string;
@@ -383,6 +387,73 @@ export async function createTaskFromPendingCapture(formData: FormData) {
       returnTo,
       `Tarefa criada, mas a auditoria da captura falhou: ${auditError.message}`,
     );
+  }
+
+  revalidateCaptureViews();
+  redirect(returnTo);
+}
+
+export async function createTaskFromSmartCapture(formData: FormData) {
+  const returnTo = getReturnTo(String(formData.get("returnTo") ?? "/capture"));
+  const parsed = createTaskFromSmartCaptureSchema.safeParse({
+    title: formData.get("title"),
+    notes: formData.get("notes") ?? "",
+    domainId: formData.get("domainId") ?? "",
+    projectId: formData.get("projectId") ?? "",
+    dueDate: formData.get("dueDate") ?? "",
+    dueTime: formData.get("dueTime") ?? "",
+    priority: formData.get("priority") ?? "medium",
+    energyRequired: formData.get("energyRequired") ?? "",
+    context: formData.get("context") ?? "",
+    returnTo,
+  });
+
+  if (!parsed.success) {
+    redirectWithError(
+      returnTo,
+      parsed.error.issues[0]?.message ?? "Tarefa invalida.",
+    );
+  }
+
+  const { supabase, user } = await requireSession();
+
+  let domainId = parsed.data.domainId;
+
+  try {
+    domainId = domainId ?? (await getInboxDomainId(supabase, user.id));
+    await validateDomain(supabase, user.id, domainId);
+
+    if (parsed.data.projectId) {
+      await validateProject(
+        supabase,
+        user.id,
+        parsed.data.projectId,
+        domainId,
+      );
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Erro ao validar destino.";
+    redirectWithError(returnTo, message);
+  }
+
+  const { error } = await supabase.from("tasks").insert({
+    user_id: user.id,
+    domain_id: domainId,
+    project_id: parsed.data.projectId,
+    title: parsed.data.title,
+    notes: parsed.data.notes,
+    due_date: parsed.data.dueDate,
+    due_time: parsed.data.dueTime,
+    priority: parsed.data.priority,
+    energy_required: parsed.data.energyRequired,
+    context: parsed.data.context,
+    status: "todo",
+    source: "manual",
+  });
+
+  if (error) {
+    redirectWithError(returnTo, error.message);
   }
 
   revalidateCaptureViews();

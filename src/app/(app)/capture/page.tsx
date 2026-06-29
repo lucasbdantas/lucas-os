@@ -1,8 +1,8 @@
-import { CaptureForm } from "@/components/capture/capture-form";
 import {
   PendingCaptureList,
   type PendingCaptureListItem,
 } from "@/components/capture/pending-capture-list";
+import { SmartCaptureForm } from "@/components/capture/smart-capture-form";
 import type {
   CaptureDomainOption,
   CaptureProjectOption,
@@ -97,10 +97,14 @@ export default async function CapturePage({ searchParams }: CapturePageProps) {
 
       <section className="mt-8">
         <div className="mb-3 flex items-center gap-2">
-          <h2 className="font-semibold text-zinc-950">Nova captura</h2>
-          <StatusBadge label="manual" />
+          <h2 className="font-semibold text-zinc-950">Captura inteligente</h2>
+          <StatusBadge label="deterministica" />
         </div>
-        <CaptureForm returnTo="/capture" />
+        <SmartCaptureForm
+          domains={selectableDomains}
+          projects={projectOptions}
+          returnTo="/capture"
+        />
       </section>
 
       <section className="mt-10">
