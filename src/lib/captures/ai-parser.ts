@@ -1,23 +1,12 @@
 import "server-only";
 
 import { zodTextFormat } from "openai/helpers/zod";
-import { z } from "zod";
 import { getOpenAIClient } from "@/lib/ai/openai";
-
-const aiCaptureSuggestionSchema = z.object({
-  kind: z.enum(["task", "none"]),
-  confidence: z.number().min(0).max(1),
-  title: z.string().nullable(),
-  notes: z.string().nullable(),
-  domain_name: z.string().nullable(),
-  project_name: z.string().nullable(),
-  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
-  due_time: z.string().regex(/^\d{2}:\d{2}$/).nullable(),
-  priority: z.enum(["low", "medium", "high", "critical"]).nullable(),
-  reason: z.string().max(240),
-});
-
-export type AICaptureSuggestion = z.infer<typeof aiCaptureSuggestionSchema>;
+import {
+  aiCaptureSuggestionSchema,
+  type AICaptureSuggestion,
+  validateAICaptureSuggestion,
+} from "@/lib/captures/ai-preview";
 
 export type AICaptureContext = {
   rawText: string;
@@ -98,16 +87,18 @@ export async function parseCaptureWithAI({
       },
     });
 
-    const suggestion = response.output_parsed;
+    const validated = validateAICaptureSuggestion(response.output_parsed);
 
-    if (!suggestion) {
+    if (!validated.ok) {
       return {
         ok: false,
-        reason: "A IA nao retornou uma sugestao estruturada valida.",
+        reason:
+          validated.state.message ??
+          "A IA nao retornou uma sugestao estruturada valida.",
       };
     }
 
-    return { ok: true, suggestion };
+    return { ok: true, suggestion: validated.suggestion };
   } catch {
     return {
       ok: false,

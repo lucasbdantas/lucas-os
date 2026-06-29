@@ -7,8 +7,8 @@ import type {
   CaptureProjectOption,
 } from "@/components/capture/capture-task-form";
 import { StatusBadge } from "@/components/ui/status-badge";
+import type { AICapturePreviewState } from "@/lib/captures/ai-preview";
 import {
-  type AICapturePreviewState,
   createPendingCapture,
   createTaskFromSmartCapture,
   previewCaptureWithAI,
