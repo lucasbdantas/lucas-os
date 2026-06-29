@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { TaskList, type TaskListItem } from "@/components/tasks/task-list";
 import { formatDate, toDateOnly } from "@/lib/format";
 import { requireSession } from "@/lib/supabase/require-session";
 
@@ -13,9 +14,30 @@ type ProjectRow = {
   target_date: string | null;
 };
 
+type TaskRow = {
+  id: string;
+  title: string;
+  notes: string | null;
+  status: string;
+  due_date: string | null;
+  due_time: string | null;
+  priority: string;
+  energy_required: string | null;
+  context: string | null;
+  domain_id: string;
+  project_id: string | null;
+};
+
 type CountResult = {
   count: number | null;
   error: { message: string } | null;
+};
+
+const priorityRank: Record<string, number> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
 };
 
 function addDays(date: Date, days: number) {
@@ -35,6 +57,26 @@ async function getCount(query: PromiseLike<CountResult>) {
   return count ?? 0;
 }
 
+function sortPriorityTasks(tasks: TaskRow[]) {
+  return [...tasks].sort((first, second) => {
+    const priorityDelta =
+      (priorityRank[first.priority] ?? 99) -
+      (priorityRank[second.priority] ?? 99);
+
+    if (priorityDelta !== 0) {
+      return priorityDelta;
+    }
+
+    return (first.due_date ?? "9999-12-31").localeCompare(
+      second.due_date ?? "9999-12-31",
+    );
+  });
+}
+
+function toTaskListItems(tasks: TaskRow[]): TaskListItem[] {
+  return tasks.map((task) => ({ ...task }));
+}
+
 export default async function TodayPage() {
   const { supabase } = await requireSession();
   const soon = addDays(new Date(), 7);
@@ -46,6 +88,8 @@ export default async function TodayPage() {
     dueSoonTasksCount,
     mainProjectsResult,
     inboxResult,
+    openTasksResult,
+    dueSoonTasksResult,
   ] = await Promise.all([
     getCount(
       supabase
@@ -86,6 +130,24 @@ export default async function TodayPage() {
       .eq("name", "Inbox")
       .eq("is_system", true)
       .maybeSingle<{ id: string; name: string }>(),
+    supabase
+      .from("tasks")
+      .select(
+        "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id",
+      )
+      .in("status", ["todo", "doing", "waiting"])
+      .limit(20)
+      .returns<TaskRow[]>(),
+    supabase
+      .from("tasks")
+      .select(
+        "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id",
+      )
+      .in("status", ["todo", "doing", "waiting"])
+      .lte("due_date", toDateOnly(soon))
+      .order("due_date", { ascending: true })
+      .limit(5)
+      .returns<TaskRow[]>(),
   ]);
 
   if (mainProjectsResult.error) {
@@ -94,6 +156,14 @@ export default async function TodayPage() {
 
   if (inboxResult.error) {
     throw new Error(inboxResult.error.message);
+  }
+
+  if (openTasksResult.error) {
+    throw new Error(openTasksResult.error.message);
+  }
+
+  if (dueSoonTasksResult.error) {
+    throw new Error(dueSoonTasksResult.error.message);
   }
 
   const inboxOpenTasksCount = inboxResult.data
@@ -105,6 +175,8 @@ export default async function TodayPage() {
           .in("status", ["todo", "doing", "waiting"]),
       )
     : 0;
+
+  const priorityTasks = sortPriorityTasks(openTasksResult.data).slice(0, 3);
 
   return (
     <main className="px-6 py-8">
@@ -180,6 +252,30 @@ export default async function TodayPage() {
               : "Domínio Inbox não encontrado."}
           </p>
         </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="mb-3 font-semibold text-zinc-950">
+          Top 3 tarefas abertas
+        </h2>
+        <TaskList
+          emptyDescription="Crie tarefas em Tasks ou Inbox para vê-las aqui."
+          emptyTitle="Nenhuma tarefa aberta"
+          returnTo="/today"
+          showActions={false}
+          tasks={toTaskListItems(priorityTasks)}
+        />
+      </section>
+
+      <section className="mt-8">
+        <h2 className="mb-3 font-semibold text-zinc-950">Deadlines próximos</h2>
+        <TaskList
+          emptyDescription="Nenhuma tarefa aberta vencida ou com prazo nos próximos 7 dias."
+          emptyTitle="Sem deadlines próximos"
+          returnTo="/today"
+          showActions={false}
+          tasks={toTaskListItems(dueSoonTasksResult.data)}
+        />
       </section>
     </main>
   );

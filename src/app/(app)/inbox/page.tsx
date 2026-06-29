@@ -1,27 +1,41 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { formatDate } from "@/lib/format";
+import { TaskForm } from "@/components/tasks/task-form";
+import { TaskList, type TaskListItem } from "@/components/tasks/task-list";
 import { requireSession } from "@/lib/supabase/require-session";
+
+type InboxPageProps = {
+  searchParams: Promise<{
+    error?: string;
+  }>;
+};
 
 type DomainRow = {
   id: string;
   name: string;
+  is_system: boolean;
 };
 
 type TaskRow = {
   id: string;
   title: string;
+  notes: string | null;
   status: string;
   due_date: string | null;
+  due_time: string | null;
   priority: string;
+  energy_required: string | null;
+  context: string | null;
+  domain_id: string;
+  project_id: string | null;
 };
 
-export default async function InboxPage() {
+export default async function InboxPage({ searchParams }: InboxPageProps) {
+  const { error: pageError } = await searchParams;
   const { supabase } = await requireSession();
   const { data: inbox, error: inboxError } = await supabase
     .from("domains")
-    .select("id,name")
+    .select("id,name,is_system")
     .eq("name", "Inbox")
     .eq("is_system", true)
     .maybeSingle<DomainRow>();
@@ -33,7 +47,9 @@ export default async function InboxPage() {
   const { data: tasks, error: tasksError } = inbox
     ? await supabase
         .from("tasks")
-        .select("id,title,status,due_date,priority")
+        .select(
+          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,created_at",
+        )
         .eq("domain_id", inbox.id)
         .in("status", ["todo", "doing", "waiting"])
         .order("created_at", { ascending: false })
@@ -44,50 +60,49 @@ export default async function InboxPage() {
     throw new Error(tasksError.message);
   }
 
+  const inboxTasks: TaskListItem[] = tasks.map((task) => ({
+    ...task,
+    domainName: "Inbox",
+  }));
+
   return (
     <main className="px-6 py-8">
       <PageHeader
         eyebrow="Operacional"
         title="Inbox"
-        description="Itens abertos no domínio Inbox."
+        description="Captura manual rápida para itens ainda não classificados."
       />
 
+      {pageError ? (
+        <p className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {pageError}
+        </p>
+      ) : null}
+
       <section className="mt-8">
-        {!inbox ? (
+        {inbox ? (
+          <TaskForm
+            compact
+            defaultDomainId={inbox.id}
+            domains={[inbox]}
+            returnTo="/inbox"
+          />
+        ) : (
           <EmptyState
             title="Inbox não encontrada"
             description="Rode o seed inicial para criar o domínio system Inbox."
           />
-        ) : tasks.length === 0 ? (
-          <EmptyState
-            title="Inbox vazia"
-            description="Nada pendente no domínio Inbox por enquanto."
-          />
-        ) : (
-          <div className="grid gap-3">
-            {tasks.map((task) => (
-              <article
-                className="rounded-md border border-zinc-200 bg-white p-4"
-                key={task.id}
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h2 className="font-semibold text-zinc-950">
-                      {task.title}
-                    </h2>
-                    <p className="mt-1 text-sm text-zinc-600">
-                      {formatDate(task.due_date)}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <StatusBadge label={task.status} tone="blue" />
-                    <StatusBadge label={task.priority} />
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
         )}
+      </section>
+
+      <section className="mt-10">
+        <h2 className="mb-3 font-semibold text-zinc-950">Itens abertos</h2>
+        <TaskList
+          emptyDescription="Nada pendente no domínio Inbox por enquanto."
+          emptyTitle="Inbox vazia"
+          returnTo="/inbox"
+          tasks={inboxTasks}
+        />
       </section>
     </main>
   );
