@@ -6,10 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:seed:phase1": "tsx src/db/seed/phase-1.ts"
   },
   "dependencies": {
+    "@next/env": "^16.2.9",
     "@hookform/resolvers": "^5.4.0",
+    "@next/env": "^16.2.9",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
     "clsx": "^2.1.1",
@@ -32,6 +35,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

@@ -52,6 +52,21 @@ npm run lint
 npm run build
 ```
 
+## Seed Inicial
+
+Antes de rodar o seed da Fase 1, aplique as migrations no Supabase e preencha
+`.env.local` com `DATABASE_URL` e `SEED_USER_ID`. O `SEED_USER_ID` é o UUID do
+usuário em Supabase Dashboard -> Authentication -> Users.
+
+O script carrega `.env.local` automaticamente:
+
+```powershell
+npm run db:seed:phase1
+```
+
+O seed é idempotente para domínios e projetos. Ele cria apenas a estrutura
+inicial da Fase 1; tarefas e CRUD ficam para passos posteriores.
+
 ## Fora do Escopo Agora
 
 Google Calendar, Gmail, captura por voz, parsing com OpenAI, Health, Finance,

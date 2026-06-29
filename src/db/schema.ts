@@ -128,6 +128,11 @@ export const projects = pgTable(
       .defaultNow(),
   },
   (table) => [
+    uniqueIndex("projects_user_domain_name_unique").on(
+      table.userId,
+      table.domainId,
+      table.name,
+    ),
     index("projects_user_status_idx").on(table.userId, table.status),
     index("projects_domain_idx").on(table.domainId),
   ],
