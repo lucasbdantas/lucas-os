@@ -1,171 +1,87 @@
 # Deploy Readiness V1
 
-## Objetivo
+## Status
 
-Este documento prepara o Lucas OS para um deploy futuro. Ele nao executa deploy real e nao adiciona integracoes externas.
+Lucas OS esta tecnicamente pronto para preparar um deploy real, desde que o ambiente de producao receba as migrations e as variaveis corretas. Este documento e um checklist pratico; o plano operacional completo esta em `docs/deploy-v1-plan.md`.
 
-## Checklist antes do deploy
+## Checklist de codigo
 
-- Confirmar que `npm run lint` passa.
-- Confirmar que `npm run build` passa.
-- Confirmar que `npm run test` passa.
-- Confirmar que `npm run test:e2e` passa ou que os testes autenticados estao skipped por falta de credenciais E2E.
-- Confirmar que `npx tsc --noEmit` passa.
-- Confirmar que `.env.local` nao esta no Git.
-- Confirmar que o projeto nao usa `SUPABASE_SERVICE_ROLE_KEY` no runtime.
-- Confirmar que as migrations foram aplicadas no Supabase de destino.
-- Confirmar que Supabase Auth permite login por email/senha para o usuario esperado.
-- Confirmar que RLS esta ativa nas tabelas do app.
-- Confirmar que `/api/capture` funciona apenas com capture token valido.
-- Confirmar que tokens revogados nao funcionam.
-- Confirmar que AI preview falha de forma amigavel quando `OPENAI_API_KEY` nao existe.
+- [ ] `git status --short` sem arquivos inesperados.
+- [ ] `npm run lint` passa.
+- [ ] `npm run build` passa.
+- [ ] `npm run test` passa.
+- [ ] `npm run test:e2e` passa.
+- [ ] `npx tsc --noEmit` passa.
+- [ ] `/api/health` aparece no build.
+- [ ] `/api/capture` aparece no build.
+- [ ] `/manifest.webmanifest` aparece no build.
 
-## Variaveis de ambiente
+## Checklist de secrets
 
-### Publicas
+- [ ] `.env.local` esta ignorado pelo Git.
+- [ ] `playwright-report` esta ignorado pelo Git.
+- [ ] `test-results` esta ignorado pelo Git.
+- [ ] Nenhum token real aparece em docs, README, tests ou src.
+- [ ] `SUPABASE_SERVICE_ROLE_KEY` nao e usado no runtime.
+- [ ] `DATABASE_URL` nao aparece em app pages, components ou lib de runtime.
+- [ ] `OPENAI_API_KEY` nao aparece em client components.
 
-Estas variaveis sao expostas ao browser e devem conter apenas valores publicos do projeto Supabase:
+## Variaveis para producao
+
+Publicas:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-### Server-only
+Server-only:
 
-Estas variaveis devem existir apenas no ambiente server-side:
+- `OPENAI_API_KEY` opcional.
+- `OPENAI_MODEL` opcional, default recomendado `gpt-4.1-nano`.
 
-- `OPENAI_API_KEY`: opcional. Sem ela, AI preview fica indisponivel de forma amigavel.
-- `OPENAI_MODEL`: opcional. Default atual: `gpt-4.1-nano`.
-
-### Somente scripts locais
-
-Estas variaveis sao para seed/migrations/scripts locais. Nao devem ser usadas em paginas, componentes, actions ou route handlers do app:
+Nao configurar na plataforma de app, salvo necessidade operacional explicita fora do runtime:
 
 - `DATABASE_URL`
 - `SEED_USER_ID`
+- `E2E_TEST_EMAIL`
+- `E2E_TEST_PASSWORD`
+- `E2E_BASE_URL`
+- `E2E_PORT`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
-### Service role
+## Checklist de Supabase
 
-`SUPABASE_SERVICE_ROLE_KEY` nao e necessaria para o app atual. O endpoint externo `/api/capture` usa token hash + Supabase anon client + funcao SQL `SECURITY DEFINER`, sem service role no runtime.
+- [ ] Projeto Supabase de producao criado.
+- [ ] Auth email/senha habilitado conforme uso esperado.
+- [ ] Usuario inicial criado e confirmado.
+- [ ] Migrations aplicadas em ordem:
+  1. `20260629000001_initial_phase_1_schema.sql`
+  2. `20260629000002_projects_unique_index.sql`
+  3. `20260629000003_pending_captures.sql`
+  4. `20260629000004_capture_tokens.sql`
+  5. `20260629000005_recurring_tasks.sql`
+- [ ] RLS ativa nas tabelas do app.
+- [ ] Seed inicial rodado uma vez se o ambiente estiver vazio.
 
-## Ordem de aplicacao das migrations
+## Checklist manual pos-deploy
 
-Aplicar no Supabase de destino, em ordem:
-
-1. `20260629000001_initial_phase_1_schema.sql`
-2. `20260629000002_projects_unique_index.sql`
-3. `20260629000003_pending_captures.sql`
-4. `20260629000004_capture_tokens.sql`
-5. `20260629000005_recurring_tasks.sql`
-
-Depois das migrations, criar o usuario em Supabase Auth e rodar o seed apenas se o ambiente for novo:
-
-```powershell
-npm run db:seed:phase1
-```
-
-## Validar build local
-
-```powershell
-npm run lint
-npm run build
-npm run test
-npm run test:e2e
-npx tsc --noEmit
-```
-
-Tambem validar:
-
-```text
-GET /api/health
-```
-
-Resposta esperada:
-
-```json
-{ "ok": true, "service": "lucas-os" }
-```
-
-## Testar auth
-
-1. Abrir `/login`.
-2. Entrar com usuario existente no Supabase Auth.
-3. Confirmar redirect para `/today` ou para a pagina inicial configurada em App Settings.
-4. Abrir `/settings` e confirmar email do usuario logado.
-5. Sair e confirmar que rotas protegidas redirecionam para `/login`.
-
-## Testar `/api/capture`
-
-1. Entrar em `/settings`.
-2. Criar capture token em "Captura externa".
-3. Copiar o token completo no momento da criacao.
-4. Enviar request:
-
-```powershell
-curl -X POST http://localhost:3000/api/capture -H "Authorization: Bearer <TOKEN_COMPLETO>" -H "Content-Type: application/json" -d "{\"text\":\"comprar pilha amanha\",\"source\":\"android_shortcut\"}"
-```
-
-5. Confirmar `{ "ok": true }`.
-6. Abrir `/capture` e confirmar a pending capture.
-7. Revogar o token e confirmar que a mesma chamada deixa de funcionar.
-
-Nunca registrar token real em docs, logs ou commits.
-
-## Testar `/quick-capture`
-
-1. Rodar em rede local quando for testar pelo celular:
-
-```powershell
-npm run dev -- --hostname 0.0.0.0
-```
-
-2. Abrir no celular:
-
-```text
-http://<IP_DO_PC>:3000/quick-capture
-```
-
-3. Fazer login se necessario.
-4. Salvar uma captura.
-5. Confirmar que aparece em `/capture` e no contador do `/today`.
-
-## Testar OpenAI opcional
-
-Com `OPENAI_API_KEY` configurada no ambiente server-side:
-
-1. Abrir `/capture`.
-2. Digitar algo como `revisar relatorio de controle amanha as 15h`.
-3. Usar preview IA.
-4. Confirmar que aparece preview editavel.
-5. Confirmar que a task nao e criada automaticamente.
-6. Confirmar que a confirmacao humana continua obrigatoria.
-
-Sem `OPENAI_API_KEY`, o app deve mostrar erro amigavel e manter o fluxo manual.
-
-## Riscos de seguranca
-
-- `NEXT_PUBLIC_*` e publico por definicao; nao colocar segredos nesses campos.
-- `.env.local` nunca deve entrar no Git.
-- Capture token completo aparece uma unica vez e nao e salvo puro no banco.
-- Prefixo e nome de token nao autenticam.
-- `/api/capture` retorna erro generico para nao revelar detalhes de autenticacao.
-- AI preview nunca cria task automaticamente.
-- Lembretes internos nao sao push notifications.
-- `DATABASE_URL` deve ficar fora do runtime do app.
+- [ ] Abrir `/api/health` e confirmar `{ "ok": true, "service": "lucas-os" }`.
+- [ ] Abrir `/login`.
+- [ ] Fazer login com usuario inicial.
+- [ ] Confirmar acesso a `/today`.
+- [ ] Abrir `/quick-capture` e salvar captura autenticada.
+- [ ] Abrir `/capture` e confirmar captura pendente.
+- [ ] Criar capture token em `/settings`.
+- [ ] Testar `POST /api/capture` com token.
+- [ ] Revogar token e confirmar que ele deixa de funcionar.
+- [ ] Se `OPENAI_API_KEY` estiver configurada, testar AI preview sem criar task automaticamente.
 
 ## Rollback basico
 
-1. Reverter para o ultimo commit estavel.
-2. Reaplicar variaveis de ambiente conhecidas.
-3. Rodar `npm run build`.
-4. Se uma migration ja foi aplicada em producao, nao tentar apagar dados manualmente sem backup.
-5. Para problemas de feature, preferir desabilitar uso pela UI ou reverter o deploy antes de mexer no banco.
+1. Reverter o deploy para o ultimo build estavel na plataforma.
+2. Nao apagar dados manualmente sem backup.
+3. Se o problema for env var, corrigir env e redeploy.
+4. Se o problema envolver migration aplicada, pausar novos deploys e revisar backup/SQL antes de qualquer ajuste.
 
-## Estado atual
+## Proximo passo
 
-O projeto esta preparado para um deploy futuro, mas este documento nao substitui um checklist especifico da plataforma escolhida. Antes do deploy real, definir:
-
-- plataforma de hospedagem;
-- dominio;
-- estrategia de backup do Supabase;
-- estrategia de rollback de deploy;
-- monitoramento basico de erros.
+Escolher a plataforma de hospedagem, preferencialmente Vercel para o primeiro deploy Next.js, e seguir `docs/deploy-v1-plan.md`.
