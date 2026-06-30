@@ -103,10 +103,12 @@ function redirectWithError(returnTo: string, message: string): never {
 
 async function getInboxDomainId(
   supabase: Awaited<ReturnType<typeof requireSession>>["supabase"],
+  userId: string,
 ) {
   const { data, error } = await supabase
     .from("domains")
     .select("id")
+    .eq("user_id", userId)
     .eq("name", "Inbox")
     .eq("is_system", true)
     .maybeSingle<{ id: string }>();
@@ -182,6 +184,7 @@ async function validateProject(
 function revalidateTaskViews() {
   revalidatePath("/tasks");
   revalidatePath("/inbox");
+  revalidatePath("/projects");
   revalidatePath("/today");
 }
 
@@ -209,13 +212,23 @@ export async function createTask(formData: FormData) {
 
   const { supabase, user } = await requireSession();
 
-  let domainId = parsed.data.domainId;
+  let domainId: string;
 
   try {
-    domainId = domainId ?? (await getInboxDomainId(supabase));
+    domainId = parsed.data.domainId ?? (await getInboxDomainId(supabase, user.id));
+    await validateDomain(supabase, user.id, domainId);
+
+    if (parsed.data.projectId) {
+      await validateProject(
+        supabase,
+        user.id,
+        parsed.data.projectId,
+        domainId,
+      );
+    }
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Erro ao localizar Inbox.";
+      error instanceof Error ? error.message : "Erro ao validar tarefa.";
     redirectWithError(returnTo, message);
   }
 

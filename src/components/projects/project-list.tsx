@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ProjectStatusActions } from "@/components/projects/project-status-actions";
@@ -12,6 +13,7 @@ export type ProjectListItem = {
   status: string;
   type: string;
   target_date: string | null;
+  domain_id: string;
   success_definition: string | null;
   failure_mode: string | null;
   domainName: string;
@@ -49,6 +51,10 @@ function getMilestoneTone(status: string) {
   return "blue";
 }
 
+function getNextActionHref(project: Pick<ProjectListItem, "id" | "domain_id">) {
+  return `/tasks?domain=${project.domain_id}&project=${project.id}#task-form`;
+}
+
 export function ProjectList({ projects, returnTo }: ProjectListProps) {
   if (projects.length === 0) {
     return (
@@ -79,7 +85,7 @@ export function ProjectList({ projects, returnTo }: ProjectListProps) {
                 <StatusBadge label={project.type} />
               </div>
               <p className="mt-2 text-sm text-zinc-600">
-                {project.domainName} · {formatDate(project.target_date)}
+                {project.domainName} - {formatDate(project.target_date)}
               </p>
               {project.description ? (
                 <p className="mt-3 text-sm leading-6 text-zinc-600">
@@ -99,11 +105,21 @@ export function ProjectList({ projects, returnTo }: ProjectListProps) {
                 </p>
               ) : null}
             </div>
-            <ProjectStatusActions
-              currentStatus={project.status}
-              projectId={project.id}
-              returnTo={returnTo}
-            />
+            <div className="flex flex-wrap gap-2 lg:justify-end">
+              {["active", "waiting"].includes(project.status) ? (
+                <Link
+                  className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                  href={getNextActionHref(project)}
+                >
+                  Criar próxima ação
+                </Link>
+              ) : null}
+              <ProjectStatusActions
+                currentStatus={project.status}
+                projectId={project.id}
+                returnTo={returnTo}
+              />
+            </div>
           </div>
 
           <div className="mt-5 border-t border-zinc-100 pt-4">
@@ -138,7 +154,7 @@ export function ProjectList({ projects, returnTo }: ProjectListProps) {
                         />
                       </div>
                       <p className="mt-1 text-sm text-zinc-600">
-                        {formatDate(milestone.due_date)} · peso{" "}
+                        {formatDate(milestone.due_date)} - peso{" "}
                         {milestone.weight}
                       </p>
                     </div>

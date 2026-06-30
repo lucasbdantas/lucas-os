@@ -31,6 +31,7 @@ type TaskFormProps = {
   domains: DomainOption[];
   projects?: ProjectOption[];
   defaultDomainId?: string;
+  defaultProjectId?: string;
   returnTo: string;
   compact?: boolean;
   initialTask?: EditableTaskValues;
@@ -40,6 +41,7 @@ export function TaskForm({
   domains,
   projects = [],
   defaultDomainId,
+  defaultProjectId,
   returnTo,
   compact = false,
   initialTask,
@@ -89,7 +91,7 @@ export function TaskForm({
           </label>
         ) : null}
 
-        {defaultDomainId && !isEditing ? (
+        {defaultDomainId && compact && !isEditing ? (
           <input name="domainId" type="hidden" value={defaultDomainId} />
         ) : (
           <label className="block">
@@ -121,7 +123,7 @@ export function TaskForm({
               </span>
               <select
                 className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
-                defaultValue={initialTask?.project_id ?? ""}
+                defaultValue={initialTask?.project_id ?? defaultProjectId ?? ""}
                 name="projectId"
               >
                 <option value="">Sem projeto</option>

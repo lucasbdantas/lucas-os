@@ -9,8 +9,10 @@ import { requireSession } from "@/lib/supabase/require-session";
 
 type TasksPageProps = {
   searchParams: Promise<{
+    domain?: string;
     edit?: string;
     error?: string;
+    project?: string;
   }>;
 };
 
@@ -47,7 +49,7 @@ function decorateTasks(
 }
 
 export default async function TasksPage({ searchParams }: TasksPageProps) {
-  const { edit, error: pageError } = await searchParams;
+  const { domain, edit, error: pageError, project } = await searchParams;
   const { supabase } = await requireSession();
 
   const [domainsResult, projectsResult, openTasksResult, closedTasksResult] =
@@ -129,6 +131,42 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
   const selectableDomains = domainsResult.data.filter(
     (domain) => domain.active || (domain.is_system && domain.name === "Inbox"),
   );
+  const domainParamWasProvided = Boolean(domain);
+  const projectParamWasProvided = Boolean(project);
+  let defaultCreateDomainId: string | undefined;
+  let defaultCreateProjectId: string | undefined;
+
+  if (!edit && (domainParamWasProvided || projectParamWasProvided)) {
+    const domainCandidate =
+      domain && uuidRegex.test(domain)
+        ? selectableDomains.find((item) => item.id === domain)
+        : undefined;
+    const projectCandidate =
+      project && uuidRegex.test(project)
+        ? projectsResult.data.find((item) => item.id === project)
+        : undefined;
+    const domainParamIsValid = !domainParamWasProvided || Boolean(domainCandidate);
+    const projectParamIsValid =
+      !projectParamWasProvided || Boolean(projectCandidate);
+    const projectDomainIsSelectable = projectCandidate
+      ? selectableDomains.some((item) => item.id === projectCandidate.domain_id)
+      : true;
+    const projectMatchesDomain =
+      projectCandidate && domainCandidate
+        ? projectCandidate.domain_id === domainCandidate.id
+        : true;
+
+    if (
+      domainParamIsValid &&
+      projectParamIsValid &&
+      projectDomainIsSelectable &&
+      projectMatchesDomain
+    ) {
+      defaultCreateDomainId = domainCandidate?.id ?? projectCandidate?.domain_id;
+      defaultCreateProjectId = projectCandidate?.id;
+    }
+  }
+
   const currentEditDomainIsSelectable = editTask
     ? selectableDomains.some((domain) => domain.id === editTask.domain_id)
     : true;
@@ -169,12 +207,22 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
         </section>
       ) : null}
 
-      <section className="mt-8">
+      <section className="mt-8" id="task-form">
         <div className="mb-3 flex items-center gap-2">
-          <h2 className="font-semibold text-zinc-950">Nova tarefa</h2>
+          <h2 className="font-semibold text-zinc-950">
+            {defaultCreateProjectId ? "Nova proxima acao" : "Nova tarefa"}
+          </h2>
           <StatusBadge label="manual" />
         </div>
+        {defaultCreateProjectId ? (
+          <p className="mb-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+            Projeto e dominio preenchidos a partir do link de proxima acao.
+            Escreva o titulo antes de criar.
+          </p>
+        ) : null}
         <TaskForm
+          defaultDomainId={defaultCreateDomainId}
+          defaultProjectId={defaultCreateProjectId}
           domains={selectableDomains}
           projects={projectOptions}
           returnTo="/tasks"
