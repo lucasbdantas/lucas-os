@@ -1,6 +1,6 @@
 # Current System State
 
-Checkpoint after Phase 1, Phase 2 capture/AI preview, parser test coverage, and Today V2.
+Checkpoint after Phase 1, Phase 2 capture/AI preview, Today V2, Task Edit V1, and Project Next Action V1.
 
 ## Current functionality
 
@@ -18,9 +18,19 @@ Checkpoint after Phase 1, Phase 2 capture/AI preview, parser test coverage, and 
   - domains CRUD without delete;
   - projects CRUD and basic status changes;
   - milestones create/done/canceled;
-  - tasks create/list/done/canceled;
+  - tasks create/list/done/canceled/edit;
   - Inbox task flow;
   - settings page with authenticated user email.
+- Task Edit V1 is available:
+  - edit title, notes, domain, optional project, due date, due time, priority, energy, context, and status;
+  - server-side validation confirms task ownership, valid active domain or Inbox, valid project ownership, and project/domain consistency;
+  - saving revalidates `/tasks`, `/today`, `/inbox`, and `/projects`.
+- Project Next Action V1 is available:
+  - `/today` shows `Criar próxima ação` for active projects without open tasks;
+  - `/projects` shows `Criar próxima ação` for `active` and `waiting` projects;
+  - links open `/tasks` with safe `domain`/`project` query params and prefilled domain/project;
+  - `/tasks?edit=<taskId>#edit-task` keeps priority over task creation defaults;
+  - invalid or unauthorized domain/project params are ignored and the normal task form is shown.
 - Capture flow is available:
   - manual pending captures;
   - deterministic parser preview for `task:`, `tarefa:`, `todo:`, and `lembrete:`;
@@ -39,6 +49,10 @@ Checkpoint after Phase 1, Phase 2 capture/AI preview, parser test coverage, and 
 
 ## Main checkpoints
 
+- `e2e6bc1 feat: add project next action flow`
+- `ec64206 feat: add task edit v1`
+- `d30e1fb chore: clarify service role configuration`
+- `f3294d0 docs: add current system state checkpoint`
 - `9eb624e feat: add today v2 operational dashboard`
 - `0eb48c2 test: add capture parser coverage`
 - `e854922 feat: add AI capture preview`
@@ -76,7 +90,8 @@ Security notes:
 
 - `git status --short`
 - `git log --oneline -8`
-- checked that `feat: add today v2 operational dashboard` exists;
+- checked that `feat: add task edit v1` exists;
+- checked that `feat: add project next action flow` exists;
 - checked that `.env.local` and local dev logs are not tracked;
 - checked that `DATABASE_URL` is not referenced in app pages/components/actions;
 - checked that `OPENAI_API_KEY` is not referenced in client-facing app/components;
@@ -101,6 +116,8 @@ npm run test
 - Capture AI preview is advisory only and still needs human confirmation.
 - Capture-to-task creation is not modeled as a database transaction from the UI layer; if an unexpected write failure occurs after task creation, manual cleanup may be needed.
 - Today V2 is intentionally simple and does not include scoring, drag and drop, charts, recurrence logic, or automatic planning.
+- Project next action uses URL query defaults instead of a dedicated project action route.
+- Task editing is basic and does not yet include advanced subtasks, recurrence, reminders, or bulk edits.
 - There are unit tests for parser behavior, but no Playwright or end-to-end browser tests yet.
 
 ## Technical risks
@@ -109,13 +126,15 @@ npm run test
 - Project "without next action" detection depends on the current open task statuses: `todo`, `doing`, and `waiting`.
 - AI preview depends on OpenAI availability and model support; failures should remain friendly and non-blocking.
 - Future scripts that truly need elevated Supabase access should document that separately and must not leak service role keys into client or app runtime.
+- Task/project relationship consistency is enforced in app server actions, but older data should still be treated carefully if edited outside the app.
 
 ## Recommended next steps
 
-1. Manually smoke-test `/today` with real data after login.
-2. Add a small browser/E2E test pass for auth-protected route behavior when the project is ready for Playwright.
+1. Manually smoke-test Task Edit V1 and Project Next Action V1 with real seeded data.
+2. Add a small browser/E2E test pass for auth-protected route behavior and the core task/project flows when ready for Playwright.
 3. Implement mobile/manual capture shortcut flow before voice.
 4. Add voice capture only after the text capture path stays stable.
-5. Revisit notifications as an audit feed once capture creates more operational events.
-6. Add `app_settings` only when there are real preferences such as timezone, Today density, capture defaults, or integration settings.
-7. Improve task editing and project next-action workflows before adding heavier integrations.
+5. Improve Today with focused action ordering only after more real usage data exists.
+6. Revisit notifications as an audit feed once capture and task/project actions generate more operational events.
+7. Add `app_settings` only when there are real preferences such as timezone, Today density, capture defaults, or integration settings.
+8. Improve task editing with recurrence, reminders, subtasks, or bulk operations before adding heavier integrations.
