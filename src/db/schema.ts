@@ -322,3 +322,29 @@ export const pendingCaptures = pgTable(
     ),
   ],
 );
+
+export const captureTokens = pgTable(
+  "capture_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    tokenHash: text("token_hash").notNull(),
+    tokenPrefix: varchar("token_prefix", { length: 32 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("capture_tokens_token_hash_unique").on(table.tokenHash),
+    index("capture_tokens_user_created_idx").on(
+      table.userId,
+      table.createdAt,
+    ),
+    index("capture_tokens_user_active_idx").on(table.userId, table.revokedAt),
+  ],
+);
