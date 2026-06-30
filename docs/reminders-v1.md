@@ -49,6 +49,19 @@ A rota protegida `/notifications` mostra:
 
 Cada lembrete pode abrir a task relacionada. Lembretes nao sao deletados pela UI; eles podem ser marcados como lidos ou dispensados.
 
+## Acoes de notificacao
+
+Em `/notifications`, cada lembrete interno pode oferecer:
+
+- abrir a task relacionada;
+- editar a task relacionada;
+- marcar como lida;
+- dispensar.
+
+Marcar como lida usa `notifications.status = "read"`. Dispensar usa `notifications.status = "dismissed"`. Como o schema atual nao tem `read_at` ou `dismissed_at`, a V1 registra apenas a mudanca de status e depende de `updated_at` do banco para auditoria basica.
+
+Lembretes lidos ou dispensados deixam de aparecer como acionaveis no `/today`, porque o Today busca apenas notificacoes `unread`.
+
 ## Integracao com Today
 
 O `/today` mostra uma secao curta de lembretes internos vencidos ou previstos para hoje. Isso nao e um calendario e nao substitui push notification.
@@ -61,6 +74,7 @@ Quando uma task recorrente gera a proxima ocorrencia, a nova task copia `reminde
 
 - Nao ha push notification.
 - Nao ha service worker.
+- Marcar como lido ou dispensar afeta apenas o estado interno no app; nao envia alerta para celular.
 - Nao ha email, SMS, WhatsApp ou integracao externa.
 - Lembretes dependem de o usuario abrir o app para ver `/notifications` ou `/today`.
 - A UI nao agenda regras complexas como "segunda e quarta".

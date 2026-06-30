@@ -35,6 +35,28 @@ async function updateNotificationStatus(
   }
 
   const { supabase, user } = await requireSession();
+  const { data: notification, error: notificationError } = await supabase
+    .from("notifications")
+    .select("id")
+    .eq("id", parsed.data.notificationId)
+    .eq("user_id", user.id)
+    .eq("type", "task_reminder")
+    .maybeSingle<{ id: string }>();
+
+  if (notificationError) {
+    const separator = returnTo.includes("?") ? "&" : "?";
+    redirect(
+      `${returnTo}${separator}error=${encodeURIComponent(notificationError.message)}`,
+    );
+  }
+
+  if (!notification) {
+    const separator = returnTo.includes("?") ? "&" : "?";
+    redirect(
+      `${returnTo}${separator}error=${encodeURIComponent("Lembrete nao encontrado.")}`,
+    );
+  }
+
   const { error } = await supabase
     .from("notifications")
     .update({ status })

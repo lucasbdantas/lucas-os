@@ -36,6 +36,21 @@ type ReminderNotification = NotificationRow & {
   payload: ReminderPayload | null;
 };
 
+const uuidRegex =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+
+function getTaskEditHref(notification: ReminderNotification) {
+  if (notification.source_url) {
+    return notification.source_url;
+  }
+
+  if (notification.source_ref && uuidRegex.test(notification.source_ref)) {
+    return `/tasks?edit=${notification.source_ref}#edit-task`;
+  }
+
+  return null;
+}
+
 function NotificationSection({
   emptyDescription,
   emptyTitle,
@@ -60,90 +75,102 @@ function NotificationSection({
         <EmptyState title={emptyTitle} description={emptyDescription} />
       ) : (
         <div className="grid gap-3">
-          {notifications.map((notification) => (
-            <article
-              className="rounded-md border border-zinc-200 bg-white p-4"
-              key={notification.id}
-            >
-              <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-medium text-zinc-950">
-                      {notification.title}
-                    </h3>
-                    <StatusBadge label={notification.status} />
+          {notifications.map((notification) => {
+            const taskEditHref = getTaskEditHref(notification);
+
+            return (
+              <article
+                className="rounded-md border border-zinc-200 bg-white p-4"
+                key={notification.id}
+              >
+                <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-medium text-zinc-950">
+                        {notification.title}
+                      </h3>
+                      <StatusBadge label={notification.status} />
+                    </div>
+                    {notification.body ? (
+                      <p className="mt-2 text-sm leading-6 text-zinc-600">
+                        {notification.body}
+                      </p>
+                    ) : null}
+                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-600">
+                      <span>
+                        Lembrar em{" "}
+                        {formatDateTime(
+                          notification.payload?.reminder_at,
+                          "Sem data",
+                          timezone,
+                        )}
+                      </span>
+                      <span>
+                        Prazo{" "}
+                        {formatDateTime(
+                          notification.payload?.due_at,
+                          "Sem data",
+                          timezone,
+                        )}
+                      </span>
+                    </div>
                   </div>
-                  {notification.body ? (
-                    <p className="mt-2 text-sm leading-6 text-zinc-600">
-                      {notification.body}
-                    </p>
-                  ) : null}
-                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-600">
-                    <span>
-                      Lembrar em{" "}
-                      {formatDateTime(
-                        notification.payload?.reminder_at,
-                        "Sem data",
-                        timezone,
-                      )}
-                    </span>
-                    <span>
-                      Prazo{" "}
-                      {formatDateTime(
-                        notification.payload?.due_at,
-                        "Sem data",
-                        timezone,
-                      )}
-                    </span>
+                  <div className="flex flex-wrap gap-2 md:justify-end">
+                    {taskEditHref ? (
+                      <>
+                        <Link
+                          className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                          href={taskEditHref}
+                        >
+                          Abrir task
+                        </Link>
+                        <Link
+                          className="rounded-md border border-blue-200 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50"
+                          href={taskEditHref}
+                        >
+                          Editar task
+                        </Link>
+                      </>
+                    ) : null}
+                    {notification.status === "unread" ? (
+                      <>
+                        <form action={markNotificationRead}>
+                          <input
+                            name="notificationId"
+                            type="hidden"
+                            value={notification.id}
+                          />
+                          <input
+                            name="returnTo"
+                            type="hidden"
+                            value="/notifications"
+                          />
+                          <button className="rounded-md border border-blue-200 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50">
+                            Marcar como lida
+                          </button>
+                        </form>
+                        <form action={dismissNotification}>
+                          <input
+                            name="notificationId"
+                            type="hidden"
+                            value={notification.id}
+                          />
+                          <input
+                            name="returnTo"
+                            type="hidden"
+                            value="/notifications"
+                          />
+                          <button className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50">
+                            Dispensar
+                          </button>
+                        </form>
+                      </>
+                    ) : null}
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2 md:justify-end">
-                  {notification.source_url ? (
-                    <Link
-                      className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-                      href={notification.source_url}
-                    >
-                      Abrir task
-                    </Link>
-                  ) : null}
-                  {notification.status === "unread" ? (
-                    <>
-                      <form action={markNotificationRead}>
-                        <input
-                          name="notificationId"
-                          type="hidden"
-                          value={notification.id}
-                        />
-                        <input
-                          name="returnTo"
-                          type="hidden"
-                          value="/notifications"
-                        />
-                        <button className="rounded-md border border-blue-200 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50">
-                          Marcar lido
-                        </button>
-                      </form>
-                      <form action={dismissNotification}>
-                        <input
-                          name="notificationId"
-                          type="hidden"
-                          value={notification.id}
-                        />
-                        <input
-                          name="returnTo"
-                          type="hidden"
-                          value="/notifications"
-                        />
-                        <button className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50">
-                          Dispensar
-                        </button>
-                      </form>
-                    </>
-                  ) : null}
-                </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       )}
     </section>
