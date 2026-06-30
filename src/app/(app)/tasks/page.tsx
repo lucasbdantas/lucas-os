@@ -1,11 +1,15 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { TaskForm } from "@/components/tasks/task-form";
+import {
+  TaskForm,
+  type EditableTaskValues,
+} from "@/components/tasks/task-form";
 import { TaskList, type TaskListItem } from "@/components/tasks/task-list";
 import { requireSession } from "@/lib/supabase/require-session";
 
 type TasksPageProps = {
   searchParams: Promise<{
+    edit?: string;
     error?: string;
   }>;
 };
@@ -23,19 +27,10 @@ type ProjectRow = {
   domain_id: string;
 };
 
-type TaskRow = {
-  id: string;
-  title: string;
-  notes: string | null;
-  status: string;
-  due_date: string | null;
-  due_time: string | null;
-  priority: string;
-  energy_required: string | null;
-  context: string | null;
-  domain_id: string;
-  project_id: string | null;
-};
+type TaskRow = EditableTaskValues;
+
+const uuidRegex =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function decorateTasks(
   tasks: TaskRow[],
@@ -52,51 +47,74 @@ function decorateTasks(
 }
 
 export default async function TasksPage({ searchParams }: TasksPageProps) {
-  const { error: pageError } = await searchParams;
+  const { edit, error: pageError } = await searchParams;
   const { supabase } = await requireSession();
 
-  const [
-    domainsResult,
-    projectsResult,
-    openTasksResult,
-    closedTasksResult,
-  ] = await Promise.all([
-    supabase
-      .from("domains")
-      .select("id,name,is_system,active")
-      .order("is_system", { ascending: false })
-      .order("name", { ascending: true })
-      .returns<DomainRow[]>(),
-    supabase
-      .from("projects")
-      .select("id,name,domain_id")
-      .in("status", ["active", "waiting"])
-      .order("name", { ascending: true })
-      .returns<ProjectRow[]>(),
-    supabase
-      .from("tasks")
-      .select(
-        "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,created_at",
-      )
-      .in("status", ["todo", "doing", "waiting"])
-      .order("due_date", { ascending: true, nullsFirst: false })
-      .order("created_at", { ascending: false })
-      .returns<TaskRow[]>(),
-    supabase
-      .from("tasks")
-      .select(
-        "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,completed_at",
-      )
-      .in("status", ["done", "canceled"])
-      .order("completed_at", { ascending: false, nullsFirst: false })
-      .limit(10)
-      .returns<TaskRow[]>(),
-  ]);
+  const [domainsResult, projectsResult, openTasksResult, closedTasksResult] =
+    await Promise.all([
+      supabase
+        .from("domains")
+        .select("id,name,is_system,active")
+        .order("is_system", { ascending: false })
+        .order("name", { ascending: true })
+        .returns<DomainRow[]>(),
+      supabase
+        .from("projects")
+        .select("id,name,domain_id")
+        .in("status", ["active", "waiting"])
+        .order("name", { ascending: true })
+        .returns<ProjectRow[]>(),
+      supabase
+        .from("tasks")
+        .select(
+          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,created_at",
+        )
+        .in("status", ["todo", "doing", "waiting"])
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: false })
+        .returns<TaskRow[]>(),
+      supabase
+        .from("tasks")
+        .select(
+          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,completed_at",
+        )
+        .in("status", ["done", "canceled"])
+        .order("completed_at", { ascending: false, nullsFirst: false })
+        .limit(10)
+        .returns<TaskRow[]>(),
+    ]);
 
   if (domainsResult.error) throw new Error(domainsResult.error.message);
   if (projectsResult.error) throw new Error(projectsResult.error.message);
   if (openTasksResult.error) throw new Error(openTasksResult.error.message);
   if (closedTasksResult.error) throw new Error(closedTasksResult.error.message);
+
+  let editTask: TaskRow | null = null;
+  let editError: string | null = null;
+
+  if (edit) {
+    if (!uuidRegex.test(edit)) {
+      editError = "Tarefa invalida para edicao.";
+    } else {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select(
+          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id",
+        )
+        .eq("id", edit)
+        .maybeSingle<TaskRow>();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!data) {
+        editError = "Tarefa nao encontrada ou sem permissao.";
+      } else {
+        editTask = data;
+      }
+    }
+  }
 
   const domainNameById = new Map(
     domainsResult.data.map((domain) => [domain.id, domain.name]),
@@ -111,19 +129,44 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
   const selectableDomains = domainsResult.data.filter(
     (domain) => domain.active || (domain.is_system && domain.name === "Inbox"),
   );
+  const currentEditDomainIsSelectable = editTask
+    ? selectableDomains.some((domain) => domain.id === editTask.domain_id)
+    : true;
+  const visibleError = pageError ?? editError;
 
   return (
     <main className="px-6 py-8">
       <PageHeader
         eyebrow="Operacional"
         title="Tasks"
-        description="Criação manual mínima e leitura real via Supabase Auth + RLS."
+        description="Criacao manual, edicao basica e leitura real via Supabase Auth + RLS."
       />
 
-      {pageError ? (
+      {visibleError ? (
         <p className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {pageError}
+          {visibleError}
         </p>
+      ) : null}
+
+      {editTask ? (
+        <section className="mt-8" id="edit-task">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <h2 className="font-semibold text-zinc-950">Editar tarefa</h2>
+            <StatusBadge label="manual" />
+          </div>
+          {!currentEditDomainIsSelectable ? (
+            <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              O dominio atual desta tarefa esta inativo. Escolha um dominio
+              ativo ou Inbox antes de salvar.
+            </p>
+          ) : null}
+          <TaskForm
+            domains={selectableDomains}
+            initialTask={editTask}
+            projects={projectOptions}
+            returnTo="/tasks"
+          />
+        </section>
       ) : null}
 
       <section className="mt-8">
@@ -141,7 +184,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       <section className="mt-10">
         <h2 className="mb-3 font-semibold text-zinc-950">Tarefas abertas</h2>
         <TaskList
-          emptyDescription="Crie uma tarefa acima para começar a validar o fluxo manual."
+          emptyDescription="Crie uma tarefa acima para comecar a validar o fluxo manual."
           emptyTitle="Nenhuma tarefa aberta"
           returnTo="/tasks"
           tasks={decorateTasks(
@@ -155,10 +198,10 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       <section className="mt-10">
         <h2 className="mb-3 font-semibold text-zinc-950">Fechadas recentes</h2>
         <TaskList
-          emptyDescription="Tarefas concluídas ou canceladas aparecerão aqui."
+          emptyDescription="Tarefas concluidas ou canceladas aparecerao aqui."
           emptyTitle="Nenhuma tarefa fechada recentemente"
           returnTo="/tasks"
-          showActions={false}
+          showStatusActions={false}
           tasks={decorateTasks(
             closedTasksResult.data,
             domainNameById,

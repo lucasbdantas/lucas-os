@@ -23,6 +23,7 @@ type TaskListProps = {
   emptyDescription: string;
   returnTo: string;
   showActions?: boolean;
+  showStatusActions?: boolean;
 };
 
 function getPriorityTone(priority: string) {
@@ -39,6 +40,7 @@ export function TaskList({
   emptyDescription,
   returnTo,
   showActions = true,
+  showStatusActions = true,
 }: TaskListProps) {
   if (tasks.length === 0) {
     return <EmptyState title={emptyTitle} description={emptyDescription} />;
@@ -69,10 +71,14 @@ export function TaskList({
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-600">
                 <span>
                   Prazo: {formatDate(task.due_date)}
-                  {task.due_time ? ` às ${task.due_time.slice(0, 5)}` : ""}
+                  {task.due_time ? ` as ${task.due_time.slice(0, 5)}` : ""}
                 </span>
-                {task.domainName ? <span>Domínio: {task.domainName}</span> : null}
-                {task.projectName ? <span>Projeto: {task.projectName}</span> : null}
+                {task.domainName ? (
+                  <span>Dominio: {task.domainName}</span>
+                ) : null}
+                {task.projectName ? (
+                  <span>Projeto: {task.projectName}</span>
+                ) : null}
                 {task.energy_required ? (
                   <span>Energia: {task.energy_required}</span>
                 ) : null}
@@ -80,7 +86,11 @@ export function TaskList({
               </div>
             </div>
             {showActions ? (
-              <TaskActions taskId={task.id} returnTo={returnTo} />
+              <TaskActions
+                returnTo={returnTo}
+                showStatusActions={showStatusActions}
+                taskId={task.id}
+              />
             ) : null}
           </div>
         </article>
