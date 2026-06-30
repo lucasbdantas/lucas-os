@@ -12,6 +12,7 @@ type TasksPageProps = {
     domain?: string;
     edit?: string;
     error?: string;
+    notice?: string;
     project?: string;
   }>;
 };
@@ -49,7 +50,13 @@ function decorateTasks(
 }
 
 export default async function TasksPage({ searchParams }: TasksPageProps) {
-  const { domain, edit, error: pageError, project } = await searchParams;
+  const {
+    domain,
+    edit,
+    error: pageError,
+    notice: pageNotice,
+    project,
+  } = await searchParams;
   const { supabase } = await requireSession();
 
   const [domainsResult, projectsResult, openTasksResult, closedTasksResult] =
@@ -69,7 +76,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       supabase
         .from("tasks")
         .select(
-          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,recurrence_type,recurrence_interval,recurrence_anchor_date,recurrence_end_date,created_at",
+          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,recurrence_type,recurrence_interval,recurrence_anchor_date,recurrence_end_date,reminder_offsets,created_at",
         )
         .in("status", ["todo", "doing", "waiting"])
         .order("due_date", { ascending: true, nullsFirst: false })
@@ -78,7 +85,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       supabase
         .from("tasks")
         .select(
-          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,recurrence_type,recurrence_interval,recurrence_anchor_date,recurrence_end_date,completed_at",
+          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,recurrence_type,recurrence_interval,recurrence_anchor_date,recurrence_end_date,reminder_offsets,completed_at",
         )
         .in("status", ["done", "canceled"])
         .order("completed_at", { ascending: false, nullsFirst: false })
@@ -101,7 +108,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       const { data, error } = await supabase
         .from("tasks")
         .select(
-          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,recurrence_type,recurrence_interval,recurrence_anchor_date,recurrence_end_date",
+          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,recurrence_type,recurrence_interval,recurrence_anchor_date,recurrence_end_date,reminder_offsets",
         )
         .eq("id", edit)
         .maybeSingle<TaskRow>();
@@ -183,6 +190,12 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       {visibleError ? (
         <p className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {visibleError}
+        </p>
+      ) : null}
+
+      {pageNotice ? (
+        <p className="mt-6 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          {pageNotice}
         </p>
       ) : null}
 

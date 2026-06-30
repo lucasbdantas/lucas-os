@@ -14,6 +14,7 @@ export function formatDate(date: string | null | undefined) {
 export function formatDateTime(
   value: string | null | undefined,
   fallback = "—",
+  timeZone = "America/Sao_Paulo",
 ) {
   if (!value) {
     return fallback;
@@ -28,7 +29,7 @@ export function formatDateTime(
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
     timeStyle: "short",
-    timeZone: "America/Sao_Paulo",
+    timeZone,
   }).format(date);
 }
 

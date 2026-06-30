@@ -15,6 +15,7 @@ export type TaskListItem = {
   energy_required: string | null;
   context: string | null;
   recurrence_type?: string | null;
+  reminder_offsets?: number[] | null;
   domainName?: string;
   projectName?: string;
 };
@@ -79,6 +80,9 @@ export function TaskList({
                 />
                 {getTaskRecurrenceLabel(task.recurrence_type) ? (
                   <StatusBadge label={getTaskRecurrenceLabel(task.recurrence_type)!} />
+                ) : null}
+                {task.reminder_offsets?.length ? (
+                  <StatusBadge label="Lembrete" tone="amber" />
                 ) : null}
               </div>
               {task.notes ? (

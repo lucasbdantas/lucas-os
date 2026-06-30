@@ -4,6 +4,7 @@ import { logout } from "@/lib/auth/actions";
 const navItems = [
   { href: "/today", label: "Today" },
   { href: "/review", label: "Review" },
+  { href: "/notifications", label: "Notificações" },
   { href: "/capture", label: "Capture" },
   { href: "/inbox", label: "Inbox" },
   { href: "/domains", label: "Domains" },
@@ -14,10 +15,15 @@ const navItems = [
 
 type AppShellProps = {
   children: React.ReactNode;
+  notificationCount?: number;
   userEmail?: string;
 };
 
-export function AppShell({ children, userEmail }: AppShellProps) {
+export function AppShell({
+  children,
+  notificationCount = 0,
+  userEmail,
+}: AppShellProps) {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-950">
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-zinc-200 bg-white px-4 py-5 md:flex md:flex-col">
@@ -36,6 +42,9 @@ export function AppShell({ children, userEmail }: AppShellProps) {
               key={item.href}
             >
               {item.label}
+              {item.href === "/notifications" && notificationCount > 0
+                ? ` (${notificationCount})`
+                : ""}
             </Link>
           ))}
         </nav>
@@ -63,14 +72,16 @@ export function AppShell({ children, userEmail }: AppShellProps) {
 
       <div className="min-h-screen pb-20 md:pl-64 md:pb-0">{children}</div>
 
-      <nav className="fixed inset-x-0 bottom-0 grid grid-cols-8 border-t border-zinc-200 bg-white md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 grid grid-cols-9 border-t border-zinc-200 bg-white md:hidden">
         {navItems.map((item) => (
           <Link
             className="px-1 py-3 text-center text-xs font-medium text-zinc-700"
             href={item.href}
             key={item.href}
           >
-            {item.label}
+            {item.href === "/notifications" && notificationCount > 0
+              ? `${item.label} (${notificationCount})`
+              : item.label}
           </Link>
         ))}
       </nav>

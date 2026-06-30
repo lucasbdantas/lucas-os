@@ -29,6 +29,7 @@ export type EditableTaskValues = {
   recurrence_interval: number;
   recurrence_anchor_date: string | null;
   recurrence_end_date: string | null;
+  reminder_offsets: number[];
 };
 
 type TaskFormProps = {
@@ -297,6 +298,39 @@ export function TaskForm({
                 Ao concluir uma task recorrente com data, o Lucas OS cria a
                 próxima ocorrência a partir do prazo atual. Sem data, nenhuma
                 próxima ocorrência é criada automaticamente.
+              </p>
+            </fieldset>
+
+            <fieldset className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+              <legend className="px-1 text-sm font-medium text-zinc-700">
+                Lembretes
+              </legend>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {[
+                  { label: "Na hora", value: 0 },
+                  { label: "15 minutos antes", value: 15 },
+                  { label: "1 hora antes", value: 60 },
+                  { label: "1 dia antes", value: 1440 },
+                ].map((option) => (
+                  <label
+                    className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700"
+                    key={option.value}
+                  >
+                    <input
+                      defaultChecked={initialTask?.reminder_offsets?.includes(
+                        option.value,
+                      )}
+                      name="reminderOffsets"
+                      type="checkbox"
+                      value={option.value}
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </div>
+              <p className="mt-2 text-xs leading-5 text-zinc-500">
+                Lembretes internos só são gerados quando a task tem data e
+                horário. Não há push notification nesta versão.
               </p>
             </fieldset>
           </>

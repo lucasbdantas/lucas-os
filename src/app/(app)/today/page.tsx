@@ -8,7 +8,12 @@ import {
   toDateOnlyInTimezone,
 } from "@/lib/app-settings/preferences";
 import { getAppPreferencesForUser } from "@/lib/app-settings/server";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
+import {
+  isReminderOverdue,
+  parseReminderPayload,
+  type ReminderPayload,
+} from "@/lib/reminders/reminders";
 import { requireSession } from "@/lib/supabase/require-session";
 import { getRecurrenceLabel } from "@/lib/tasks/recurrence";
 
@@ -44,6 +49,18 @@ type TaskRow = {
 type CountResult = {
   count: number | null;
   error: { message: string } | null;
+};
+
+type NotificationRow = {
+  id: string;
+  title: string;
+  body: string | null;
+  source_url: string | null;
+  undo_payload: unknown;
+};
+
+type ReminderRow = NotificationRow & {
+  payload: ReminderPayload;
 };
 
 const openTaskStatuses = ["todo", "doing", "waiting"];
@@ -243,6 +260,7 @@ export default async function TodayPage() {
     upcomingProjectsResult,
     activeProjectsResult,
     openProjectTasksResult,
+    remindersResult,
     domainsResult,
     projectsForNamesResult,
   ] = await Promise.all([
@@ -304,6 +322,14 @@ export default async function TodayPage() {
       .in("status", openTaskStatuses)
       .not("project_id", "is", null)
       .returns<Array<{ project_id: string | null }>>(),
+    supabase
+      .from("notifications")
+      .select("id,title,body,source_url,undo_payload")
+      .eq("type", "task_reminder")
+      .eq("status", "unread")
+      .order("created_at", { ascending: false })
+      .limit(50)
+      .returns<NotificationRow[]>(),
     supabase.from("domains").select("id,name").returns<DomainRow[]>(),
     supabase
       .from("projects")
@@ -328,6 +354,9 @@ export default async function TodayPage() {
   }
   if (openProjectTasksResult.error) {
     throw new Error(openProjectTasksResult.error.message);
+  }
+  if (remindersResult.error) {
+    throw new Error(remindersResult.error.message);
   }
   if (domainsResult.error) {
     throw new Error(domainsResult.error.message);
@@ -361,6 +390,25 @@ export default async function TodayPage() {
     0,
     projectDisplayLimit,
   );
+  const nowIso = new Date().toISOString();
+  const todayReminders = remindersResult.data
+    .map((notification) => ({
+      ...notification,
+      payload: parseReminderPayload(notification.undo_payload),
+    }))
+    .filter(
+      (notification): notification is ReminderRow =>
+        Boolean(notification.payload) &&
+        (isReminderOverdue(notification.payload!.reminder_at, nowIso) ||
+          toDateOnlyInTimezone(
+            preferences.timezone,
+            new Date(notification.payload!.reminder_at),
+          ) === today),
+    )
+    .sort((first, second) =>
+      first.payload.reminder_at.localeCompare(second.payload.reminder_at),
+    )
+    .slice(0, isCompact ? 3 : 5);
 
   return (
     <main className="px-6 py-8">
@@ -391,6 +439,68 @@ export default async function TodayPage() {
       </section>
 
       <div className={sectionGapClass}>
+        <section>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-semibold text-zinc-950">Lembretes</h2>
+              <p className="mt-1 text-sm text-zinc-600">
+                Lembretes internos vencidos ou previstos para hoje.
+              </p>
+            </div>
+            <Link
+              className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+              href="/notifications"
+            >
+              Abrir notificações
+            </Link>
+          </div>
+
+          {todayReminders.length === 0 ? (
+            <EmptyState
+              description="Nenhum lembrete interno vencido ou para hoje."
+              title="Sem lembretes"
+            />
+          ) : (
+            <div className="grid gap-3">
+              {todayReminders.map((reminder) => (
+                <article
+                  className="rounded-md border border-zinc-200 bg-white p-4"
+                  key={reminder.id}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-medium text-zinc-950">
+                        {reminder.title}
+                      </h3>
+                      {reminder.body ? (
+                        <p className="mt-1 text-sm text-zinc-600">
+                          {reminder.body}
+                        </p>
+                      ) : null}
+                      <p className="mt-2 text-sm text-zinc-600">
+                        Lembrar em{" "}
+                        {formatDateTime(
+                          reminder.payload.reminder_at,
+                          "Sem data",
+                          preferences.timezone,
+                        )}
+                      </p>
+                    </div>
+                    {reminder.source_url ? (
+                      <Link
+                        className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                        href={reminder.source_url}
+                      >
+                        Abrir task
+                      </Link>
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
         <TaskSection
           description="Tasks abertas com data anterior a hoje."
           domainNameById={domainNameById}

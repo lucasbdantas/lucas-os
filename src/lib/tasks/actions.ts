@@ -3,6 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { getAppPreferencesForUser } from "@/lib/app-settings/server";
+import {
+  buildReminderNotifications,
+  normalizeReminderOffsets,
+  type ReminderOffset,
+} from "@/lib/reminders/reminders";
 import { requireSession } from "@/lib/supabase/require-session";
 import {
   getNextOccurrenceDate,
@@ -52,6 +58,10 @@ const recurrenceIntervalSchema = z
   .transform((value) => (value === "" ? 1 : Number(value)))
   .pipe(z.number().int().min(1).max(365));
 
+const reminderOffsetsSchema = z
+  .array(z.unknown())
+  .transform((values) => normalizeReminderOffsets(values));
+
 const taskFieldsSchema = z.object({
   title: z.string().trim().min(1, "Informe um título.").max(220),
   notes: optionalText(4000),
@@ -69,6 +79,7 @@ const taskFieldsSchema = z.object({
   recurrenceInterval: recurrenceIntervalSchema,
   recurrenceAnchorDate: optionalDate,
   recurrenceEndDate: optionalDate,
+  reminderOffsets: reminderOffsetsSchema,
   returnTo: z.string().optional(),
 });
 
@@ -118,6 +129,7 @@ type RecurringTaskSnapshot = {
   recurrence_anchor_date: string | null;
   recurrence_end_date: string | null;
   recurrence_parent_id: string | null;
+  reminder_offsets: ReminderOffset[];
 };
 
 type NextOccurrenceStatus =
@@ -127,6 +139,8 @@ type NextOccurrenceStatus =
   | "none"
   | "past_end_date";
 
+type ReminderSyncStatus = "created" | "missing_due_time" | "none";
+
 function getReturnTo(value: string | undefined, fallback = "/tasks") {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
     return fallback;
@@ -135,9 +149,17 @@ function getReturnTo(value: string | undefined, fallback = "/tasks") {
   return value;
 }
 
-function redirectWithError(returnTo: string, message: string): never {
+function redirectWithParam(returnTo: string, key: "error" | "notice", message: string): never {
   const separator = returnTo.includes("?") ? "&" : "?";
-  redirect(`${returnTo}${separator}error=${encodeURIComponent(message)}`);
+  redirect(`${returnTo}${separator}${key}=${encodeURIComponent(message)}`);
+}
+
+function redirectWithError(returnTo: string, message: string): never {
+  redirectWithParam(returnTo, "error", message);
+}
+
+function redirectWithNotice(returnTo: string, message: string): never {
+  redirectWithParam(returnTo, "notice", message);
 }
 
 async function getInboxDomainId(
@@ -250,12 +272,88 @@ function revalidateTaskViews() {
   revalidatePath("/projects");
   revalidatePath("/today");
   revalidatePath("/review");
+  revalidatePath("/notifications");
+}
+
+async function dismissTaskReminderNotifications(
+  supabase: Awaited<ReturnType<typeof requireSession>>["supabase"],
+  userId: string,
+  taskId: string,
+) {
+  const { error } = await supabase
+    .from("notifications")
+    .update({ status: "dismissed" })
+    .eq("user_id", userId)
+    .eq("type", "task_reminder")
+    .eq("source_ref", taskId)
+    .eq("status", "unread");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+async function replaceTaskReminderNotifications(
+  supabase: Awaited<ReturnType<typeof requireSession>>["supabase"],
+  userId: string,
+  task: {
+    due_date: string | null;
+    due_time: string | null;
+    id: string;
+    reminder_offsets: ReminderOffset[];
+    status: string;
+    title: string;
+  },
+  timezone: Parameters<typeof buildReminderNotifications>[0]["timezone"],
+): Promise<ReminderSyncStatus> {
+  await dismissTaskReminderNotifications(supabase, userId, task.id);
+
+  if (
+    task.reminder_offsets.length === 0 ||
+    task.status === "done" ||
+    task.status === "canceled"
+  ) {
+    return "none";
+  }
+
+  const drafts = buildReminderNotifications({
+    dueDate: task.due_date,
+    dueTime: task.due_time,
+    offsets: task.reminder_offsets,
+    taskId: task.id,
+    taskTitle: task.title,
+    timezone,
+  });
+
+  if (drafts.length === 0) {
+    return "missing_due_time";
+  }
+
+  const { error } = await supabase.from("notifications").insert(
+    drafts.map((draft) => ({
+      body: draft.body,
+      source_ref: draft.sourceRef,
+      source_url: draft.sourceUrl,
+      status: "unread",
+      title: draft.title,
+      type: "task_reminder",
+      undo_payload: draft.payload,
+      user_id: userId,
+    })),
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return "created";
 }
 
 async function maybeCreateNextOccurrence(
   supabase: Awaited<ReturnType<typeof requireSession>>["supabase"],
   userId: string,
   task: RecurringTaskSnapshot,
+  timezone: Parameters<typeof buildReminderNotifications>[0]["timezone"],
 ): Promise<NextOccurrenceStatus> {
   const nextOccurrence = getNextOccurrenceDate({
     dueDate: task.due_date,
@@ -286,25 +384,37 @@ async function maybeCreateNextOccurrence(
     return "duplicate";
   }
 
-  const { error } = await supabase.from("tasks").insert({
-    user_id: userId,
-    domain_id: task.domain_id,
-    project_id: task.project_id,
-    title: task.title,
-    notes: task.notes,
-    status: "todo",
-    due_date: nextOccurrence.nextDueDate,
-    due_time: task.due_time,
-    priority: task.priority,
-    energy_required: task.energy_required,
-    context: task.context,
-    source: task.source,
-    recurrence_type: task.recurrence_type,
-    recurrence_interval: task.recurrence_interval,
-    recurrence_anchor_date: task.recurrence_anchor_date ?? task.due_date,
-    recurrence_end_date: task.recurrence_end_date,
-    recurrence_parent_id: recurrenceParentId,
-  });
+  const { data: nextTask, error } = await supabase
+    .from("tasks")
+    .insert({
+      user_id: userId,
+      domain_id: task.domain_id,
+      project_id: task.project_id,
+      title: task.title,
+      notes: task.notes,
+      status: "todo",
+      due_date: nextOccurrence.nextDueDate,
+      due_time: task.due_time,
+      priority: task.priority,
+      energy_required: task.energy_required,
+      context: task.context,
+      source: task.source,
+      recurrence_type: task.recurrence_type,
+      recurrence_interval: task.recurrence_interval,
+      recurrence_anchor_date: task.recurrence_anchor_date ?? task.due_date,
+      recurrence_end_date: task.recurrence_end_date,
+      recurrence_parent_id: recurrenceParentId,
+      reminder_offsets: task.reminder_offsets,
+    })
+    .select("id,title,status,due_date,due_time,reminder_offsets")
+    .single<{
+      due_date: string | null;
+      due_time: string | null;
+      id: string;
+      reminder_offsets: ReminderOffset[];
+      status: string;
+      title: string;
+    }>();
 
   if (error) {
     if (error.message.toLowerCase().includes("duplicate")) {
@@ -314,12 +424,25 @@ async function maybeCreateNextOccurrence(
     throw new Error(error.message);
   }
 
+  await replaceTaskReminderNotifications(supabase, userId, nextTask, timezone);
+
   return "created";
 }
 
 function getRecurringMissingDateMessage(status: NextOccurrenceStatus) {
   if (status === "missing_due_date") {
     return "Tarefa concluída, mas nenhuma próxima ocorrência foi criada porque ela não tem data.";
+  }
+
+  return null;
+}
+
+function getReminderMissingTimeMessage(
+  status: ReminderSyncStatus,
+  prefix: string,
+) {
+  if (status === "missing_due_time") {
+    return `${prefix}, mas nenhum lembrete foi gerado porque falta data ou horário.`;
   }
 
   return null;
@@ -341,6 +464,7 @@ export async function createTask(formData: FormData) {
     recurrenceInterval: formData.get("recurrenceInterval") ?? "1",
     recurrenceAnchorDate: formData.get("recurrenceAnchorDate") ?? "",
     recurrenceEndDate: formData.get("recurrenceEndDate") ?? "",
+    reminderOffsets: formData.getAll("reminderOffsets"),
     returnTo,
   });
 
@@ -352,7 +476,6 @@ export async function createTask(formData: FormData) {
   }
 
   const { supabase, user } = await requireSession();
-
   let domainId: string;
 
   try {
@@ -374,31 +497,58 @@ export async function createTask(formData: FormData) {
     redirectWithError(returnTo, message);
   }
 
+  const preferences = await getAppPreferencesForUser(supabase, user.id);
   const recurrence = normalizeRecurrenceFields(parsed.data);
-  const { error } = await supabase.from("tasks").insert({
-    user_id: user.id,
-    domain_id: domainId,
-    project_id: parsed.data.projectId,
-    title: parsed.data.title,
-    notes: parsed.data.notes,
-    due_date: parsed.data.dueDate,
-    due_time: parsed.data.dueTime,
-    priority: parsed.data.priority,
-    energy_required: parsed.data.energyRequired,
-    context: parsed.data.context,
-    status: "todo",
-    source: "manual",
-    recurrence_type: recurrence.recurrenceType,
-    recurrence_interval: recurrence.recurrenceInterval,
-    recurrence_anchor_date: recurrence.recurrenceAnchorDate,
-    recurrence_end_date: recurrence.recurrenceEndDate,
-  });
+  const { data: task, error } = await supabase
+    .from("tasks")
+    .insert({
+      user_id: user.id,
+      domain_id: domainId,
+      project_id: parsed.data.projectId,
+      title: parsed.data.title,
+      notes: parsed.data.notes,
+      due_date: parsed.data.dueDate,
+      due_time: parsed.data.dueTime,
+      priority: parsed.data.priority,
+      energy_required: parsed.data.energyRequired,
+      context: parsed.data.context,
+      status: "todo",
+      source: "manual",
+      recurrence_type: recurrence.recurrenceType,
+      recurrence_interval: recurrence.recurrenceInterval,
+      recurrence_anchor_date: recurrence.recurrenceAnchorDate,
+      recurrence_end_date: recurrence.recurrenceEndDate,
+      reminder_offsets: parsed.data.reminderOffsets,
+    })
+    .select("id,title,status,due_date,due_time,reminder_offsets")
+    .single<{
+      due_date: string | null;
+      due_time: string | null;
+      id: string;
+      reminder_offsets: ReminderOffset[];
+      status: string;
+      title: string;
+    }>();
 
   if (error) {
     redirectWithError(returnTo, error.message);
   }
 
+  const reminderStatus = await replaceTaskReminderNotifications(
+    supabase,
+    user.id,
+    task,
+    preferences.timezone,
+  );
+
   revalidateTaskViews();
+
+  const notice = getReminderMissingTimeMessage(reminderStatus, "Tarefa criada");
+
+  if (notice) {
+    redirectWithNotice(returnTo, notice);
+  }
+
   redirect(returnTo);
 }
 
@@ -419,6 +569,7 @@ export async function updateTask(formData: FormData) {
     recurrenceInterval: formData.get("recurrenceInterval") ?? "1",
     recurrenceAnchorDate: formData.get("recurrenceAnchorDate") ?? "",
     recurrenceEndDate: formData.get("recurrenceEndDate") ?? "",
+    reminderOffsets: formData.getAll("reminderOffsets"),
     status: formData.get("status") ?? "todo",
     returnTo,
   });
@@ -452,7 +603,7 @@ export async function updateTask(formData: FormData) {
   const { data: task, error: taskError } = await supabase
     .from("tasks")
     .select(
-      "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,source,completed_at,recurrence_type,recurrence_interval,recurrence_anchor_date,recurrence_end_date,recurrence_parent_id",
+      "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,source,completed_at,recurrence_type,recurrence_interval,recurrence_anchor_date,recurrence_end_date,recurrence_parent_id,reminder_offsets",
     )
     .eq("id", parsed.data.taskId)
     .eq("user_id", user.id)
@@ -472,6 +623,7 @@ export async function updateTask(formData: FormData) {
     ? (task.completed_at ?? new Date().toISOString())
     : null;
   const recurrence = normalizeRecurrenceFields(parsed.data);
+  const preferences = await getAppPreferencesForUser(supabase, user.id);
 
   const { error } = await supabase
     .from("tasks")
@@ -491,6 +643,7 @@ export async function updateTask(formData: FormData) {
       recurrence_interval: recurrence.recurrenceInterval,
       recurrence_anchor_date: recurrence.recurrenceAnchorDate,
       recurrence_end_date: recurrence.recurrenceEndDate,
+      reminder_offsets: parsed.data.reminderOffsets,
     })
     .eq("id", parsed.data.taskId)
     .eq("user_id", user.id);
@@ -499,28 +652,48 @@ export async function updateTask(formData: FormData) {
     redirectWithError(returnTo, error.message);
   }
 
+  const reminderStatus = await replaceTaskReminderNotifications(
+    supabase,
+    user.id,
+    {
+      due_date: parsed.data.dueDate,
+      due_time: parsed.data.dueTime,
+      id: parsed.data.taskId,
+      reminder_offsets: parsed.data.reminderOffsets,
+      status: parsed.data.status,
+      title: parsed.data.title,
+    },
+    preferences.timezone,
+  );
+
   let nextOccurrenceStatus: NextOccurrenceStatus = "none";
 
   if (parsed.data.status === "done" && task.status !== "done") {
     try {
-      nextOccurrenceStatus = await maybeCreateNextOccurrence(supabase, user.id, {
-        ...task,
-        title: parsed.data.title,
-        notes: parsed.data.notes,
-        status: parsed.data.status,
-        due_date: parsed.data.dueDate,
-        due_time: parsed.data.dueTime,
-        priority: parsed.data.priority,
-        energy_required: parsed.data.energyRequired,
-        context: parsed.data.context,
-        domain_id: parsed.data.domainId,
-        project_id: parsed.data.projectId,
-        completed_at: completedAt,
-        recurrence_type: recurrence.recurrenceType,
-        recurrence_interval: recurrence.recurrenceInterval,
-        recurrence_anchor_date: recurrence.recurrenceAnchorDate,
-        recurrence_end_date: recurrence.recurrenceEndDate,
-      });
+      nextOccurrenceStatus = await maybeCreateNextOccurrence(
+        supabase,
+        user.id,
+        {
+          ...task,
+          title: parsed.data.title,
+          notes: parsed.data.notes,
+          status: parsed.data.status,
+          due_date: parsed.data.dueDate,
+          due_time: parsed.data.dueTime,
+          priority: parsed.data.priority,
+          energy_required: parsed.data.energyRequired,
+          context: parsed.data.context,
+          domain_id: parsed.data.domainId,
+          project_id: parsed.data.projectId,
+          completed_at: completedAt,
+          recurrence_type: recurrence.recurrenceType,
+          recurrence_interval: recurrence.recurrenceInterval,
+          recurrence_anchor_date: recurrence.recurrenceAnchorDate,
+          recurrence_end_date: recurrence.recurrenceEndDate,
+          reminder_offsets: parsed.data.reminderOffsets,
+        },
+        preferences.timezone,
+      );
     } catch (error) {
       const message =
         error instanceof Error
@@ -538,6 +711,12 @@ export async function updateTask(formData: FormData) {
 
   if (missingDateMessage) {
     redirectWithError(returnTo, missingDateMessage);
+  }
+
+  const notice = getReminderMissingTimeMessage(reminderStatus, "Tarefa salva");
+
+  if (notice) {
+    redirectWithNotice(returnTo, notice);
   }
 
   redirect(returnTo);
@@ -569,7 +748,7 @@ async function updateTaskStatus(
   const { data: task, error: taskError } = await supabase
     .from("tasks")
     .select(
-      "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,source,completed_at,recurrence_type,recurrence_interval,recurrence_anchor_date,recurrence_end_date,recurrence_parent_id",
+      "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,source,completed_at,recurrence_type,recurrence_interval,recurrence_anchor_date,recurrence_end_date,recurrence_parent_id,reminder_offsets",
     )
     .eq("id", parsed.data.taskId)
     .eq("user_id", user.id)
@@ -583,6 +762,7 @@ async function updateTaskStatus(
     redirectWithError(returnTo, "Tarefa não encontrada.");
   }
 
+  const preferences = await getAppPreferencesForUser(supabase, user.id);
   const { error } = await supabase
     .from("tasks")
     .update({
@@ -604,6 +784,7 @@ async function updateTaskStatus(
         supabase,
         user.id,
         task,
+        preferences.timezone,
       );
     } catch (error) {
       const message =
@@ -614,6 +795,7 @@ async function updateTaskStatus(
     }
   }
 
+  await dismissTaskReminderNotifications(supabase, user.id, task.id);
   revalidateTaskViews();
 
   const missingDateMessage = getRecurringMissingDateMessage(

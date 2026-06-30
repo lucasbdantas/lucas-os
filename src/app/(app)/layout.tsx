@@ -23,5 +23,15 @@ export default async function OperationalLayout({
     redirect("/login");
   }
 
-  return <AppShell userEmail={user.email}>{children}</AppShell>;
+  const { count } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("type", "task_reminder")
+    .eq("status", "unread");
+
+  return (
+    <AppShell notificationCount={count ?? 0} userEmail={user.email}>
+      {children}
+    </AppShell>
+  );
 }
