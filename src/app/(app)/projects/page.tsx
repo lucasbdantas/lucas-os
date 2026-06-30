@@ -1,5 +1,8 @@
 import { PageHeader } from "@/components/layout/page-header";
-import { ProjectForm } from "@/components/projects/project-form";
+import {
+  ProjectForm,
+  type ProjectFormInitialProject,
+} from "@/components/projects/project-form";
 import {
   ProjectList,
   type MilestoneListItem,
@@ -10,6 +13,7 @@ import { requireSession } from "@/lib/supabase/require-session";
 
 type ProjectsPageProps = {
   searchParams: Promise<{
+    edit?: string;
     error?: string;
   }>;
 };
@@ -20,20 +24,13 @@ type DomainRow = {
   active: boolean;
 };
 
-type ProjectRow = {
-  id: string;
-  name: string;
-  description: string | null;
-  status: string;
-  type: string;
-  target_date: string | null;
-  domain_id: string;
-  success_definition: string | null;
-  failure_mode: string | null;
-};
+type ProjectRow = ProjectFormInitialProject;
+
+const uuidRegex =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
-  const { error: pageError } = await searchParams;
+  const { edit, error: pageError } = await searchParams;
   const { supabase } = await requireSession();
 
   const [domainsResult, projectsResult, milestonesResult] = await Promise.all([
@@ -45,7 +42,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     supabase
       .from("projects")
       .select(
-        "id,name,description,status,type,target_date,domain_id,success_definition,failure_mode",
+        "id,name,description,status,type,target_date,start_date,cadence_expected,domain_id,success_definition,failure_mode",
       )
       .order("target_date", { ascending: true, nullsFirst: false })
       .order("name", { ascending: true })
@@ -81,6 +78,30 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     milestones: milestonesByProjectId.get(project.id) ?? [],
   }));
 
+  let editProject: ProjectRow | null = null;
+  let editError: string | null = null;
+
+  if (edit) {
+    if (!uuidRegex.test(edit)) {
+      editError = "Projeto inválido para edição.";
+    } else {
+      editProject =
+        projectsResult.data.find((project) => project.id === edit) ?? null;
+      if (!editProject) {
+        editError = "Projeto não encontrado ou sem permissão.";
+      }
+    }
+  }
+
+  const editDomain = editProject
+    ? domainsResult.data.find((domain) => domain.id === editProject.domain_id)
+    : null;
+  const editDomains =
+    editDomain && !activeDomains.some((domain) => domain.id === editDomain.id)
+      ? [...activeDomains, editDomain]
+      : activeDomains;
+  const visibleError = pageError ?? editError;
+
   return (
     <main className="px-6 py-8">
       <PageHeader
@@ -89,10 +110,24 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
         description="CRUD manual mínimo de projetos e milestones via Supabase Auth + RLS."
       />
 
-      {pageError ? (
+      {visibleError ? (
         <p className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {pageError}
+          {visibleError}
         </p>
+      ) : null}
+
+      {editProject ? (
+        <section className="mt-8" id="edit-project">
+          <div className="mb-3 flex items-center gap-2">
+            <h2 className="font-semibold text-zinc-950">Editar projeto</h2>
+            <StatusBadge label="edição manual" tone="amber" />
+          </div>
+          <ProjectForm
+            domains={editDomains}
+            initialProject={editProject}
+            returnTo="/projects"
+          />
+        </section>
       ) : null}
 
       <section className="mt-8">

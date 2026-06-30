@@ -13,6 +13,8 @@ export type ProjectListItem = {
   status: string;
   type: string;
   target_date: string | null;
+  start_date: string | null;
+  cadence_expected: string | null;
   domain_id: string;
   success_definition: string | null;
   failure_mode: string | null;
@@ -55,6 +57,10 @@ function getNextActionHref(project: Pick<ProjectListItem, "id" | "domain_id">) {
   return `/tasks?domain=${project.domain_id}&project=${project.id}#task-form`;
 }
 
+function getEditHref(projectId: string) {
+  return `/projects?edit=${projectId}#edit-project`;
+}
+
 export function ProjectList({ projects, returnTo }: ProjectListProps) {
   if (projects.length === 0) {
     return (
@@ -85,8 +91,19 @@ export function ProjectList({ projects, returnTo }: ProjectListProps) {
                 <StatusBadge label={project.type} />
               </div>
               <p className="mt-2 text-sm text-zinc-600">
-                {project.domainName} - {formatDate(project.target_date)}
+                {project.domainName} - alvo {formatDate(project.target_date)}
               </p>
+              {project.start_date || project.cadence_expected ? (
+                <p className="mt-1 text-sm text-zinc-600">
+                  {project.start_date
+                    ? `Início ${formatDate(project.start_date)}`
+                    : null}
+                  {project.start_date && project.cadence_expected ? " - " : ""}
+                  {project.cadence_expected
+                    ? `cadência ${project.cadence_expected}`
+                    : null}
+                </p>
+              ) : null}
               {project.description ? (
                 <p className="mt-3 text-sm leading-6 text-zinc-600">
                   {project.description}
@@ -106,6 +123,12 @@ export function ProjectList({ projects, returnTo }: ProjectListProps) {
               ) : null}
             </div>
             <div className="flex flex-wrap gap-2 lg:justify-end">
+              <Link
+                className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                href={getEditHref(project.id)}
+              >
+                Editar
+              </Link>
               {["active", "waiting"].includes(project.status) ? (
                 <Link
                   className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"

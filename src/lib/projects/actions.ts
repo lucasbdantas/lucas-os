@@ -34,16 +34,24 @@ const optionalText = (maxLength: number) =>
     .max(maxLength)
     .transform((value) => (value === "" ? null : value));
 
-const createProjectSchema = z.object({
+const projectFieldsSchema = z.object({
   name: z.string().trim().min(1, "Informe o nome do projeto.").max(160),
   description: optionalText(4000),
   domainId: z.string().uuid("Escolha um domínio."),
   status: z.enum(projectStatusValues),
   type: z.enum(projectTypeValues),
   targetDate: optionalDate,
+  startDate: optionalDate,
+  cadenceExpected: optionalText(120),
   successDefinition: optionalText(4000),
   failureMode: optionalText(4000),
   returnTo: z.string().optional(),
+});
+
+const createProjectSchema = projectFieldsSchema;
+
+const updateProjectSchema = projectFieldsSchema.extend({
+  projectId: z.string().uuid(),
 });
 
 const projectStatusSchema = z.object({
@@ -65,6 +73,18 @@ const milestoneActionSchema = z.object({
   status: z.enum(["done", "canceled"]),
   returnTo: z.string().optional(),
 });
+
+type DomainIdentity = {
+  id: string;
+  name: string;
+  active: boolean;
+  is_system: boolean;
+};
+
+type ProjectIdentity = {
+  id: string;
+  domain_id: string;
+};
 
 function getReturnTo(value: string | undefined, fallback = "/projects") {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
@@ -93,6 +113,83 @@ function revalidateProjectViews() {
   revalidatePath("/today");
 }
 
+async function validateProjectDomain(
+  supabase: Awaited<ReturnType<typeof requireSession>>["supabase"],
+  userId: string,
+  domainId: string,
+  options?: { allowInactiveCurrentDomainId?: string },
+) {
+  const { data, error } = await supabase
+    .from("domains")
+    .select("id,name,active,is_system")
+    .eq("id", domainId)
+    .eq("user_id", userId)
+    .maybeSingle<DomainIdentity>();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) {
+    throw new Error("Domínio inválido.");
+  }
+
+  const isInbox = data.is_system && data.name === "Inbox";
+  const isCurrentInactiveDomain =
+    options?.allowInactiveCurrentDomainId === data.id;
+
+  if (!data.active && !isInbox && !isCurrentInactiveDomain) {
+    throw new Error("Escolha um domínio ativo ou use Inbox.");
+  }
+
+  return data;
+}
+
+async function getProjectIdentity(
+  supabase: Awaited<ReturnType<typeof requireSession>>["supabase"],
+  userId: string,
+  projectId: string,
+) {
+  const { data, error } = await supabase
+    .from("projects")
+    .select("id,domain_id")
+    .eq("id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle<ProjectIdentity>();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) {
+    throw new Error("Projeto não encontrado ou sem permissão.");
+  }
+
+  return data;
+}
+
+async function assertProjectCanMoveDomain(
+  supabase: Awaited<ReturnType<typeof requireSession>>["supabase"],
+  userId: string,
+  projectId: string,
+) {
+  const { count, error } = await supabase
+    .from("tasks")
+    .select("id", { count: "exact", head: true })
+    .eq("project_id", projectId)
+    .eq("user_id", userId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if ((count ?? 0) > 0) {
+    throw new Error(
+      "Este projeto já tem tasks associadas. Para evitar inconsistência, o domínio não pode ser alterado agora.",
+    );
+  }
+}
+
 export async function createProject(formData: FormData) {
   const returnTo = getReturnTo(String(formData.get("returnTo") ?? "/projects"));
   const parsed = createProjectSchema.safeParse({
@@ -102,6 +199,8 @@ export async function createProject(formData: FormData) {
     status: formData.get("status") ?? "active",
     type: formData.get("type") ?? "deadline",
     targetDate: formData.get("targetDate") ?? "",
+    startDate: formData.get("startDate") ?? "",
+    cadenceExpected: formData.get("cadenceExpected") ?? "",
     successDefinition: formData.get("successDefinition") ?? "",
     failureMode: formData.get("failureMode") ?? "",
     returnTo,
@@ -115,6 +214,15 @@ export async function createProject(formData: FormData) {
   }
 
   const { supabase, user } = await requireSession();
+
+  try {
+    await validateProjectDomain(supabase, user.id, parsed.data.domainId);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Erro ao validar domínio.";
+    redirectWithError(returnTo, message);
+  }
+
   const { error } = await supabase.from("projects").insert({
     user_id: user.id,
     domain_id: parsed.data.domainId,
@@ -123,11 +231,89 @@ export async function createProject(formData: FormData) {
     status: parsed.data.status,
     type: parsed.data.type,
     target_date: parsed.data.targetDate,
+    start_date: parsed.data.startDate,
+    cadence_expected: parsed.data.cadenceExpected,
     success_definition: parsed.data.successDefinition,
     failure_mode: parsed.data.failureMode,
     completed_at:
       parsed.data.status === "completed" ? new Date().toISOString() : null,
   });
+
+  if (error) {
+    redirectWithError(returnTo, getFriendlySupabaseError(error.message));
+  }
+
+  revalidateProjectViews();
+  redirect(returnTo);
+}
+
+export async function updateProject(formData: FormData) {
+  const returnTo = getReturnTo(String(formData.get("returnTo") ?? "/projects"));
+  const parsed = updateProjectSchema.safeParse({
+    projectId: formData.get("projectId"),
+    name: formData.get("name"),
+    description: formData.get("description") ?? "",
+    domainId: formData.get("domainId") ?? "",
+    status: formData.get("status") ?? "active",
+    type: formData.get("type") ?? "deadline",
+    targetDate: formData.get("targetDate") ?? "",
+    startDate: formData.get("startDate") ?? "",
+    cadenceExpected: formData.get("cadenceExpected") ?? "",
+    successDefinition: formData.get("successDefinition") ?? "",
+    failureMode: formData.get("failureMode") ?? "",
+    returnTo,
+  });
+
+  if (!parsed.success) {
+    redirectWithError(
+      returnTo,
+      parsed.error.issues[0]?.message ?? "Projeto inválido.",
+    );
+  }
+
+  const { supabase, user } = await requireSession();
+
+  try {
+    const currentProject = await getProjectIdentity(
+      supabase,
+      user.id,
+      parsed.data.projectId,
+    );
+    await validateProjectDomain(supabase, user.id, parsed.data.domainId, {
+      allowInactiveCurrentDomainId: currentProject.domain_id,
+    });
+
+    if (currentProject.domain_id !== parsed.data.domainId) {
+      await assertProjectCanMoveDomain(
+        supabase,
+        user.id,
+        parsed.data.projectId,
+      );
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Erro ao validar projeto.";
+    redirectWithError(returnTo, message);
+  }
+
+  const { error } = await supabase
+    .from("projects")
+    .update({
+      domain_id: parsed.data.domainId,
+      name: parsed.data.name,
+      description: parsed.data.description,
+      status: parsed.data.status,
+      type: parsed.data.type,
+      target_date: parsed.data.targetDate,
+      start_date: parsed.data.startDate,
+      cadence_expected: parsed.data.cadenceExpected,
+      success_definition: parsed.data.successDefinition,
+      failure_mode: parsed.data.failureMode,
+      completed_at:
+        parsed.data.status === "completed" ? new Date().toISOString() : null,
+    })
+    .eq("id", parsed.data.projectId)
+    .eq("user_id", user.id);
 
   if (error) {
     redirectWithError(returnTo, getFriendlySupabaseError(error.message));
