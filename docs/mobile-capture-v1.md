@@ -1,70 +1,71 @@
 # Mobile Capture V1
 
-Mobile Capture V1 has two capture modes:
+Mobile Capture V1 tem dois modos de captura:
 
-1. External endpoint with token: `POST /api/capture`.
-2. Authenticated browser screen: `/quick-capture`.
+1. Endpoint externo com token: `POST /api/capture`.
+2. Tela autenticada no navegador: `/quick-capture`.
 
-Use the endpoint when a mobile shortcut or webhook needs to capture without a browser login. Use `/quick-capture` when the phone browser can log in normally.
+Use o endpoint quando um atalho mobile ou webhook precisar capturar sem login no navegador. Use `/quick-capture` quando o navegador do celular puder fazer login normalmente.
 
-## What exists
+## O Que Existe
 
-- Authenticated users can create capture tokens in `/settings`.
-- Tokens are stored only as SHA-256 hashes in `capture_tokens`.
-- The full token is shown only once, immediately after creation.
-- Existing tokens show only name, prefix, created date, last used date, and revoked state.
-- Tokens can be revoked from `/settings`.
-- `POST /api/capture` accepts text captures without a browser login.
-- `/quick-capture` accepts text captures from an authenticated browser session.
-- The app does not use `SUPABASE_SERVICE_ROLE_KEY`.
-- The route handler does not use `DATABASE_URL`.
+- Usuários autenticados podem criar tokens de captura em `/settings`.
+- Tokens são armazenados apenas como hashes SHA-256 em `capture_tokens`.
+- O token completo aparece apenas uma vez, logo após a criação.
+- Tokens existentes mostram apenas nome, prefixo, data de criação, último uso e estado revogado.
+- Tokens podem ser revogados em `/settings`.
+- `POST /api/capture` aceita capturas de texto sem login no navegador.
+- `/quick-capture` aceita capturas de texto por sessão autenticada.
+- Lucas OS pode ser adicionado à tela inicial como PWA simples.
+- O app não usa `SUPABASE_SERVICE_ROLE_KEY`.
+- O route handler não usa `DATABASE_URL`.
 
-## Mode A: external endpoint with token
+## Modo A: Endpoint Externo Com Token
 
-Use this mode for Android/Samsung shortcuts, iOS Shortcuts, or simple webhooks.
+Use este modo para atalhos Android/Samsung, iOS Shortcuts ou webhooks simples.
 
-### Create a token
+### Criar Um Token
 
-1. Log in to Lucas OS.
-2. Open `/settings`.
-3. In `Captura externa`, create a token with a name such as `Samsung Shortcut`, `Android Shortcut`, or `iPhone Shortcut`.
-4. Copy the full token immediately.
+1. Faça login no Lucas OS.
+2. Abra `/settings`.
+3. Em `Captura externa`, crie um token com um nome como `Samsung Shortcut`, `Android Shortcut` ou `iPhone Shortcut`.
+4. Copie o token completo imediatamente.
 
-The full token is not shown again after that first response. If it is lost, revoke it and create a new one.
+O token completo não aparece novamente depois dessa primeira resposta. Se ele for perdido, revogue o token antigo e crie outro.
 
-Important:
+Importante:
 
-- The token prefix shown in the list does not authenticate.
-- The token name does not authenticate.
-- Only the complete token can authorize external capture.
+- O prefixo mostrado na lista não autentica.
+- O nome do token não autentica.
+- Apenas o token completo autoriza captura externa.
 
-### Endpoint URLs
+### URLs Do Endpoint
 
-Use the URL your phone can reach.
+Use a URL que o celular consegue alcançar.
 
-Local browser on the computer:
+Navegador local no computador:
 
 ```txt
 http://localhost:3000/api/capture
 ```
 
-Phone on the same Wi-Fi as the computer:
+Celular na mesma rede Wi-Fi do computador:
 
 ```txt
 http://<IP_DO_COMPUTADOR>:3000/api/capture
 ```
 
-Future deployed app:
+App publicado futuramente:
 
 ```txt
 https://seu-dominio.com/api/capture
 ```
 
-On a phone, `localhost` means the phone itself, not your PC. For local mobile tests, use the PC's local network IP.
+No celular, `localhost` aponta para o próprio celular, não para o PC. Para testes mobile locais, use o IP local do PC.
 
-### Request format
+### Formato Da Requisição
 
-Method:
+Método:
 
 ```txt
 POST
@@ -86,24 +87,24 @@ Body:
 }
 ```
 
-Allowed external sources:
+Sources externos aceitos:
 
 - `ios_shortcut`
 - `android_shortcut`
 - `webhook`
 
-Any unsupported source falls back to `webhook`.
+Qualquer source não suportado cai em `webhook`.
 
-Text rules:
+Regras do texto:
 
-- required;
-- trimmed before insert;
-- empty text is rejected;
-- max length is 5000 characters.
+- obrigatório;
+- recebe `trim()` antes de inserir;
+- texto vazio é rejeitado;
+- limite máximo de 5000 caracteres.
 
-### Test with curl
+### Testar Com Curl
 
-Use a local dev server and replace `<TOKEN>` with the complete token copied from `/settings`.
+Use um servidor local de desenvolvimento e substitua `<TOKEN>` pelo token completo copiado de `/settings`.
 
 ```bash
 curl -X POST http://localhost:3000/api/capture \
@@ -112,70 +113,108 @@ curl -X POST http://localhost:3000/api/capture \
   -d "{\"text\":\"comprar pilha amanhã\",\"source\":\"android_shortcut\"}"
 ```
 
-Expected response:
+Resposta esperada:
 
 ```json
 { "ok": true }
 ```
 
-Then open `/capture` or `/today` and confirm the pending capture appears.
+Depois abra `/capture` ou `/today` e confirme que a captura pendente apareceu.
 
-## Mode B: authenticated browser quick capture
+## Modo B: Quick Capture Autenticada
 
-Use this mode when the phone can open Lucas OS in a browser and log in.
+Use este modo quando o celular puder abrir Lucas OS no navegador e fazer login.
 
-Local computer:
+Computador local:
 
 ```txt
 http://localhost:3000/quick-capture
 ```
 
-Phone on the same Wi-Fi as the computer:
+Celular na mesma rede Wi-Fi do computador:
 
 ```txt
 http://<IP_DO_PC>:3000/quick-capture
 ```
 
-Future deployed app:
+App publicado futuramente:
 
 ```txt
 https://seu-dominio.com/quick-capture
 ```
 
-Behavior:
+Comportamento:
 
-- requires login;
-- saves text as `pending_capture`;
-- uses `source = "web"`;
-- does not call AI automatically;
-- clears the field after saving;
-- pending captures appear in `/capture` and update `/today`.
+- exige login;
+- salva texto como `pending_capture`;
+- usa `source = "web"`;
+- não chama IA automaticamente;
+- limpa o campo após salvar;
+- pendências aparecem em `/capture` e atualizam `/today`.
 
-## Local network development
+## Instalar Como App / PWA
 
-Run Next so it listens on the local network:
+Lucas OS inclui manifest básico de PWA para instalação simples na tela inicial. O app abre em `/quick-capture` quando iniciado pelo ícone.
+
+Android/Chrome:
+
+1. Abra `/quick-capture`.
+2. Toque no menu do navegador.
+3. Escolha `Adicionar à tela inicial`.
+4. Abra Lucas OS pelo novo ícone.
+
+iPhone/Safari:
+
+1. Abra `/quick-capture`.
+2. Toque no botão de compartilhar.
+3. Escolha `Adicionar à Tela de Início`.
+4. Abra Lucas OS pelo novo ícone.
+
+Em desenvolvimento local, use:
+
+```txt
+http://<IP_DO_PC>:3000/quick-capture
+```
+
+Em produção futura, use o domínio real:
+
+```txt
+https://seu-dominio.com/quick-capture
+```
+
+Limites do PWA V1:
+
+- não há modo offline;
+- não há service worker customizado;
+- não há cache de dados sensíveis;
+- não há push notifications;
+- alguns navegadores podem exigir HTTPS ou critérios próprios para mostrar o prompt de instalação.
+
+## Desenvolvimento Na Rede Local
+
+Rode o Next ouvindo na rede local:
 
 ```bash
 npm run dev -- --hostname 0.0.0.0
 ```
 
-Then:
+Depois:
 
-1. Find the PC's local IP address.
-2. Make sure phone and PC are on the same Wi-Fi network.
-3. Use `http://<IP_DO_PC>:3000/quick-capture` for authenticated browser capture.
-4. Use `http://<IP_DO_COMPUTADOR>:3000/api/capture` for token-based shortcut capture.
-5. If the phone cannot connect, check Windows Firewall and network isolation settings.
+1. Descubra o IP local do PC.
+2. Garanta que celular e PC estejam na mesma rede Wi-Fi.
+3. Use `http://<IP_DO_PC>:3000/quick-capture` para captura autenticada no navegador.
+4. Use `http://<IP_DO_COMPUTADOR>:3000/api/capture` para captura externa por token.
+5. Se o celular não conectar, confira firewall do Windows e isolamento de rede.
 
-## Android / Samsung shortcut setup
+## Setup De Atalho Android / Samsung
 
-Exact app names vary by Android version and Samsung model, but the shortcut needs to create an HTTP request with these values:
+Os nomes exatos variam por versão do Android e modelo Samsung, mas o atalho precisa criar uma requisição HTTP com estes valores:
 
-1. URL: `http://<IP_DO_COMPUTADOR>:3000/api/capture` for local Wi-Fi testing, or your production URL later.
-2. Method: `POST`.
-3. Header: `Authorization` with value `Bearer <TOKEN_COMPLETO>`.
-4. Header: `Content-Type` with value `application/json`.
-5. JSON body:
+1. URL: `http://<IP_DO_COMPUTADOR>:3000/api/capture` para teste local em Wi-Fi, ou a URL de produção no futuro.
+2. Método: `POST`.
+3. Header: `Authorization` com valor `Bearer <TOKEN_COMPLETO>`.
+4. Header: `Content-Type` com valor `application/json`.
+5. Body JSON:
 
 ```json
 {
@@ -184,18 +223,18 @@ Exact app names vary by Android version and Samsung model, but the shortcut need
 }
 ```
 
-For a real shortcut, replace the `text` value with the text input collected by the shortcut.
+No atalho real, substitua o valor de `text` pelo texto coletado pelo próprio atalho.
 
-## iOS Shortcuts setup
+## Setup De iOS Shortcuts
 
-In iOS Shortcuts, create a shortcut that:
+No iOS Shortcuts, crie um atalho que:
 
-1. Receives or asks for text.
-2. Uses `Get Contents of URL`.
-3. Sets method to `POST`.
-4. Adds header `Authorization: Bearer <TOKEN_COMPLETO>`.
-5. Adds header `Content-Type: application/json`.
-6. Sends JSON body:
+1. Recebe ou pede um texto.
+2. Usa `Get Contents of URL`.
+3. Define o método como `POST`.
+4. Adiciona o header `Authorization: Bearer <TOKEN_COMPLETO>`.
+5. Adiciona o header `Content-Type: application/json`.
+6. Envia o body JSON:
 
 ```json
 {
@@ -204,27 +243,28 @@ In iOS Shortcuts, create a shortcut that:
 }
 ```
 
-For local testing from the iPhone, use the PC's local IP instead of `localhost`.
+Para teste local no iPhone, use o IP local do PC em vez de `localhost`.
 
 ## Troubleshooting
 
-- `localhost` on the phone points to the phone, not to the PC.
-- If the token was lost, revoke it in `/settings` and create a new one.
-- A revoked token does not work.
-- The prefix shown in Lucas OS does not work as a token.
-- The token name does not work as a token.
-- Generic API errors are intentional and do not reveal details for security.
-- A successful capture appears in `/capture` as pending and contributes to `/today`.
-- If `/quick-capture` redirects to `/login`, log in on the phone browser first.
-- If local Wi-Fi requests fail, check that Next is running with `--hostname 0.0.0.0`, the devices are on the same network, and Windows Firewall allows the connection.
+- `localhost` no celular aponta para o celular, não para o PC.
+- Token perdido exige revogar o token antigo em `/settings` e criar outro.
+- Token revogado não funciona.
+- O prefixo mostrado no Lucas OS não funciona como token.
+- O nome do token não funciona como token.
+- Erros genéricos da API são intencionais e não revelam detalhes por segurança.
+- Uma captura bem-sucedida aparece em `/capture` como pendente e contribui para `/today`.
+- Se `/quick-capture` redirecionar para `/login`, faça login no navegador do celular.
+- Se requisições em Wi-Fi local falharem, confira se o Next está rodando com `--hostname 0.0.0.0`, se os dispositivos estão na mesma rede e se o firewall do Windows permite a conexão.
+- Se o navegador não oferecer instalação como PWA, tente abrir `/quick-capture`, atualizar a página e verificar se o navegador exige HTTPS.
 
-## Security risks and controls
+## Riscos De Segurança E Controles
 
-- A capture token can create pending captures for its owner.
-- Store shortcut tokens carefully; anyone with the token can submit text captures.
-- Revoke tokens immediately if a device or shortcut is compromised.
-- Tokens are never stored in plain text by Lucas OS.
-- `/quick-capture` does not use tokens; it relies on the authenticated browser session.
-- `.env.local` must never be committed.
-- The app does not need or use a Supabase service role key for Mobile Capture V1.
-- Error responses are intentionally generic and do not reveal whether the token, body, or auth format failed.
+- Um token de captura pode criar pending captures para seu dono.
+- Guarde tokens de atalho com cuidado; qualquer pessoa com o token pode enviar capturas.
+- Revogue tokens imediatamente se um dispositivo ou atalho for comprometido.
+- Tokens nunca são armazenados em texto puro pelo Lucas OS.
+- `/quick-capture` não usa tokens; depende da sessão autenticada do navegador.
+- `.env.local` nunca deve ser commitado.
+- O app não precisa e não usa Supabase service role key para Mobile Capture V1.
+- Respostas de erro são genéricas de propósito e não revelam se a falha foi token, body ou formato de autenticação.

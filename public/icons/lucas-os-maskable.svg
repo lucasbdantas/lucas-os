@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Lucas OS">
+  <rect width="512" height="512" fill="#18181b"/>
+  <circle cx="256" cy="256" r="176" fill="#27272a"/>
+  <path fill="#fafafa" d="M132 352V144h56v160h88v48H132Z"/>
+  <path fill="#a7f3d0" d="M286 354c-56 0-96-42-96-106s40-106 96-106 96 42 96 106-40 106-96 106Zm0-50c24 0 40-21 40-56s-16-56-40-56-40 21-40 56 16 56 40 56Z"/>
+</svg>

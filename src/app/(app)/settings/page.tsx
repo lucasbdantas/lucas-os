@@ -104,6 +104,31 @@ export default async function SettingsPage() {
             </div>
 
             <div>
+              <p className="font-medium text-zinc-900">
+                Instalar como app simples
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                <li>
+                  Android/Chrome: abra <code>/quick-capture</code>, toque no
+                  menu do navegador e escolha “Adicionar à tela inicial”.
+                </li>
+                <li>
+                  iPhone/Safari: abra <code>/quick-capture</code>, toque em
+                  compartilhar e escolha “Adicionar à Tela de Início”.
+                </li>
+                <li>
+                  Em desenvolvimento local, use{" "}
+                  <code>http://&lt;IP_DO_PC&gt;:3000/quick-capture</code>.
+                </li>
+                <li>Em produção futura, use o domínio real do Lucas OS.</li>
+                <li>
+                  Esta versão não promete modo offline e não usa notificações
+                  push.
+                </li>
+              </ul>
+            </div>
+
+            <div>
               <p className="font-medium text-zinc-900">Segurança do token</p>
               <ul className="mt-2 list-disc space-y-1 pl-5">
                 <li>O token completo aparece apenas uma vez ao criar.</li>
