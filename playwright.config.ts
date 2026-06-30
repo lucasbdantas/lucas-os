@@ -14,7 +14,7 @@ export default defineConfig({
   timeout: 30_000,
   use: {
     baseURL,
-    trace: "retain-on-failure",
+    trace: "off",
   },
   webServer: process.env.E2E_BASE_URL
     ? undefined

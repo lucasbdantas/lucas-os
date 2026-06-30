@@ -35,7 +35,7 @@ Credenciais opcionais para smoke autenticado:
 - `E2E_TEST_EMAIL`
 - `E2E_TEST_PASSWORD`
 
-Use um usuario descartavel do Supabase Auth. Nunca commite credenciais reais.
+Use um usuario descartavel do Supabase Auth. Coloque valores reais apenas em `.env.local` e nunca commite credenciais reais.
 
 Configuracao opcional:
 
@@ -52,6 +52,8 @@ Sempre rodam:
 ## Testes autenticados
 
 Rode com `E2E_TEST_EMAIL` e `E2E_TEST_PASSWORD` configurados. Sem essas variaveis, os testes autenticados ficam skipped de forma explicita.
+
+O login e feito via UI em `/login`, preenchendo email e senha no formulario normal do app. Os testes nao imprimem email/senha em logs e o Playwright esta configurado com trace desativado para reduzir risco de artefatos contendo campos sensiveis.
 
 Rotas cobertas:
 
@@ -72,6 +74,14 @@ Rotas cobertas:
 - Nao usam service role.
 - Nao usam `DATABASE_URL`.
 - Dependem de Supabase Auth configurado para os testes autenticados.
+- Se o usuario de teste nao tiver dados seedados, os smoke tests autenticados ainda devem passar porque validam carregamento das rotas, nao conteudo especifico.
+
+## Como preparar usuario de teste
+
+1. No Supabase Dashboard, crie um usuario Auth descartavel.
+2. Confirme o email do usuario ou marque-o como confirmado no painel.
+3. Coloque `E2E_TEST_EMAIL` e `E2E_TEST_PASSWORD` apenas em `.env.local`.
+4. Rode `npm run test:e2e`.
 
 ## Quando usar
 
