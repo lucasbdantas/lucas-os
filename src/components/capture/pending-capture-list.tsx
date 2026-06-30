@@ -5,6 +5,7 @@ import {
   type CaptureDomainOption,
   type CaptureProjectOption,
 } from "@/components/capture/capture-task-form";
+import { PendingCaptureAIPreview } from "@/components/capture/pending-capture-ai-preview";
 import { PendingCaptureActions } from "@/components/capture/pending-capture-actions";
 
 export type PendingCaptureListItem = {
@@ -70,6 +71,13 @@ export function PendingCaptureList({
             />
           </div>
           <CaptureTaskForm
+            captureId={capture.id}
+            domains={domains}
+            projects={projects}
+            rawText={capture.raw_text}
+            returnTo={returnTo}
+          />
+          <PendingCaptureAIPreview
             captureId={capture.id}
             domains={domains}
             projects={projects}

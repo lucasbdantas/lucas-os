@@ -80,6 +80,7 @@ const createTaskFromCaptureSchema = z.object({
     .transform((value) => (value === "" ? null : value))
     .pipe(z.enum(taskEnergyValues).nullable()),
   context: optionalText(80),
+  resolutionMode: z.enum(["task", "ai_task"]).default("task"),
   returnTo: z.string().optional(),
 });
 
@@ -212,6 +213,75 @@ function toSaoPauloDateOnly(date = new Date()) {
   return `${valueByType.get("year")}-${valueByType.get("month")}-${valueByType.get("day")}`;
 }
 
+async function buildAIPreviewForRawText(
+  supabase: Awaited<ReturnType<typeof requireSession>>["supabase"],
+  rawText: string,
+): Promise<AICapturePreviewState> {
+  const [domainsResult, projectsResult] = await Promise.all([
+    supabase
+      .from("domains")
+      .select("id,name,is_system,active")
+      .order("name", { ascending: true })
+      .returns<Array<DomainIdentity>>(),
+    supabase
+      .from("projects")
+      .select("id,name,domain_id")
+      .in("status", ["active", "waiting"])
+      .order("name", { ascending: true })
+      .returns<Array<{ id: string; name: string; domain_id: string }>>(),
+  ]);
+
+  if (domainsResult.error) {
+    return { status: "error", message: domainsResult.error.message };
+  }
+
+  if (projectsResult.error) {
+    return { status: "error", message: projectsResult.error.message };
+  }
+
+  const selectableDomains = domainsResult.data.filter(
+    (domain) => domain.active || (domain.is_system && domain.name === "Inbox"),
+  );
+  const domainNameById = new Map(
+    domainsResult.data.map((domain) => [domain.id, domain.name]),
+  );
+  const projects = projectsResult.data
+    .map((project) => ({
+      ...project,
+      domainName: domainNameById.get(project.domain_id),
+    }))
+    .filter(
+      (project): project is typeof project & { domainName: string } =>
+        Boolean(project.domainName),
+    );
+  const aiResult = await parseCaptureWithAI({
+    currentDate: toSaoPauloDateOnly(),
+    domains: selectableDomains.map((domain) => ({ name: domain.name })),
+    projects: projects.map((project) => ({
+      domainName: project.domainName,
+      name: project.name,
+    })),
+    rawText,
+    timezone: "America/Sao_Paulo",
+  });
+
+  if (!aiResult.ok) {
+    return { status: "error", message: aiResult.reason };
+  }
+
+  return buildAICapturePreviewState(aiResult.suggestion, {
+    domains: selectableDomains.map((domain) => ({
+      id: domain.id,
+      name: domain.name,
+    })),
+    projects: projects.map((project) => ({
+      domainId: project.domain_id,
+      id: project.id,
+      name: project.name,
+    })),
+  });
+}
+
 export async function createPendingCapture(formData: FormData) {
   const returnTo = getReturnTo(String(formData.get("returnTo") ?? "/capture"));
   const parsed = createPendingCaptureSchema.safeParse({
@@ -300,6 +370,7 @@ export async function createTaskFromPendingCapture(formData: FormData) {
     priority: formData.get("priority") ?? "medium",
     energyRequired: formData.get("energyRequired") ?? "",
     context: formData.get("context") ?? "",
+    resolutionMode: formData.get("resolutionMode") ?? "task",
     returnTo,
   });
 
@@ -393,7 +464,7 @@ export async function createTaskFromPendingCapture(formData: FormData) {
     .from("pending_captures")
     .update({
       parsed_intent: {
-        manual_resolution: "task",
+        manual_resolution: parsed.data.resolutionMode,
         task_id: task.id,
       },
     })
@@ -493,69 +564,51 @@ export async function previewCaptureWithAI(
 
   const { supabase } = await requireSession();
 
-  const [domainsResult, projectsResult] = await Promise.all([
-    supabase
-      .from("domains")
-      .select("id,name,is_system,active")
-      .order("name", { ascending: true })
-      .returns<Array<DomainIdentity>>(),
-    supabase
-      .from("projects")
-      .select("id,name,domain_id")
-      .in("status", ["active", "waiting"])
-      .order("name", { ascending: true })
-      .returns<Array<{ id: string; name: string; domain_id: string }>>(),
-  ]);
+  return buildAIPreviewForRawText(supabase, rawText);
+}
 
-  if (domainsResult.error) {
-    return { status: "error", message: domainsResult.error.message };
+export async function previewPendingCaptureWithAI(
+  _previousState: AICapturePreviewState,
+  formData: FormData,
+): Promise<AICapturePreviewState> {
+  const captureId = String(formData.get("captureId") ?? "");
+  const parsed = z.string().uuid().safeParse(captureId);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Captura invalida.",
+    };
   }
 
-  if (projectsResult.error) {
-    return { status: "error", message: projectsResult.error.message };
+  const { supabase, user } = await requireSession();
+  const { data: capture, error } = await supabase
+    .from("pending_captures")
+    .select("id,raw_text,status")
+    .eq("id", parsed.data)
+    .eq("user_id", user.id)
+    .maybeSingle<{ id: string; raw_text: string; status: string }>();
+
+  if (error) {
+    return {
+      status: "error",
+      message: "Nao foi possivel carregar a captura.",
+    };
   }
 
-  const selectableDomains = domainsResult.data.filter(
-    (domain) => domain.active || (domain.is_system && domain.name === "Inbox"),
-  );
-  const domainNameById = new Map(
-    domainsResult.data.map((domain) => [domain.id, domain.name]),
-  );
-  const projects = projectsResult.data
-    .map((project) => ({
-      ...project,
-      domainName: domainNameById.get(project.domain_id),
-    }))
-    .filter(
-      (project): project is typeof project & { domainName: string } =>
-        Boolean(project.domainName),
-    );
-  const aiResult = await parseCaptureWithAI({
-    currentDate: toSaoPauloDateOnly(),
-    domains: selectableDomains.map((domain) => ({ name: domain.name })),
-    projects: projects.map((project) => ({
-      domainName: project.domainName,
-      name: project.name,
-    })),
-    rawText,
-    timezone: "America/Sao_Paulo",
-  });
-
-  if (!aiResult.ok) {
-    return { status: "error", message: aiResult.reason };
+  if (!capture) {
+    return {
+      status: "error",
+      message: "Captura nao encontrada.",
+    };
   }
 
-  const { suggestion } = aiResult;
+  if (capture.status !== "pending") {
+    return {
+      status: "error",
+      message: "Esta captura ja foi triada.",
+    };
+  }
 
-  return buildAICapturePreviewState(suggestion, {
-    domains: selectableDomains.map((domain) => ({
-      id: domain.id,
-      name: domain.name,
-    })),
-    projects: projects.map((project) => ({
-      domainId: project.domain_id,
-      id: project.id,
-      name: project.name,
-    })),
-  });
+  return buildAIPreviewForRawText(supabase, capture.raw_text);
 }
