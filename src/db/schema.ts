@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -50,6 +51,13 @@ export const taskSourceEnum = pgEnum("task_source", [
   "email",
   "observation",
   "import",
+]);
+
+export const taskRecurrenceTypeEnum = pgEnum("task_recurrence_type", [
+  "none",
+  "daily",
+  "weekly",
+  "monthly",
 ]);
 
 export const projectStatusEnum = pgEnum("project_status", [
@@ -209,6 +217,16 @@ export const tasks = pgTable(
     energyRequired: taskEnergyEnum("energy_required"),
     context: varchar("context", { length: 80 }),
     recurrenceRule: text("recurrence_rule"),
+    recurrenceType: taskRecurrenceTypeEnum("recurrence_type")
+      .notNull()
+      .default("none"),
+    recurrenceInterval: integer("recurrence_interval").notNull().default(1),
+    recurrenceAnchorDate: date("recurrence_anchor_date"),
+    recurrenceEndDate: date("recurrence_end_date"),
+    recurrenceParentId: uuid("recurrence_parent_id").references(
+      (): AnyPgColumn => tasks.id,
+      { onDelete: "set null" },
+    ),
     reminderOffsets: jsonb("reminder_offsets")
       .$type<number[]>()
       .notNull()
@@ -228,6 +246,21 @@ export const tasks = pgTable(
     index("tasks_domain_idx").on(table.domainId),
     index("tasks_project_idx").on(table.projectId),
     index("tasks_parent_task_idx").on(table.parentTaskId),
+    index("tasks_recurrence_parent_idx").on(table.recurrenceParentId),
+    index("tasks_user_recurrence_idx").on(
+      table.userId,
+      table.recurrenceType,
+      table.recurrenceParentId,
+    ),
+    uniqueIndex("tasks_user_recurrence_parent_due_open_unique")
+      .on(table.userId, table.recurrenceParentId, table.dueDate)
+      .where(
+        sql`${table.recurrenceParentId} is not null and ${table.dueDate} is not null and ${table.status} in ('todo', 'doing', 'waiting')`,
+      ),
+    check(
+      "tasks_recurrence_interval_positive",
+      sql`${table.recurrenceInterval} >= 1`,
+    ),
   ],
 );
 

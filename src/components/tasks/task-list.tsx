@@ -2,6 +2,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TaskActions } from "@/components/tasks/task-actions";
 import { formatDate } from "@/lib/format";
+import { getRecurrenceLabel } from "@/lib/tasks/recurrence";
 
 export type TaskListItem = {
   id: string;
@@ -13,6 +14,7 @@ export type TaskListItem = {
   priority: string;
   energy_required: string | null;
   context: string | null;
+  recurrence_type?: string | null;
   domainName?: string;
   projectName?: string;
 };
@@ -32,6 +34,19 @@ function getPriorityTone(priority: string) {
   if (priority === "medium") return "blue";
 
   return "default";
+}
+
+function getTaskRecurrenceLabel(recurrenceType: string | null | undefined) {
+  if (
+    recurrenceType === "none" ||
+    recurrenceType === "daily" ||
+    recurrenceType === "weekly" ||
+    recurrenceType === "monthly"
+  ) {
+    return getRecurrenceLabel(recurrenceType);
+  }
+
+  return null;
 }
 
 export function TaskList({
@@ -62,6 +77,9 @@ export function TaskList({
                   label={task.priority}
                   tone={getPriorityTone(task.priority)}
                 />
+                {getTaskRecurrenceLabel(task.recurrence_type) ? (
+                  <StatusBadge label={getTaskRecurrenceLabel(task.recurrence_type)!} />
+                ) : null}
               </div>
               {task.notes ? (
                 <p className="mt-2 text-sm leading-6 text-zinc-600">

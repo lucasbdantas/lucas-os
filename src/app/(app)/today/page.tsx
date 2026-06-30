@@ -5,6 +5,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate } from "@/lib/format";
 import { requireSession } from "@/lib/supabase/require-session";
+import { getRecurrenceLabel } from "@/lib/tasks/recurrence";
 
 type DomainRow = {
   id: string;
@@ -32,6 +33,7 @@ type TaskRow = {
   context: string | null;
   domain_id: string;
   project_id: string | null;
+  recurrence_type: string | null;
 };
 
 type CountResult = {
@@ -112,6 +114,19 @@ function getProjectTone(status: string) {
   return "default";
 }
 
+function getTaskRecurrenceLabel(recurrenceType: string | null | undefined) {
+  if (
+    recurrenceType === "none" ||
+    recurrenceType === "daily" ||
+    recurrenceType === "weekly" ||
+    recurrenceType === "monthly"
+  ) {
+    return getRecurrenceLabel(recurrenceType);
+  }
+
+  return null;
+}
+
 function TaskSection({
   description,
   emptyDescription,
@@ -160,6 +175,11 @@ function TaskSection({
                       label={task.priority}
                       tone={getPriorityTone(task.priority)}
                     />
+                    {getTaskRecurrenceLabel(task.recurrence_type) ? (
+                      <StatusBadge
+                        label={getTaskRecurrenceLabel(task.recurrence_type)!}
+                      />
+                    ) : null}
                     {task.status !== "todo" ? (
                       <StatusBadge label={task.status} />
                     ) : null}
@@ -237,7 +257,7 @@ export default async function TodayPage() {
     supabase
       .from("tasks")
       .select(
-        "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id",
+        "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,recurrence_type",
       )
       .in("status", openTaskStatuses)
       .lt("due_date", today)
@@ -246,7 +266,7 @@ export default async function TodayPage() {
     supabase
       .from("tasks")
       .select(
-        "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id",
+        "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,recurrence_type",
       )
       .in("status", openTaskStatuses)
       .eq("due_date", today)
@@ -255,7 +275,7 @@ export default async function TodayPage() {
     supabase
       .from("tasks")
       .select(
-        "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id",
+        "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,recurrence_type",
       )
       .in("status", openTaskStatuses)
       .gte("due_date", tomorrow)

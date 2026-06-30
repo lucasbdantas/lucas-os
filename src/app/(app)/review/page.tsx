@@ -5,6 +5,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { requireSession } from "@/lib/supabase/require-session";
+import { getRecurrenceLabel } from "@/lib/tasks/recurrence";
 
 type DomainRow = {
   id: string;
@@ -31,6 +32,7 @@ type TaskRow = {
   domain_id: string;
   project_id: string | null;
   completed_at?: string | null;
+  recurrence_type?: string | null;
   updated_at?: string | null;
 };
 
@@ -120,6 +122,19 @@ function getProjectTone(status: string) {
   return "default";
 }
 
+function getTaskRecurrenceLabel(recurrenceType: string | null | undefined) {
+  if (
+    recurrenceType === "none" ||
+    recurrenceType === "daily" ||
+    recurrenceType === "weekly" ||
+    recurrenceType === "monthly"
+  ) {
+    return getRecurrenceLabel(recurrenceType);
+  }
+
+  return null;
+}
+
 function getTaskEditHref(taskId: string) {
   return `/tasks?edit=${taskId}#edit-task`;
 }
@@ -178,6 +193,11 @@ function TaskReviewSection({
                       label={task.priority}
                       tone={getPriorityTone(task.priority)}
                     />
+                    {getTaskRecurrenceLabel(task.recurrence_type) ? (
+                      <StatusBadge
+                        label={getTaskRecurrenceLabel(task.recurrence_type)!}
+                      />
+                    ) : null}
                     {task.status !== "todo" ? (
                       <StatusBadge label={task.status} />
                     ) : null}
@@ -256,7 +276,7 @@ export default async function WeeklyReviewPage() {
     supabase
       .from("tasks")
       .select(
-        "id,title,notes,status,due_date,due_time,priority,domain_id,project_id",
+        "id,title,notes,status,due_date,due_time,priority,domain_id,project_id,recurrence_type",
       )
       .in("status", openTaskStatuses)
       .lt("due_date", today)
@@ -265,7 +285,7 @@ export default async function WeeklyReviewPage() {
     supabase
       .from("tasks")
       .select(
-        "id,title,notes,status,due_date,due_time,priority,domain_id,project_id,completed_at,updated_at",
+        "id,title,notes,status,due_date,due_time,priority,domain_id,project_id,recurrence_type,completed_at,updated_at",
       )
       .eq("status", "done")
       .order("updated_at", { ascending: false })
@@ -274,7 +294,7 @@ export default async function WeeklyReviewPage() {
     supabase
       .from("tasks")
       .select(
-        "id,title,notes,status,due_date,due_time,priority,domain_id,project_id",
+        "id,title,notes,status,due_date,due_time,priority,domain_id,project_id,recurrence_type",
       )
       .in("status", openTaskStatuses)
       .gte("due_date", today)

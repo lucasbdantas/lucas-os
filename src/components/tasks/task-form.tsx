@@ -25,6 +25,10 @@ export type EditableTaskValues = {
   context: string | null;
   domain_id: string;
   project_id: string | null;
+  recurrence_type: string;
+  recurrence_interval: number;
+  recurrence_anchor_date: string | null;
+  recurrence_end_date: string | null;
 };
 
 type TaskFormProps = {
@@ -230,9 +234,78 @@ export function TaskForm({
                 </select>
               </label>
             ) : null}
+
+            <fieldset className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+              <legend className="px-1 text-sm font-medium text-zinc-700">
+                Recorrência
+              </legend>
+              <div className="mt-2 grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-sm font-medium text-zinc-700">
+                    Repetição
+                  </span>
+                  <select
+                    className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+                    defaultValue={initialTask?.recurrence_type ?? "none"}
+                    name="recurrenceType"
+                  >
+                    <option value="none">Não repetir</option>
+                    <option value="daily">Todo dia</option>
+                    <option value="weekly">Toda semana</option>
+                    <option value="monthly">Todo mês</option>
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-medium text-zinc-700">
+                    Intervalo
+                  </span>
+                  <input
+                    className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+                    defaultValue={initialTask?.recurrence_interval ?? 1}
+                    min={1}
+                    name="recurrenceInterval"
+                    type="number"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-medium text-zinc-700">
+                    Data base opcional
+                  </span>
+                  <input
+                    className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+                    defaultValue={initialTask?.recurrence_anchor_date ?? ""}
+                    name="recurrenceAnchorDate"
+                    type="date"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-medium text-zinc-700">
+                    Repetir até
+                  </span>
+                  <input
+                    className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+                    defaultValue={initialTask?.recurrence_end_date ?? ""}
+                    name="recurrenceEndDate"
+                    type="date"
+                  />
+                </label>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-zinc-500">
+                Ao concluir uma task recorrente com data, o Lucas OS cria a
+                próxima ocorrência a partir do prazo atual. Sem data, nenhuma
+                próxima ocorrência é criada automaticamente.
+              </p>
+            </fieldset>
           </>
         ) : (
-          <input name="priority" type="hidden" value="medium" />
+          <>
+            <input name="priority" type="hidden" value="medium" />
+            <input name="recurrenceType" type="hidden" value="none" />
+            <input name="recurrenceInterval" type="hidden" value="1" />
+          </>
         )}
 
         <div className="flex flex-wrap gap-2">

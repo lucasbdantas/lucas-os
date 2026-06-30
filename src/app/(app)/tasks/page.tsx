@@ -69,7 +69,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       supabase
         .from("tasks")
         .select(
-          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,created_at",
+          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,recurrence_type,recurrence_interval,recurrence_anchor_date,recurrence_end_date,created_at",
         )
         .in("status", ["todo", "doing", "waiting"])
         .order("due_date", { ascending: true, nullsFirst: false })
@@ -78,7 +78,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       supabase
         .from("tasks")
         .select(
-          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,completed_at",
+          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,recurrence_type,recurrence_interval,recurrence_anchor_date,recurrence_end_date,completed_at",
         )
         .in("status", ["done", "canceled"])
         .order("completed_at", { ascending: false, nullsFirst: false })
@@ -101,7 +101,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       const { data, error } = await supabase
         .from("tasks")
         .select(
-          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id",
+          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,recurrence_type,recurrence_interval,recurrence_anchor_date,recurrence_end_date",
         )
         .eq("id", edit)
         .maybeSingle<TaskRow>();

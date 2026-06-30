@@ -28,6 +28,7 @@ type TaskRow = {
   context: string | null;
   domain_id: string;
   project_id: string | null;
+  recurrence_type: string;
 };
 
 export default async function InboxPage({ searchParams }: InboxPageProps) {
@@ -48,7 +49,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
     ? await supabase
         .from("tasks")
         .select(
-          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,created_at",
+          "id,title,notes,status,due_date,due_time,priority,energy_required,context,domain_id,project_id,recurrence_type,created_at",
         )
         .eq("domain_id", inbox.id)
         .in("status", ["todo", "doing", "waiting"])
