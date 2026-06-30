@@ -30,43 +30,77 @@ The SQL function is `SECURITY DEFINER`, sets `search_path` explicitly, validates
 
 1. Log in to Lucas OS.
 2. Open `/settings`.
-3. In `Captura externa`, create a token with a name such as `iPhone Shortcut`.
+3. In `Captura externa`, create a token with a name such as `Samsung Shortcut`, `Android Shortcut`, or `iPhone Shortcut`.
 4. Copy the full token immediately.
 
 The full token is not shown again after that first response. If it is lost, revoke it and create a new one.
 
-## Test with curl
+Important:
 
-Use a local dev server and replace `<TOKEN>` with the token copied from `/settings`.
+- The token prefix shown in the list does not authenticate.
+- The token name does not authenticate.
+- Only the complete token can authorize external capture.
+
+## Endpoint URLs
+
+Use the URL your phone can reach.
+
+Local browser on the computer:
+
+```txt
+http://localhost:3000/api/capture
+```
+
+Phone on the same Wi-Fi as the computer:
+
+```txt
+http://<IP_DO_COMPUTADOR>:3000/api/capture
+```
+
+Future deployed app:
+
+```txt
+https://seu-dominio.com/api/capture
+```
+
+On a phone, `localhost` means the phone itself, not your PC. For local mobile tests, use the PC's local network IP.
+
+## Local network development
+
+Run Next so it listens on the local network:
 
 ```bash
-curl -X POST http://localhost:3000/api/capture \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d "{\"text\":\"comprar pilha amanha\",\"source\":\"ios_shortcut\"}"
+npm run dev -- --hostname 0.0.0.0
 ```
 
-Expected response:
+Then:
 
-```json
-{ "ok": true }
-```
-
-Then open `/capture` or `/today` and confirm the pending capture appears.
+1. Find the PC's local IP address.
+2. Make sure phone and PC are on the same Wi-Fi network.
+3. Use `http://<IP_DO_COMPUTADOR>:3000/api/capture` in the mobile shortcut.
+4. If the phone cannot connect, check Windows Firewall and network isolation settings.
 
 ## Request format
 
+Method:
+
+```txt
+POST
+```
+
 Headers:
 
-- `Authorization: Bearer <TOKEN>`
-- `Content-Type: application/json`
+```txt
+Authorization: Bearer <TOKEN_COMPLETO>
+Content-Type: application/json
+```
 
 Body:
 
 ```json
 {
-  "text": "texto capturado",
-  "source": "ios_shortcut"
+  "text": "comprar pilha amanhã",
+  "source": "android_shortcut"
 }
 ```
 
@@ -85,16 +119,74 @@ Text rules:
 - empty text is rejected;
 - max length is 5000 characters.
 
-## Future mobile shortcut
+## Test with curl
 
-A future iOS or Android shortcut can call the same endpoint:
+Use a local dev server and replace `<TOKEN>` with the complete token copied from `/settings`.
 
-- method: `POST`;
-- URL: `https://<lucas-os-host>/api/capture`;
-- header: `Authorization: Bearer <TOKEN>`;
-- JSON body with `text` and `source`.
+```bash
+curl -X POST http://localhost:3000/api/capture \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d "{\"text\":\"comprar pilha amanhã\",\"source\":\"android_shortcut\"}"
+```
 
-Voice capture is intentionally not implemented in this version.
+Expected response:
+
+```json
+{ "ok": true }
+```
+
+Then open `/capture` or `/today` and confirm the pending capture appears.
+
+## Android / Samsung shortcut setup
+
+Exact app names vary by Android version and Samsung model, but the shortcut needs to create an HTTP request with these values:
+
+1. URL: `http://<IP_DO_COMPUTADOR>:3000/api/capture` for local Wi-Fi testing, or your production URL later.
+2. Method: `POST`.
+3. Header: `Authorization` with value `Bearer <TOKEN_COMPLETO>`.
+4. Header: `Content-Type` with value `application/json`.
+5. JSON body:
+
+```json
+{
+  "text": "comprar pilha amanhã",
+  "source": "android_shortcut"
+}
+```
+
+For a real shortcut, replace the `text` value with the text input collected by the shortcut.
+
+## iOS Shortcuts setup
+
+In iOS Shortcuts, create a shortcut that:
+
+1. Receives or asks for text.
+2. Uses `Get Contents of URL`.
+3. Sets method to `POST`.
+4. Adds header `Authorization: Bearer <TOKEN_COMPLETO>`.
+5. Adds header `Content-Type: application/json`.
+6. Sends JSON body:
+
+```json
+{
+  "text": "comprar pilha amanhã",
+  "source": "ios_shortcut"
+}
+```
+
+For local testing from the iPhone, use the PC's local IP instead of `localhost`.
+
+## Troubleshooting
+
+- `localhost` on the phone points to the phone, not to the PC.
+- If the token was lost, revoke it in `/settings` and create a new one.
+- A revoked token does not work.
+- The prefix shown in Lucas OS does not work as a token.
+- The token name does not work as a token.
+- Generic errors are intentional and do not reveal details for security.
+- A successful capture appears in `/capture` as pending and contributes to `/today`.
+- If local Wi-Fi requests fail, check that Next is running with `--hostname 0.0.0.0`, the devices are on the same network, and Windows Firewall allows the connection.
 
 ## Security risks and controls
 

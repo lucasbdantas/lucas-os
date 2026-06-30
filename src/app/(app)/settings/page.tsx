@@ -8,7 +8,10 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { requireSession } from "@/lib/supabase/require-session";
 
 const curlExample =
-  'curl -X POST http://localhost:3000/api/capture -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d "{\\"text\\":\\"comprar pilha amanha\\",\\"source\\":\\"ios_shortcut\\"}"';
+  'curl -X POST http://localhost:3000/api/capture -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d "{\\"text\\":\\"comprar pilha amanhã\\",\\"source\\":\\"ios_shortcut\\"}"';
+
+const requestBodyExample =
+  '{ "text": "comprar pilha amanhã", "source": "android_shortcut" }';
 
 export default async function SettingsPage() {
   const { supabase, user } = await requireSession();
@@ -27,7 +30,7 @@ export default async function SettingsPage() {
       <PageHeader
         eyebrow="Operacional"
         title="Settings"
-        description="Informacoes basicas da sessao autenticada e captura externa."
+        description="Informações básicas da sessão autenticada e captura externa."
       />
 
       <section className="mt-8 max-w-2xl rounded-md border border-zinc-200 bg-white p-4">
@@ -35,7 +38,7 @@ export default async function SettingsPage() {
           <div>
             <h2 className="font-semibold text-zinc-950">Supabase Auth</h2>
             <p className="mt-1 text-sm text-zinc-600">
-              Sessao autenticada por cookies.
+              Sessão autenticada por cookies.
             </p>
           </div>
           <StatusBadge label="conectado" tone="green" />
@@ -77,6 +80,83 @@ export default async function SettingsPage() {
           <code className="mt-2 block overflow-x-auto rounded bg-white px-3 py-2 text-xs text-zinc-800">
             {curlExample}
           </code>
+        </div>
+
+        <div className="mt-6 rounded-md border border-zinc-200 bg-zinc-50 p-4">
+          <h3 className="text-sm font-semibold text-zinc-950">
+            Como usar no celular
+          </h3>
+          <div className="mt-3 grid gap-4 text-sm leading-6 text-zinc-700">
+            <div>
+              <p className="font-medium text-zinc-900">Segurança do token</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                <li>O token completo aparece apenas uma vez ao criar.</li>
+                <li>Se perder o token, revogue e crie outro.</li>
+                <li>O prefixo mostrado na lista não autentica.</li>
+                <li>O nome do token não autentica.</li>
+              </ul>
+            </div>
+
+            <div>
+              <p className="font-medium text-zinc-900">URLs possíveis</p>
+              <div className="mt-2 grid gap-2">
+                <code className="block overflow-x-auto rounded bg-white px-3 py-2 text-xs text-zinc-800">
+                  http://localhost:3000/api/capture
+                </code>
+                <code className="block overflow-x-auto rounded bg-white px-3 py-2 text-xs text-zinc-800">
+                  http://&lt;IP_DO_COMPUTADOR&gt;:3000/api/capture
+                </code>
+                <code className="block overflow-x-auto rounded bg-white px-3 py-2 text-xs text-zinc-800">
+                  https://seu-dominio.com/api/capture
+                </code>
+              </div>
+            </div>
+
+            <div>
+              <p className="font-medium text-zinc-900">
+                Desenvolvimento na rede local
+              </p>
+              <ol className="mt-2 list-decimal space-y-1 pl-5">
+                <li>
+                  Rode o Next ouvindo na rede:
+                  <code className="ml-1 rounded bg-white px-1 py-0.5 text-xs text-zinc-800">
+                    npm run dev -- --hostname 0.0.0.0
+                  </code>
+                </li>
+                <li>Descubra o IP local do PC.</li>
+                <li>Garanta que celular e PC estejam na mesma rede Wi-Fi.</li>
+                <li>Se não conectar, confira o firewall do Windows.</li>
+              </ol>
+            </div>
+
+            <div>
+              <p className="font-medium text-zinc-900">
+                Requisição do atalho
+              </p>
+              <dl className="mt-2 grid gap-2">
+                <div>
+                  <dt className="font-medium text-zinc-500">Método</dt>
+                  <dd>POST</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-zinc-500">Headers</dt>
+                  <dd>
+                    <code>Authorization: Bearer &lt;TOKEN_COMPLETO&gt;</code>
+                    <br />
+                    <code>Content-Type: application/json</code>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-zinc-500">Body</dt>
+                  <dd>
+                    <code className="mt-1 block overflow-x-auto rounded bg-white px-3 py-2 text-xs text-zinc-800">
+                      {requestBodyExample}
+                    </code>
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </div>
         </div>
       </section>
     </main>
