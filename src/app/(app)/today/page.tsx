@@ -3,6 +3,11 @@ import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import {
+  addDays,
+  toDateOnlyInTimezone,
+} from "@/lib/app-settings/preferences";
+import { getAppPreferencesForUser } from "@/lib/app-settings/server";
 import { formatDate } from "@/lib/format";
 import { requireSession } from "@/lib/supabase/require-session";
 import { getRecurrenceLabel } from "@/lib/tasks/recurrence";
@@ -49,25 +54,6 @@ const priorityRank: Record<string, number> = {
   medium: 2,
   low: 3,
 };
-
-function addDays(date: Date, days: number) {
-  const nextDate = new Date(date);
-  nextDate.setDate(nextDate.getDate() + days);
-
-  return nextDate;
-}
-
-function toSaoPauloDateOnly(date = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    day: "2-digit",
-    month: "2-digit",
-    timeZone: "America/Sao_Paulo",
-    year: "numeric",
-  }).formatToParts(date);
-  const valueByType = new Map(parts.map((part) => [part.type, part.value]));
-
-  return `${valueByType.get("year")}-${valueByType.get("month")}-${valueByType.get("day")}`;
-}
 
 async function getCount(query: PromiseLike<CountResult>) {
   const { count, error } = await query;
@@ -231,11 +217,23 @@ function getNextActionHref(project: Pick<ProjectRow, "id" | "domain_id">) {
 }
 
 export default async function TodayPage() {
-  const { supabase } = await requireSession();
-  const today = toSaoPauloDateOnly();
-  const tomorrow = toSaoPauloDateOnly(addDays(new Date(), 1));
-  const nextSevenDays = toSaoPauloDateOnly(addDays(new Date(), 7));
-  const nextFourteenDays = toSaoPauloDateOnly(addDays(new Date(), 14));
+  const { supabase, user } = await requireSession();
+  const preferences = await getAppPreferencesForUser(supabase, user.id);
+  const now = new Date();
+  const today = toDateOnlyInTimezone(preferences.timezone, now);
+  const tomorrow = toDateOnlyInTimezone(preferences.timezone, addDays(now, 1));
+  const nextSevenDays = toDateOnlyInTimezone(
+    preferences.timezone,
+    addDays(now, 7),
+  );
+  const nextFourteenDays = toDateOnlyInTimezone(
+    preferences.timezone,
+    addDays(now, 14),
+  );
+  const isCompact = preferences.todayDensity === "compact";
+  const sectionGapClass = isCompact ? "mt-6 grid gap-6" : "mt-8 grid gap-8";
+  const taskDisplayLimit = isCompact ? 5 : 20;
+  const projectDisplayLimit = isCompact ? 5 : 10;
 
   const [
     pendingCapturesCount,
@@ -356,13 +354,20 @@ export default async function TodayPage() {
   const overdueTasks = sortByDueDateAndPriority(overdueTasksResult.data);
   const todayTasks = sortByDueDateAndPriority(todayTasksResult.data);
   const nextTasks = sortByDueDateAndPriority(nextTasksResult.data);
+  const displayedOverdueTasks = overdueTasks.slice(0, taskDisplayLimit);
+  const displayedTodayTasks = todayTasks.slice(0, taskDisplayLimit);
+  const displayedNextTasks = nextTasks.slice(0, taskDisplayLimit);
+  const displayedUpcomingProjects = upcomingProjectsResult.data.slice(
+    0,
+    projectDisplayLimit,
+  );
 
   return (
     <main className="px-6 py-8">
       <PageHeader
         eyebrow="Lucas OS"
         title="Today"
-        description="Painel operacional do dia com capturas, tarefas, prazos e projetos que precisam de proxima acao."
+        description={`Painel operacional do dia em ${preferences.timezone}.`}
       />
 
       <section className="mt-8 grid gap-3 md:grid-cols-[1fr_auto]">
@@ -385,14 +390,14 @@ export default async function TodayPage() {
         <StatCard label="Proximos 7 dias" value={nextTasks.length} />
       </section>
 
-      <div className="mt-8 grid gap-8">
+      <div className={sectionGapClass}>
         <TaskSection
           description="Tasks abertas com data anterior a hoje."
           domainNameById={domainNameById}
           emptyDescription="Nada vencido agora. Bom sinal operacional."
           emptyTitle="Nenhuma tarefa vencida"
           projectNameById={projectNameById}
-          tasks={overdueTasks}
+          tasks={displayedOverdueTasks}
           title="Tarefas vencidas"
         />
 
@@ -402,7 +407,7 @@ export default async function TodayPage() {
           emptyDescription="Nenhuma tarefa com data de hoje. Use Capture ou Tasks para planejar o dia."
           emptyTitle="Nenhuma tarefa para hoje"
           projectNameById={projectNameById}
-          tasks={todayTasks}
+          tasks={displayedTodayTasks}
           title="Tarefas de hoje"
         />
 
@@ -412,7 +417,7 @@ export default async function TodayPage() {
           emptyDescription="Nenhuma task proxima nos proximos 7 dias."
           emptyTitle="Sem proximos prazos"
           projectNameById={projectNameById}
-          tasks={nextTasks}
+          tasks={displayedNextTasks}
           title="Proximos 7 dias"
         />
 
@@ -426,17 +431,17 @@ export default async function TodayPage() {
                 Projetos ativos ou waiting com target nos proximos 14 dias.
               </p>
             </div>
-            <StatusBadge label={`${upcomingProjectsResult.data.length}`} />
+            <StatusBadge label={`${displayedUpcomingProjects.length}`} />
           </div>
 
-          {upcomingProjectsResult.data.length === 0 ? (
+          {displayedUpcomingProjects.length === 0 ? (
             <EmptyState
               description="Projetos com target nos proximos 14 dias aparecerao aqui."
               title="Nenhum projeto com prazo proximo"
             />
           ) : (
             <div className="grid gap-3">
-              {upcomingProjectsResult.data.map((project) => (
+              {displayedUpcomingProjects.map((project) => (
                 <article
                   className="rounded-md border border-zinc-200 bg-white p-4"
                   key={project.id}
@@ -465,6 +470,7 @@ export default async function TodayPage() {
           )}
         </section>
 
+        {preferences.showProjectsWithoutNextAction ? (
         <section>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -475,7 +481,9 @@ export default async function TodayPage() {
                 Projetos ativos que nao possuem nenhuma task aberta associada.
               </p>
             </div>
-            <StatusBadge label={`${projectsWithoutNextAction.length}`} />
+            <StatusBadge
+              label={`${projectsWithoutNextAction.slice(0, projectDisplayLimit).length}`}
+            />
           </div>
 
           {projectsWithoutNextAction.length === 0 ? (
@@ -485,7 +493,9 @@ export default async function TodayPage() {
             />
           ) : (
             <div className="grid gap-3">
-              {projectsWithoutNextAction.map((project) => (
+              {projectsWithoutNextAction
+                .slice(0, projectDisplayLimit)
+                .map((project) => (
                 <article
                   className="rounded-md border border-zinc-200 bg-white p-4"
                   key={project.id}
@@ -517,6 +527,7 @@ export default async function TodayPage() {
             </div>
           )}
         </section>
+        ) : null}
 
         <section>
           <h2 className="mb-3 font-semibold text-zinc-950">Acoes rapidas</h2>

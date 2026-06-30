@@ -1,12 +1,21 @@
+import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
+import { AppPreferencesForm } from "@/components/settings/app-preferences-form";
 import { CaptureTokenForm } from "@/components/settings/capture-token-form";
 import {
   CaptureTokenList,
   type CaptureTokenListItem,
 } from "@/components/settings/capture-token-list";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { getAppPreferencesForUser } from "@/lib/app-settings/server";
 import { requireSession } from "@/lib/supabase/require-session";
-import Link from "next/link";
+
+type SettingsPageProps = {
+  searchParams: Promise<{
+    error?: string;
+    settings?: string;
+  }>;
+};
 
 const curlExample =
   'curl -X POST http://localhost:3000/api/capture -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d "{\\"text\\":\\"comprar pilha amanhã\\",\\"source\\":\\"ios_shortcut\\"}"';
@@ -14,16 +23,22 @@ const curlExample =
 const requestBodyExample =
   '{ "text": "comprar pilha amanhã", "source": "android_shortcut" }';
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: SettingsPageProps) {
+  const { error: pageError, settings } = await searchParams;
   const { supabase, user } = await requireSession();
-  const { data: captureTokens, error: captureTokensError } = await supabase
-    .from("capture_tokens")
-    .select("id,name,token_prefix,created_at,last_used_at,revoked_at")
-    .order("created_at", { ascending: false })
-    .returns<CaptureTokenListItem[]>();
+  const [captureTokensResult, preferences] = await Promise.all([
+    supabase
+      .from("capture_tokens")
+      .select("id,name,token_prefix,created_at,last_used_at,revoked_at")
+      .order("created_at", { ascending: false })
+      .returns<CaptureTokenListItem[]>(),
+    getAppPreferencesForUser(supabase, user.id),
+  ]);
 
-  if (captureTokensError) {
-    throw new Error(captureTokensError.message);
+  if (captureTokensResult.error) {
+    throw new Error(captureTokensResult.error.message);
   }
 
   return (
@@ -31,8 +46,20 @@ export default async function SettingsPage() {
       <PageHeader
         eyebrow="Operacional"
         title="Settings"
-        description="Informações básicas da sessão autenticada e captura externa."
+        description="Informações básicas da sessão autenticada, preferências do app e captura externa."
       />
+
+      {pageError ? (
+        <p className="mt-6 max-w-4xl rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {pageError}
+        </p>
+      ) : null}
+
+      {settings === "saved" ? (
+        <p className="mt-6 max-w-4xl rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+          Preferências salvas.
+        </p>
+      ) : null}
 
       <section className="mt-8 max-w-2xl rounded-md border border-zinc-200 bg-white p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -56,6 +83,23 @@ export default async function SettingsPage() {
       <section className="mt-8 max-w-4xl rounded-md border border-zinc-200 bg-white p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
+            <h2 className="font-semibold text-zinc-950">
+              Preferências do app
+            </h2>
+            <p className="mt-1 text-sm text-zinc-600">
+              Ajustes básicos usados por Today, Weekly Review e navegação
+              inicial.
+            </p>
+          </div>
+          <StatusBadge label="app_settings" tone="blue" />
+        </div>
+
+        <AppPreferencesForm preferences={preferences} />
+      </section>
+
+      <section className="mt-8 max-w-4xl rounded-md border border-zinc-200 bg-white p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
             <h2 className="font-semibold text-zinc-950">Captura externa</h2>
             <p className="mt-1 text-sm text-zinc-600">
               Crie tokens para atalhos mobile ou webhooks simples. O token
@@ -71,7 +115,7 @@ export default async function SettingsPage() {
           <h3 className="text-sm font-semibold text-zinc-950">
             Tokens criados
           </h3>
-          <CaptureTokenList tokens={captureTokens} />
+          <CaptureTokenList tokens={captureTokensResult.data} />
         </div>
 
         <div className="mt-6 rounded-md border border-zinc-200 bg-zinc-50 p-3">

@@ -3,6 +3,11 @@ import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import {
+  addDays,
+  toDateOnlyInTimezone,
+} from "@/lib/app-settings/preferences";
+import { getAppPreferencesForUser } from "@/lib/app-settings/server";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { requireSession } from "@/lib/supabase/require-session";
 import { getRecurrenceLabel } from "@/lib/tasks/recurrence";
@@ -56,25 +61,6 @@ const priorityRank: Record<string, number> = {
   medium: 2,
   low: 3,
 };
-
-function addDays(date: Date, days: number) {
-  const nextDate = new Date(date);
-  nextDate.setDate(nextDate.getDate() + days);
-
-  return nextDate;
-}
-
-function toSaoPauloDateOnly(date = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    day: "2-digit",
-    month: "2-digit",
-    timeZone: "America/Sao_Paulo",
-    year: "numeric",
-  }).formatToParts(date);
-  const valueByType = new Map(parts.map((part) => [part.type, part.value]));
-
-  return `${valueByType.get("year")}-${valueByType.get("month")}-${valueByType.get("day")}`;
-}
 
 async function getCount(query: PromiseLike<CountResult>) {
   const { count, error } = await query;
@@ -240,11 +226,18 @@ function TaskReviewSection({
 }
 
 export default async function WeeklyReviewPage() {
-  const { supabase } = await requireSession();
+  const { supabase, user } = await requireSession();
+  const preferences = await getAppPreferencesForUser(supabase, user.id);
   const now = new Date();
-  const today = toSaoPauloDateOnly(now);
-  const nextSevenDays = toSaoPauloDateOnly(addDays(now, 7));
-  const nextThirtyDays = toSaoPauloDateOnly(addDays(now, 30));
+  const today = toDateOnlyInTimezone(preferences.timezone, now);
+  const nextSevenDays = toDateOnlyInTimezone(
+    preferences.timezone,
+    addDays(now, 7),
+  );
+  const nextThirtyDays = toDateOnlyInTimezone(
+    preferences.timezone,
+    addDays(now, 30),
+  );
   const sevenDaysAgoIso = addDays(now, -7).toISOString();
 
   const [

@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { getAppPreferencesForUser } from "@/lib/app-settings/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function loginError(message: string): never {
@@ -53,8 +54,15 @@ export async function loginWithPassword(formData: FormData) {
     loginError(getSafeAuthErrorMessage(error.message));
   }
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const preferredHome = user
+    ? (await getAppPreferencesForUser(supabase, user.id)).preferredHome
+    : "/today";
+
   revalidatePath("/", "layout");
-  redirect("/today");
+  redirect(preferredHome);
 }
 
 export async function logout() {
