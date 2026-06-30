@@ -2,87 +2,95 @@
 
 Personal Operations Dashboard self-hosted para Lucas Batista Dantas.
 
-Este repositório segue o escopo em `SCOPE.md` e será construído em fases. A
-Fase 1 entrega apenas a espinha operacional: auth, layout, domains, projects,
-milestones, tasks, inbox, notificações simples, app settings, Today básico e
-seed inicial.
+O projeto segue `SCOPE.md` e esta sendo construido por fases. O estado atual ja inclui auth, domains, projects, milestones, tasks, capture, AI preview opcional, mobile capture, quick capture, PWA, review, recurring tasks, app settings, reminders e notifications internas.
 
-## Stack Inicial
+## Stack
 
 - Next.js App Router
 - TypeScript
 - Tailwind CSS
 - npm
-- Supabase
+- Supabase Auth + Postgres + RLS
 - Drizzle
+- Vitest
 
-## Getting Started
+## Setup local
 
-Instale as dependências e rode o servidor local:
+Instale dependencias:
 
 ```powershell
 npm install
+```
+
+Crie `.env.local` a partir de `.env.example`. Nunca commite `.env.local`.
+
+Rode o app:
+
+```powershell
 npm run dev
 ```
 
-Abra [http://localhost:3000](http://localhost:3000).
+Abra `http://localhost:3000`.
 
-Sem variáveis Supabase configuradas, `/` redireciona para `/login`. Com
-Supabase configurado, `/` verifica a sessão e redireciona para `/today` quando
-o usuário estiver autenticado.
+## Variaveis de ambiente
 
-## Environment
+Publicas, usadas pelo client Supabase:
 
-Crie um arquivo `.env.local` com base em `.env.example`.
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-```txt
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-DATABASE_URL=
-```
+Server-only:
 
-Nunca commitar `.env.local`.
+- `OPENAI_API_KEY` opcional para AI capture preview.
+- `OPENAI_MODEL` opcional, default documentado em `.env.example`.
 
-O app atual nao usa `SUPABASE_SERVICE_ROLE_KEY`. Nao configure service role key
-para o fluxo normal de desenvolvimento local.
+Somente scripts locais:
 
-## Comandos
+- `DATABASE_URL`
+- `SEED_USER_ID`
+
+O app nao usa `SUPABASE_SERVICE_ROLE_KEY` para o runtime.
+
+## Comandos principais
 
 ```powershell
 npm run dev
 npm run lint
 npm run build
+npm run test
+npx tsc --noEmit
 ```
 
-## Seed Inicial
+## Seed inicial
 
-Antes de rodar o seed da Fase 1, aplique as migrations no Supabase e preencha
-`.env.local` com `DATABASE_URL` e `SEED_USER_ID`. O `SEED_USER_ID` é o UUID do
-usuário em Supabase Dashboard -> Authentication -> Users.
-
-O script carrega `.env.local` automaticamente:
+Antes de rodar o seed da Fase 1, aplique as migrations no Supabase e preencha `.env.local` com `DATABASE_URL` e `SEED_USER_ID`. O `SEED_USER_ID` e o UUID do usuario em Supabase Dashboard -> Authentication -> Users.
 
 ```powershell
 npm run db:seed:phase1
 ```
 
-O seed é idempotente para domínios e projetos. Ele cria apenas a estrutura
-inicial da Fase 1; tarefas, projects, milestones e domains podem ser criados
-manualmente pelo app depois do login.
+O seed e idempotente para domains e projects.
 
-## Checklist Fase 1
+## Docs principais
 
-- Auth com Supabase email/senha.
-- Rotas operacionais protegidas por sessão.
-- Seed inicial de domains e projects.
-- Leitura real via Supabase Auth + RLS.
-- CRUD manual mínimo de tasks.
-- CRUD manual mínimo de projects e milestones.
-- CRUD manual mínimo de domains, sem delete.
-- Today básico com contadores, Inbox, tasks e projects próximos.
+- `SCOPE.md`
+- `docs/current-system-state.md`
+- `docs/phase-1-completion.md`
+- `docs/phase-2-ai-capture-completion.md`
+- `docs/mobile-capture-v1.md`
+- `docs/app-settings-v1.md`
+- `docs/recurring-tasks-v1.md`
+- `docs/reminders-v1.md`
+- `docs/deploy-readiness-v1.md`
 
-## Fora do Escopo Agora
+## Health check
 
-Google Calendar, Gmail, captura por voz, parsing com OpenAI, Health, Finance,
-People CRM, TCC avançado, Serena avançado e Observations ficam para fases
-posteriores.
+```text
+GET /api/health
+```
+
+Resposta esperada:
+
+```json
+{ "ok": true, "service": "lucas-os" }
+```

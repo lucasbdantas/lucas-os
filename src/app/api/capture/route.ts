@@ -6,6 +6,7 @@ import {
   normalizeExternalCaptureSource,
   parseBearerToken,
 } from "@/lib/capture-tokens/tokens";
+import { getPublicSupabaseRuntimeEnv } from "@/lib/env/server";
 
 type CaptureRequestBody = {
   source?: unknown;
@@ -20,14 +21,13 @@ function jsonError(status: number) {
 }
 
 function getSupabaseAnonClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const env = getPublicSupabaseRuntimeEnv();
 
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!env) {
     return null;
   }
 
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  return createClient(env.supabaseUrl, env.supabaseAnonKey, {
     auth: {
       persistSession: false,
     },
