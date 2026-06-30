@@ -9,6 +9,7 @@ Este documento prepara o Lucas OS para um deploy futuro. Ele nao executa deploy 
 - Confirmar que `npm run lint` passa.
 - Confirmar que `npm run build` passa.
 - Confirmar que `npm run test` passa.
+- Confirmar que `npm run test:e2e` passa ou que os testes autenticados estao skipped por falta de credenciais E2E.
 - Confirmar que `npx tsc --noEmit` passa.
 - Confirmar que `.env.local` nao esta no Git.
 - Confirmar que o projeto nao usa `SUPABASE_SERVICE_ROLE_KEY` no runtime.
@@ -68,6 +69,7 @@ npm run db:seed:phase1
 npm run lint
 npm run build
 npm run test
+npm run test:e2e
 npx tsc --noEmit
 ```
 

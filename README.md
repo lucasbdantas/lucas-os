@@ -58,6 +58,7 @@ npm run dev
 npm run lint
 npm run build
 npm run test
+npm run test:e2e
 npx tsc --noEmit
 ```
 
@@ -82,6 +83,7 @@ O seed e idempotente para domains e projects.
 - `docs/recurring-tasks-v1.md`
 - `docs/reminders-v1.md`
 - `docs/deploy-readiness-v1.md`
+- `docs/e2e-smoke-tests-v1.md`
 
 ## Health check
 
