@@ -15,7 +15,7 @@ Use o endpoint quando um atalho mobile ou webhook precisar capturar sem login no
 - Tokens existentes mostram apenas nome, prefixo, data de criação, último uso e estado revogado.
 - Tokens podem ser revogados em `/settings`.
 - `POST /api/capture` aceita capturas de texto sem login no navegador.
-- `/quick-capture` aceita capturas de texto por sessão autenticada.
+- `/quick-capture` aceita capturas digitadas e ditadas por sessão autenticada, quando o navegador suporta reconhecimento de voz.
 - Lucas OS pode ser adicionado à tela inicial como PWA simples.
 - O app não usa `SUPABASE_SERVICE_ROLE_KEY`.
 - O route handler não usa `DATABASE_URL`.
@@ -148,9 +148,27 @@ Comportamento:
 - exige login;
 - salva texto como `pending_capture`;
 - usa `source = "web"`;
+- permite digitar ou ditar texto pelo navegador, quando suportado;
 - não chama IA automaticamente;
+- não salva áudio;
+- não cria task automaticamente;
 - limpa o campo após salvar;
 - pendências aparecem em `/capture` e atualizam `/today`.
+
+### Ditado No Quick Capture
+
+Em navegadores com Web Speech API, `/quick-capture` mostra o botão `Falar`.
+
+Fluxo:
+
+1. Toque em `Falar`.
+2. Dite a captura.
+3. Revise o texto preenchido no campo.
+4. Toque em `Salvar captura`.
+
+O Lucas OS não envia áudio para o servidor, não grava áudio e não salva automaticamente após transcrever. A voz vira apenas texto local no navegador, e o usuário continua responsável por revisar antes de salvar.
+
+Se o navegador não oferecer reconhecimento de voz, use o teclado do celular ou o botão de microfone nativo do Android/iOS.
 
 ## Instalar Como App / PWA
 
