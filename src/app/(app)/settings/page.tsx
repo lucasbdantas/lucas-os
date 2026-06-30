@@ -6,6 +6,7 @@ import {
 } from "@/components/settings/capture-token-list";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireSession } from "@/lib/supabase/require-session";
+import Link from "next/link";
 
 const curlExample =
   'curl -X POST http://localhost:3000/api/capture -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d "{\\"text\\":\\"comprar pilha amanhã\\",\\"source\\":\\"ios_shortcut\\"}"';
@@ -88,6 +89,21 @@ export default async function SettingsPage() {
           </h3>
           <div className="mt-3 grid gap-4 text-sm leading-6 text-zinc-700">
             <div>
+              <p className="font-medium text-zinc-900">
+                Modo autenticado no navegador
+              </p>
+              <p className="mt-2 text-zinc-700">
+                Se você estiver logado no celular, use a tela rápida sem token.
+              </p>
+              <Link
+                className="mt-2 inline-flex rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+                href="/quick-capture"
+              >
+                Abrir Captura rápida
+              </Link>
+            </div>
+
+            <div>
               <p className="font-medium text-zinc-900">Segurança do token</p>
               <ul className="mt-2 list-disc space-y-1 pl-5">
                 <li>O token completo aparece apenas uma vez ao criar.</li>
@@ -102,6 +118,9 @@ export default async function SettingsPage() {
               <div className="mt-2 grid gap-2">
                 <code className="block overflow-x-auto rounded bg-white px-3 py-2 text-xs text-zinc-800">
                   http://localhost:3000/api/capture
+                </code>
+                <code className="block overflow-x-auto rounded bg-white px-3 py-2 text-xs text-zinc-800">
+                  http://&lt;IP_DO_COMPUTADOR&gt;:3000/quick-capture
                 </code>
                 <code className="block overflow-x-auto rounded bg-white px-3 py-2 text-xs text-zinc-800">
                   http://&lt;IP_DO_COMPUTADOR&gt;:3000/api/capture

@@ -1,6 +1,11 @@
 # Mobile Capture V1
 
-Mobile Capture V1 adds a narrow external capture endpoint for text-only capture from a shortcut or webhook.
+Mobile Capture V1 has two capture modes:
+
+1. External endpoint with token: `POST /api/capture`.
+2. Authenticated browser screen: `/quick-capture`.
+
+Use the endpoint when a mobile shortcut or webhook needs to capture without a browser login. Use `/quick-capture` when the phone browser can log in normally.
 
 ## What exists
 
@@ -10,23 +15,15 @@ Mobile Capture V1 adds a narrow external capture endpoint for text-only capture 
 - Existing tokens show only name, prefix, created date, last used date, and revoked state.
 - Tokens can be revoked from `/settings`.
 - `POST /api/capture` accepts text captures without a browser login.
+- `/quick-capture` accepts text captures from an authenticated browser session.
 - The app does not use `SUPABASE_SERVICE_ROLE_KEY`.
 - The route handler does not use `DATABASE_URL`.
 
-## Database objects
+## Mode A: external endpoint with token
 
-Migration:
+Use this mode for Android/Samsung shortcuts, iOS Shortcuts, or simple webhooks.
 
-- `supabase/migrations/20260629000004_capture_tokens.sql`
-
-Objects:
-
-- `capture_tokens`
-- `public.create_pending_capture_from_token(token_hash, raw_text, source)`
-
-The SQL function is `SECURITY DEFINER`, sets `search_path` explicitly, validates the active token hash, inserts into `pending_captures` for the token owner, and updates `last_used_at`.
-
-## Create a token
+### Create a token
 
 1. Log in to Lucas OS.
 2. Open `/settings`.
@@ -41,7 +38,7 @@ Important:
 - The token name does not authenticate.
 - Only the complete token can authorize external capture.
 
-## Endpoint URLs
+### Endpoint URLs
 
 Use the URL your phone can reach.
 
@@ -65,22 +62,7 @@ https://seu-dominio.com/api/capture
 
 On a phone, `localhost` means the phone itself, not your PC. For local mobile tests, use the PC's local network IP.
 
-## Local network development
-
-Run Next so it listens on the local network:
-
-```bash
-npm run dev -- --hostname 0.0.0.0
-```
-
-Then:
-
-1. Find the PC's local IP address.
-2. Make sure phone and PC are on the same Wi-Fi network.
-3. Use `http://<IP_DO_COMPUTADOR>:3000/api/capture` in the mobile shortcut.
-4. If the phone cannot connect, check Windows Firewall and network isolation settings.
-
-## Request format
+### Request format
 
 Method:
 
@@ -119,7 +101,7 @@ Text rules:
 - empty text is rejected;
 - max length is 5000 characters.
 
-## Test with curl
+### Test with curl
 
 Use a local dev server and replace `<TOKEN>` with the complete token copied from `/settings`.
 
@@ -137,6 +119,53 @@ Expected response:
 ```
 
 Then open `/capture` or `/today` and confirm the pending capture appears.
+
+## Mode B: authenticated browser quick capture
+
+Use this mode when the phone can open Lucas OS in a browser and log in.
+
+Local computer:
+
+```txt
+http://localhost:3000/quick-capture
+```
+
+Phone on the same Wi-Fi as the computer:
+
+```txt
+http://<IP_DO_PC>:3000/quick-capture
+```
+
+Future deployed app:
+
+```txt
+https://seu-dominio.com/quick-capture
+```
+
+Behavior:
+
+- requires login;
+- saves text as `pending_capture`;
+- uses `source = "web"`;
+- does not call AI automatically;
+- clears the field after saving;
+- pending captures appear in `/capture` and update `/today`.
+
+## Local network development
+
+Run Next so it listens on the local network:
+
+```bash
+npm run dev -- --hostname 0.0.0.0
+```
+
+Then:
+
+1. Find the PC's local IP address.
+2. Make sure phone and PC are on the same Wi-Fi network.
+3. Use `http://<IP_DO_PC>:3000/quick-capture` for authenticated browser capture.
+4. Use `http://<IP_DO_COMPUTADOR>:3000/api/capture` for token-based shortcut capture.
+5. If the phone cannot connect, check Windows Firewall and network isolation settings.
 
 ## Android / Samsung shortcut setup
 
@@ -184,8 +213,9 @@ For local testing from the iPhone, use the PC's local IP instead of `localhost`.
 - A revoked token does not work.
 - The prefix shown in Lucas OS does not work as a token.
 - The token name does not work as a token.
-- Generic errors are intentional and do not reveal details for security.
+- Generic API errors are intentional and do not reveal details for security.
 - A successful capture appears in `/capture` as pending and contributes to `/today`.
+- If `/quick-capture` redirects to `/login`, log in on the phone browser first.
 - If local Wi-Fi requests fail, check that Next is running with `--hostname 0.0.0.0`, the devices are on the same network, and Windows Firewall allows the connection.
 
 ## Security risks and controls
@@ -194,6 +224,7 @@ For local testing from the iPhone, use the PC's local IP instead of `localhost`.
 - Store shortcut tokens carefully; anyone with the token can submit text captures.
 - Revoke tokens immediately if a device or shortcut is compromised.
 - Tokens are never stored in plain text by Lucas OS.
+- `/quick-capture` does not use tokens; it relies on the authenticated browser session.
 - `.env.local` must never be committed.
 - The app does not need or use a Supabase service role key for Mobile Capture V1.
 - Error responses are intentionally generic and do not reveal whether the token, body, or auth format failed.
