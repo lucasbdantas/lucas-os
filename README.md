@@ -38,11 +38,13 @@ Crie um arquivo `.env.local` com base em `.env.example`.
 ```txt
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
 DATABASE_URL=
 ```
 
 Nunca commitar `.env.local`.
+
+O app atual nao usa `SUPABASE_SERVICE_ROLE_KEY`. Nao configure service role key
+para o fluxo normal de desenvolvimento local.
 
 ## Comandos
 

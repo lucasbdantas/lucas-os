@@ -70,7 +70,7 @@ Security notes:
 - `.env.local` must stay out of Git.
 - App pages, components, and actions should not use `DATABASE_URL`.
 - The app should not expose `OPENAI_API_KEY` to client components.
-- `SUPABASE_SERVICE_ROLE_KEY` is listed in docs/env example, but no executable app code currently uses it. This may be cleaned up later to reduce configuration ambiguity.
+- `SUPABASE_SERVICE_ROLE_KEY` is not required for the current app and should not be configured for normal local usage.
 
 ## Validation performed
 
@@ -108,7 +108,7 @@ npm run test
 - Date logic in Today V2 is app-side and based on the America/Sao_Paulo calendar day. This is fine for current single-user use, but timezone preferences should eventually move into `app_settings`.
 - Project "without next action" detection depends on the current open task statuses: `todo`, `doing`, and `waiting`.
 - AI preview depends on OpenAI availability and model support; failures should remain friendly and non-blocking.
-- Keeping `SUPABASE_SERVICE_ROLE_KEY` in docs/env example may confuse future setup because the current app must not use service role keys.
+- Future scripts that truly need elevated Supabase access should document that separately and must not leak service role keys into client or app runtime.
 
 ## Recommended next steps
 
