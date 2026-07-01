@@ -1,9 +1,12 @@
 export const googleIdentityScopes = ["openid", "email", "profile"] as const;
 export const googleCalendarReadonlyScope =
   "https://www.googleapis.com/auth/calendar.readonly";
+export const googleGmailReadonlyScope =
+  "https://www.googleapis.com/auth/gmail.readonly";
 export const googleRequestedScopes = [
   ...googleIdentityScopes,
   googleCalendarReadonlyScope,
+  googleGmailReadonlyScope,
 ] as const;
 
 export type GoogleTokenResponse = {

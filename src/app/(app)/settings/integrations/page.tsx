@@ -6,6 +6,7 @@ import { formatDateTime } from "@/lib/format";
 import { getCalendarLanePreferencesForUser } from "@/lib/integrations/google/calendar-lane-settings";
 import { hasGoogleCalendarReadonlyScope } from "@/lib/integrations/google/calendar-events";
 import { getGoogleCalendarSourcesForUser } from "@/lib/integrations/google/calendar";
+import { hasGoogleGmailReadonlyScope } from "@/lib/integrations/google/gmail-messages";
 import { requireSession } from "@/lib/supabase/require-session";
 
 type ConnectedAccountListItem = {
@@ -82,7 +83,7 @@ export default async function IntegrationsPage({
       <PageHeader
         eyebrow="Configuracoes"
         title="Integracoes"
-        description="Conecte contas externas com tokens criptografados no servidor. Google Calendar usa acesso somente leitura."
+        description="Conecte contas externas com tokens criptografados no servidor. Google Calendar e Gmail usam acesso somente leitura."
       />
 
       <div className="mt-4">
@@ -121,7 +122,8 @@ export default async function IntegrationsPage({
             <h2 className="font-semibold text-zinc-950">Google</h2>
             <p className="mt-1 text-sm text-zinc-600">
               Fundacao OAuth para multiplas contas. Calendar read-only esta
-              disponivel; Gmail entra em etapa futura com novo escopo explicito.
+              disponivel; Gmail read-only alimenta a Action Inbox sem modificar
+              emails.
             </p>
           </div>
 
@@ -164,6 +166,11 @@ export default async function IntegrationsPage({
                   ) : (
                     <StatusBadge label="reconectar para Calendar" tone="amber" />
                   )}
+                  {hasGoogleGmailReadonlyScope(account.scopes) ? (
+                    <StatusBadge label="Gmail read-only" tone="green" />
+                  ) : (
+                    <StatusBadge label="reconectar para Gmail" tone="amber" />
+                  )}
                 </div>
               </div>
 
@@ -173,6 +180,15 @@ export default async function IntegrationsPage({
                   Esta conta foi conectada antes do escopo Calendar. Clique em
                   Conectar Google novamente e escolha esta conta para conceder
                   acesso somente leitura.
+                </p>
+              ) : null}
+
+              {!hasGoogleGmailReadonlyScope(account.scopes) &&
+              account.status !== "revoked" ? (
+                <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  Esta conta ainda nao concedeu Gmail read-only. Clique em
+                  Conectar Google novamente e escolha esta conta para habilitar a
+                  Action Inbox.
                 </p>
               ) : null}
 

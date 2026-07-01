@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   googleCalendarReadonlyScope,
+  googleGmailReadonlyScope,
   normalizeGoogleConnectedAccount,
   normalizeGoogleScopes,
 } from "./connected-account";
@@ -37,6 +38,7 @@ describe("google connected account normalization", () => {
       "email",
       "profile",
       googleCalendarReadonlyScope,
+      googleGmailReadonlyScope,
     ]);
   });
 
