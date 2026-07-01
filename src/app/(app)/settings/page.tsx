@@ -118,6 +118,26 @@ export default async function SettingsPage({
       <section className="app-card mt-8 max-w-4xl p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
+            <h2 className="font-semibold text-zinc-950">
+              Notificacoes push
+            </h2>
+            <p className="mt-1 text-sm text-zinc-600">
+              Ative push notifications por dispositivo para lembretes de tasks,
+              sempre com consentimento explicito.
+            </p>
+          </div>
+          <Link
+            className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+            href="/settings/notifications"
+          >
+            Abrir notificacoes
+          </Link>
+        </div>
+      </section>
+
+      <section className="app-card mt-8 max-w-4xl p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
             <h2 className="font-semibold text-zinc-950">Backup e export</h2>
             <p className="mt-1 text-sm text-zinc-600">
               Exporte seus dados em JSON e consulte o plano de recuperacao

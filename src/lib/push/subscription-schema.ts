@@ -1,0 +1,11 @@
+import { z } from "zod";
+
+export const pushSubscriptionSchema = z.object({
+  endpoint: z.string().trim().url().max(2048),
+  keys: z.object({
+    auth: z.string().trim().min(8).max(256),
+    p256dh: z.string().trim().min(32).max(512),
+  }),
+});
+
+export type PushSubscriptionInput = z.infer<typeof pushSubscriptionSchema>;

@@ -72,6 +72,7 @@ test.describe("authenticated smoke", () => {
     "/settings",
     "/settings/backup",
     "/settings/integrations",
+    "/settings/notifications",
     "/notifications",
     "/review",
   ];
