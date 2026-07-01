@@ -30,7 +30,9 @@ Deploy preview funcionando na Vercel com Supabase producao.
   - `/review`.
 - `/api/health` funcionando.
 - `/quick-capture` funcionando.
-- `/api/capture` com token externo: pendente de confirmacao explicita neste checkpoint.
+- `/api/capture` com token externo funcionando:
+  - POST retornou sucesso;
+  - pending capture apareceu em `/capture`.
 - AI preview: opcional; validar apenas se `OPENAI_API_KEY` estiver configurada no ambiente da Vercel.
 
 ## Riscos restantes antes de dominio final
@@ -38,7 +40,7 @@ Deploy preview funcionando na Vercel com Supabase producao.
 - Confirmar comportamento em 1 dia real de uso.
 - Revisar logs da Vercel depois de uso real.
 - Planejar backup/restore do Supabase antes de dominio final.
-- Confirmar se `/api/capture` com token externo foi testado em producao preview.
+- Testar revogacao de token externo antes de dominio final, se ainda nao tiver sido feito.
 - Confirmar se AI preview deve ficar habilitado no ambiente de producao.
 - Revisar Supabase Auth Redirect URLs quando houver dominio final.
 - Evitar configurar `DATABASE_URL`, `SEED_USER_ID`, `SUPABASE_SERVICE_ROLE_KEY` ou `E2E_*` no runtime da Vercel.
@@ -47,7 +49,7 @@ Deploy preview funcionando na Vercel com Supabase producao.
 
 1. Testar o preview por 1 dia real.
 2. Revisar logs da Vercel.
-3. Testar `/api/capture` com token externo, se ainda nao tiver sido validado.
+3. Testar revogacao do token externo, se ainda nao tiver sido validada.
 4. Decidir se AI preview fica habilitado com `OPENAI_API_KEY`.
 5. Planejar backup do Supabase.
 6. Decidir se vai manter preview ou promover para producao.
