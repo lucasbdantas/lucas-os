@@ -118,6 +118,24 @@ export default async function SettingsPage({
       <section className="app-card mt-8 max-w-4xl p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
+            <h2 className="font-semibold text-zinc-950">Backup e export</h2>
+            <p className="mt-1 text-sm text-zinc-600">
+              Exporte seus dados em JSON e consulte o plano de recuperacao
+              manual. Secrets e tokens sensiveis ficam fora do arquivo.
+            </p>
+          </div>
+          <Link
+            className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+            href="/settings/backup"
+          >
+            Abrir backup
+          </Link>
+        </div>
+      </section>
+
+      <section className="app-card mt-8 max-w-4xl p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
             <h2 className="font-semibold text-zinc-950">Captura externa</h2>
             <p className="mt-1 text-sm text-zinc-600">
               Crie tokens para atalhos mobile ou webhooks simples. O token

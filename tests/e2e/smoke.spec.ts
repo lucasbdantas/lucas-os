@@ -33,6 +33,16 @@ test.describe("public smoke", () => {
     });
   });
 
+  test("/api/backup/export exige login", async ({ request }) => {
+    const response = await request.get("/api/backup/export");
+    const payload = await response.json();
+
+    expect(response.status()).toBe(401);
+    expect(payload).toEqual({
+      error: "Faca login para exportar seus dados.",
+    });
+  });
+
   test("/share carrega fallback publico", async ({ page }) => {
     await page.goto("/share");
 
@@ -60,6 +70,7 @@ test.describe("authenticated smoke", () => {
     "/inbox",
     "/quick-capture",
     "/settings",
+    "/settings/backup",
     "/settings/integrations",
     "/notifications",
     "/review",
