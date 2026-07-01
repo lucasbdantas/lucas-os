@@ -16,6 +16,7 @@ import {
   type GmailInboxFilters,
   type GmailInboxPreset,
 } from "@/lib/integrations/google/gmail-filters";
+import { buildGmailTaskDraft } from "@/lib/integrations/google/gmail-task-draft";
 import { requireSession } from "@/lib/supabase/require-session";
 
 type InboxPageProps = {
@@ -23,6 +24,7 @@ type InboxPageProps = {
     account?: string;
     attachment?: string;
     error?: string;
+    emailTask?: string;
     label?: string;
     notice?: string;
     period?: string;
@@ -33,9 +35,16 @@ type InboxPageProps = {
 };
 
 type DomainRow = {
+  active: boolean;
   id: string;
   name: string;
   is_system: boolean;
+};
+
+type ProjectRow = {
+  domain_id: string;
+  id: string;
+  name: string;
 };
 
 type TaskRow = {
@@ -107,6 +116,13 @@ function buildInboxHref(
   return queryString ? `/inbox?${queryString}` : "/inbox";
 }
 
+function buildEmailTaskHref(filtersHref: string, accountId: string, id: string) {
+  const separator = filtersHref.includes("?") ? "&" : "?";
+  return `${filtersHref}${separator}emailTask=${encodeURIComponent(
+    `${accountId}:${id}`,
+  )}#email-task-form`;
+}
+
 function buildPresetHref(filters: GmailInboxFilters, preset: GmailInboxPreset) {
   return buildInboxHref(
     {
@@ -124,12 +140,12 @@ function buildPresetHref(filters: GmailInboxFilters, preset: GmailInboxPreset) {
 
 export default async function InboxPage({ searchParams }: InboxPageProps) {
   const params = await searchParams;
-  const { error: pageError, notice } = params;
+  const { emailTask, error: pageError, notice } = params;
   const gmailFilters = normalizeGmailInboxFilters(params);
   const activeFilterSummary = describeGmailFilters(gmailFilters);
   const currentInboxHref = buildInboxHref(gmailFilters);
   const { supabase, user } = await requireSession();
-  const [gmailInbox, inboxResult] = await Promise.all([
+  const [gmailInbox, domainsResult, projectsResult] = await Promise.all([
     getGmailActionInboxForUser({
       filters: gmailFilters,
       maxResultsPerAccount: 20,
@@ -138,16 +154,30 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
     }),
     supabase
       .from("domains")
-      .select("id,name,is_system")
-      .eq("name", "Inbox")
-      .eq("is_system", true)
-      .maybeSingle<DomainRow>(),
+      .select("id,name,is_system,active")
+      .order("is_system", { ascending: false })
+      .order("name", { ascending: true })
+      .returns<DomainRow[]>(),
+    supabase
+      .from("projects")
+      .select("id,name,domain_id")
+      .in("status", ["active", "waiting"])
+      .order("name", { ascending: true })
+      .returns<ProjectRow[]>(),
   ]);
-  const { data: inbox, error: inboxError } = inboxResult;
 
-  if (inboxError) {
-    throw new Error(inboxError.message);
+  if (domainsResult.error) {
+    throw new Error(domainsResult.error.message);
   }
+
+  if (projectsResult.error) {
+    throw new Error(projectsResult.error.message);
+  }
+
+  const inbox =
+    domainsResult.data.find(
+      (domain) => domain.name === "Inbox" && domain.is_system,
+    ) ?? null;
 
   const { data: tasks, error: tasksError } = inbox
     ? await supabase
@@ -169,6 +199,24 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
     ...task,
     domainName: "Inbox",
   }));
+  const selectedEmail = emailTask
+    ? gmailInbox.messages.find(
+        (message) => `${message.accountId}:${message.id}` === emailTask,
+      )
+    : null;
+  const emailTaskDraft = selectedEmail
+    ? buildGmailTaskDraft(selectedEmail)
+    : null;
+  const selectableDomains = domainsResult.data.filter(
+    (domain) => domain.active || (domain.is_system && domain.name === "Inbox"),
+  );
+  const domainNameById = new Map(
+    domainsResult.data.map((domain) => [domain.id, domain.name]),
+  );
+  const projectOptions = projectsResult.data.map((project) => ({
+    ...project,
+    domainName: domainNameById.get(project.domain_id),
+  }));
 
   return (
     <main className="app-page mx-auto max-w-6xl">
@@ -186,7 +234,12 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
 
       {notice ? (
         <p className="mt-6 rounded-2xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
-          {notice}
+          {notice}{" "}
+          {notice.toLowerCase().includes("task criada") ? (
+            <Link className="underline underline-offset-4" href="/tasks">
+              Abrir Tasks
+            </Link>
+          ) : null}
         </p>
       ) : null}
 
@@ -398,6 +451,16 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
                     >
                       Abrir no Gmail
                     </a>
+                    <Link
+                      className="soft-button px-3 py-2 text-sm font-semibold"
+                      href={buildEmailTaskHref(
+                        currentInboxHref,
+                        message.accountId,
+                        message.id,
+                      )}
+                    >
+                      Criar task
+                    </Link>
                     <form action={sendGmailMessageToCapture}>
                       <input
                         name="returnTo"
@@ -441,6 +504,52 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
           </div>
         ) : null}
       </section>
+
+      {emailTask && !selectedEmail ? (
+        <section className="section-shell mt-10">
+          <EmptyState
+            description="O email selecionado nao apareceu no filtro atual. Limpe filtros ou amplie o periodo para tentar de novo."
+            title="Email nao encontrado para criar task"
+          />
+        </section>
+      ) : null}
+
+      {selectedEmail && emailTaskDraft ? (
+        <section className="section-shell mt-10" id="email-task-form">
+          <SectionHeader
+            action={
+              <Link
+                className="ghost-button px-3 py-2 text-sm font-semibold"
+                href={currentInboxHref}
+              >
+                Cancelar
+              </Link>
+            }
+            description="Revise os campos antes de salvar. Nada e criado automaticamente a partir do Gmail."
+            title="Criar task a partir deste email"
+          />
+          <div className="app-card-muted p-4 text-sm leading-6 text-zinc-600">
+            <p>
+              Origem: {selectedEmail.from} / {selectedEmail.accountEmail}
+            </p>
+            <p>Assunto: {selectedEmail.subject}</p>
+            {selectedEmail.snippet ? <p>{selectedEmail.snippet}</p> : null}
+          </div>
+          <TaskForm
+            createDefaults={{
+              notes: emailTaskDraft.notes,
+              priority: "medium",
+              reminder_offsets: [],
+              source: emailTaskDraft.source,
+              title: emailTaskDraft.title,
+            }}
+            domains={selectableDomains}
+            projects={projectOptions}
+            returnTo={currentInboxHref}
+            submitLabel="Criar task"
+          />
+        </section>
+      ) : null}
 
       <section className="mt-10">
         {inbox ? (

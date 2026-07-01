@@ -32,6 +32,24 @@ export type EditableTaskValues = {
   reminder_offsets: number[];
 };
 
+export type CreateTaskDefaults = {
+  context?: string | null;
+  domain_id?: string | null;
+  due_date?: string | null;
+  due_time?: string | null;
+  energy_required?: string | null;
+  notes?: string | null;
+  priority?: string;
+  project_id?: string | null;
+  recurrence_anchor_date?: string | null;
+  recurrence_end_date?: string | null;
+  recurrence_interval?: number;
+  recurrence_type?: string;
+  reminder_offsets?: number[];
+  source?: "manual" | "voice" | "email" | "observation" | "import";
+  title?: string;
+};
+
 type TaskFormProps = {
   domains: DomainOption[];
   projects?: ProjectOption[];
@@ -39,7 +57,9 @@ type TaskFormProps = {
   defaultProjectId?: string;
   returnTo: string;
   compact?: boolean;
+  createDefaults?: CreateTaskDefaults;
   initialTask?: EditableTaskValues;
+  submitLabel?: string;
 };
 
 export function TaskForm({
@@ -49,11 +69,17 @@ export function TaskForm({
   defaultProjectId,
   returnTo,
   compact = false,
+  createDefaults,
   initialTask,
+  submitLabel,
 }: TaskFormProps) {
   const isEditing = Boolean(initialTask);
   const action = isEditing ? updateTask : createTask;
-  const selectedDomainId = initialTask?.domain_id ?? defaultDomainId ?? "";
+  const selectedDomainId =
+    initialTask?.domain_id ??
+    createDefaults?.domain_id ??
+    defaultDomainId ??
+    "";
   const selectedDomainIsAvailable = selectedDomainId
     ? domains.some((domain) => domain.id === selectedDomainId)
     : false;
@@ -69,13 +95,16 @@ export function TaskForm({
       {initialTask ? (
         <input name="taskId" type="hidden" value={initialTask.id} />
       ) : null}
+      {!isEditing && createDefaults?.source ? (
+        <input name="source" type="hidden" value={createDefaults.source} />
+      ) : null}
 
       <div className="grid gap-4">
         <label className="block">
           <span className="text-sm font-medium text-zinc-700">Titulo</span>
           <input
             className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
-            defaultValue={initialTask?.title}
+            defaultValue={initialTask?.title ?? createDefaults?.title}
             maxLength={220}
             name="title"
             placeholder={compact ? "Adicionar tarefa na Inbox" : "Nova tarefa"}
@@ -89,7 +118,7 @@ export function TaskForm({
             <span className="text-sm font-medium text-zinc-700">Notas</span>
             <textarea
               className="mt-2 min-h-24 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
-              defaultValue={initialTask?.notes ?? ""}
+              defaultValue={initialTask?.notes ?? createDefaults?.notes ?? ""}
               maxLength={4000}
               name="notes"
             />
@@ -128,7 +157,12 @@ export function TaskForm({
               </span>
               <select
                 className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
-                defaultValue={initialTask?.project_id ?? defaultProjectId ?? ""}
+                defaultValue={
+                  initialTask?.project_id ??
+                  createDefaults?.project_id ??
+                  defaultProjectId ??
+                  ""
+                }
                 name="projectId"
               >
                 <option value="">Sem projeto</option>
@@ -153,7 +187,7 @@ export function TaskForm({
                 <span className="text-sm font-medium text-zinc-700">Data</span>
                 <input
                   className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
-                  defaultValue={initialTask?.due_date ?? ""}
+                  defaultValue={initialTask?.due_date ?? createDefaults?.due_date ?? ""}
                   name="dueDate"
                   type="date"
                 />
@@ -164,7 +198,11 @@ export function TaskForm({
                 </span>
                 <input
                   className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
-                  defaultValue={initialTask?.due_time?.slice(0, 5) ?? ""}
+                  defaultValue={
+                    initialTask?.due_time?.slice(0, 5) ??
+                    createDefaults?.due_time?.slice(0, 5) ??
+                    ""
+                  }
                   name="dueTime"
                   type="time"
                 />
@@ -178,7 +216,9 @@ export function TaskForm({
                 </span>
                 <select
                   className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
-                  defaultValue={initialTask?.priority ?? "medium"}
+                  defaultValue={
+                    initialTask?.priority ?? createDefaults?.priority ?? "medium"
+                  }
                   name="priority"
                 >
                   <option value="low">low</option>
@@ -193,7 +233,11 @@ export function TaskForm({
                 </span>
                 <select
                   className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
-                  defaultValue={initialTask?.energy_required ?? ""}
+                  defaultValue={
+                    initialTask?.energy_required ??
+                    createDefaults?.energy_required ??
+                    ""
+                  }
                   name="energyRequired"
                 >
                   <option value="">Sem definir</option>
@@ -208,7 +252,7 @@ export function TaskForm({
                 </span>
                 <input
                   className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
-                  defaultValue={initialTask?.context ?? ""}
+                  defaultValue={initialTask?.context ?? createDefaults?.context ?? ""}
                   maxLength={80}
                   name="context"
                   placeholder="computador, casa..."
@@ -247,7 +291,11 @@ export function TaskForm({
                   </span>
                   <select
                     className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
-                    defaultValue={initialTask?.recurrence_type ?? "none"}
+                    defaultValue={
+                      initialTask?.recurrence_type ??
+                      createDefaults?.recurrence_type ??
+                      "none"
+                    }
                     name="recurrenceType"
                   >
                     <option value="none">Não repetir</option>
@@ -263,7 +311,11 @@ export function TaskForm({
                   </span>
                   <input
                     className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
-                    defaultValue={initialTask?.recurrence_interval ?? 1}
+                    defaultValue={
+                      initialTask?.recurrence_interval ??
+                      createDefaults?.recurrence_interval ??
+                      1
+                    }
                     min={1}
                     name="recurrenceInterval"
                     type="number"
@@ -276,7 +328,11 @@ export function TaskForm({
                   </span>
                   <input
                     className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
-                    defaultValue={initialTask?.recurrence_anchor_date ?? ""}
+                    defaultValue={
+                      initialTask?.recurrence_anchor_date ??
+                      createDefaults?.recurrence_anchor_date ??
+                      ""
+                    }
                     name="recurrenceAnchorDate"
                     type="date"
                   />
@@ -288,7 +344,11 @@ export function TaskForm({
                   </span>
                   <input
                     className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
-                    defaultValue={initialTask?.recurrence_end_date ?? ""}
+                    defaultValue={
+                      initialTask?.recurrence_end_date ??
+                      createDefaults?.recurrence_end_date ??
+                      ""
+                    }
                     name="recurrenceEndDate"
                     type="date"
                   />
@@ -319,7 +379,7 @@ export function TaskForm({
                     <input
                       defaultChecked={initialTask?.reminder_offsets?.includes(
                         option.value,
-                      )}
+                      ) ?? createDefaults?.reminder_offsets?.includes(option.value)}
                       name="reminderOffsets"
                       type="checkbox"
                       value={option.value}
@@ -344,7 +404,7 @@ export function TaskForm({
 
         <div className="flex flex-wrap gap-2">
           <button className="primary-button px-4 py-2.5 text-sm font-semibold">
-            {isEditing ? "Salvar alteracoes" : "Criar tarefa"}
+            {submitLabel ?? (isEditing ? "Salvar alteracoes" : "Criar tarefa")}
           </button>
           {isEditing ? (
             <a
