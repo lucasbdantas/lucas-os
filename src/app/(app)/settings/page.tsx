@@ -100,6 +100,24 @@ export default async function SettingsPage({
       <section className="mt-8 max-w-4xl rounded-md border border-zinc-200 bg-white p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
+            <h2 className="font-semibold text-zinc-950">Integracoes</h2>
+            <p className="mt-1 text-sm text-zinc-600">
+              Conecte contas Google com OAuth seguro. Gmail e Calendar ainda nao
+              sao lidos nesta etapa.
+            </p>
+          </div>
+          <Link
+            className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+            href="/settings/integrations"
+          >
+            Abrir integracoes
+          </Link>
+        </div>
+      </section>
+
+      <section className="mt-8 max-w-4xl rounded-md border border-zinc-200 bg-white p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
             <h2 className="font-semibold text-zinc-950">Captura externa</h2>
             <p className="mt-1 text-sm text-zinc-600">
               Crie tokens para atalhos mobile ou webhooks simples. O token
