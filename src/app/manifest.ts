@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/quick-capture",
     scope: "/",
     display: "standalone",
-    background_color: "#fafafa",
-    theme_color: "#18181b",
+    background_color: "#f4efe4",
+    theme_color: "#2f6b58",
     orientation: "portrait",
     icons: [
       {

@@ -18,7 +18,7 @@ export function ProjectStatusActions({
       <input name="projectId" type="hidden" value={projectId} />
       <input name="returnTo" type="hidden" value={returnTo} />
       <select
-        className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+        className="field-control px-3 py-2 text-sm outline-none"
         defaultValue={currentStatus}
         name="status"
       >
@@ -28,7 +28,7 @@ export function ProjectStatusActions({
           </option>
         ))}
       </select>
-      <button className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100">
+      <button className="soft-button px-3 py-2 text-sm font-semibold">
         Atualizar
       </button>
     </form>

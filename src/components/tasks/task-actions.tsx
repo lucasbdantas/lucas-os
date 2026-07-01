@@ -15,7 +15,7 @@ export function TaskActions({
   return (
     <div className="flex flex-wrap gap-2">
       <Link
-        className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        className="soft-button px-3 py-2 text-sm font-semibold"
         href={`/tasks?edit=${taskId}#edit-task`}
       >
         Editar
@@ -25,14 +25,14 @@ export function TaskActions({
           <form action={completeTask}>
             <input name="taskId" type="hidden" value={taskId} />
             <input name="returnTo" type="hidden" value={returnTo} />
-            <button className="rounded-md border border-green-200 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-50">
+            <button className="soft-button px-3 py-2 text-sm font-semibold">
               Concluir
             </button>
           </form>
           <form action={cancelTask}>
             <input name="taskId" type="hidden" value={taskId} />
             <input name="returnTo" type="hidden" value={returnTo} />
-            <button className="rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
+            <button className="danger-button px-3 py-2 text-sm font-semibold">
               Cancelar
             </button>
           </form>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getAppPreferencesForUser } from "@/lib/app-settings/server";
 import { formatDateTime } from "@/lib/format";
@@ -65,11 +66,11 @@ function NotificationSection({
   title: string;
 }) {
   return (
-    <section>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-semibold text-zinc-950">{title}</h2>
-        <StatusBadge label={`${notifications.length}`} />
-      </div>
+    <section className="section-shell">
+      <SectionHeader
+        action={<StatusBadge label={`${notifications.length}`} />}
+        title={title}
+      />
 
       {notifications.length === 0 ? (
         <EmptyState title={emptyTitle} description={emptyDescription} />
@@ -80,7 +81,7 @@ function NotificationSection({
 
             return (
               <article
-                className="rounded-md border border-zinc-200 bg-white p-4"
+                className="app-card-soft p-4"
                 key={notification.id}
               >
                 <div className="grid gap-3 md:grid-cols-[1fr_auto]">
@@ -119,13 +120,13 @@ function NotificationSection({
                     {taskEditHref ? (
                       <>
                         <Link
-                          className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                          className="soft-button px-3 py-2 text-sm font-semibold"
                           href={taskEditHref}
                         >
                           Abrir task
                         </Link>
                         <Link
-                          className="rounded-md border border-blue-200 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50"
+                          className="soft-button px-3 py-2 text-sm font-semibold"
                           href={taskEditHref}
                         >
                           Editar task
@@ -145,7 +146,7 @@ function NotificationSection({
                             type="hidden"
                             value="/notifications"
                           />
-                          <button className="rounded-md border border-blue-200 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50">
+                          <button className="soft-button px-3 py-2 text-sm font-semibold">
                             Marcar como lida
                           </button>
                         </form>
@@ -160,7 +161,7 @@ function NotificationSection({
                             type="hidden"
                             value="/notifications"
                           />
-                          <button className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50">
+                          <button className="ghost-button px-3 py-2 text-sm font-semibold">
                             Dispensar
                           </button>
                         </form>
@@ -218,7 +219,7 @@ export default async function NotificationsPage({
     .slice(0, 20);
 
   return (
-    <main className="px-6 py-8">
+    <main className="app-page mx-auto max-w-6xl">
       <PageHeader
         eyebrow="Lucas OS"
         title="Notificações"
@@ -226,7 +227,7 @@ export default async function NotificationsPage({
       />
 
       {pageError ? (
-        <p className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {pageError}
         </p>
       ) : null}

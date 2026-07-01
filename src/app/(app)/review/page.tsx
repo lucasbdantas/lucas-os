@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SectionHeader } from "@/components/ui/section-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -151,14 +152,12 @@ function TaskReviewSection({
   title: string;
 }) {
   return (
-    <section>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-semibold text-zinc-950">{title}</h2>
-          <p className="mt-1 text-sm text-zinc-600">{description}</p>
-        </div>
-        <StatusBadge label={`${tasks.length}`} />
-      </div>
+    <section className="section-shell">
+      <SectionHeader
+        action={<StatusBadge label={`${tasks.length}`} />}
+        description={description}
+        title={title}
+      />
 
       {tasks.length === 0 ? (
         <EmptyState title={emptyTitle} description={emptyDescription} />
@@ -166,7 +165,7 @@ function TaskReviewSection({
         <div className="grid gap-3">
           {tasks.map((task) => (
             <article
-              className="rounded-md border border-zinc-200 bg-white p-4"
+              className="task-card app-card-interactive p-4"
               key={task.id}
             >
               <div className="grid gap-3 md:grid-cols-[1fr_auto]">
@@ -211,7 +210,7 @@ function TaskReviewSection({
                   </div>
                 </div>
                 <Link
-                  className="inline-flex items-center justify-center rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                  className="soft-button px-3 py-2 text-sm font-semibold"
                   href={getTaskEditHref(task.id)}
                 >
                   Editar task
@@ -389,7 +388,7 @@ export default async function WeeklyReviewPage() {
     .slice(0, 20);
 
   return (
-    <main className="px-6 py-8">
+    <main className="app-page mx-auto max-w-7xl">
       <PageHeader
         eyebrow="Lucas OS"
         title="Weekly Review"
@@ -418,7 +417,7 @@ export default async function WeeklyReviewPage() {
               </p>
             </div>
             <Link
-              className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+              className="soft-button px-3 py-2 text-sm font-semibold"
               href="/capture"
             >
               Abrir Capture
@@ -434,7 +433,7 @@ export default async function WeeklyReviewPage() {
             <div className="grid gap-3">
               {pendingCapturesResult.data.map((capture) => (
                 <article
-                  className="rounded-md border border-zinc-200 bg-white p-4"
+                  className="project-card app-card-interactive p-4"
                   key={capture.id}
                 >
                   <p className="line-clamp-3 text-sm leading-6 text-zinc-800">
@@ -506,7 +505,7 @@ export default async function WeeklyReviewPage() {
             <div className="grid gap-3">
               {projectsWithoutNextAction.map((project) => (
                 <article
-                  className="rounded-md border border-zinc-200 bg-white p-4"
+                  className="project-card app-card-interactive p-4"
                   key={project.id}
                 >
                   <div className="grid gap-3 md:grid-cols-[1fr_auto]">
@@ -523,13 +522,13 @@ export default async function WeeklyReviewPage() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Link
-                        className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                        className="soft-button px-3 py-2 text-sm font-semibold"
                         href={getNextActionHref(project)}
                       >
                         Criar próxima ação
                       </Link>
                       <Link
-                        className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                        className="soft-button px-3 py-2 text-sm font-semibold"
                         href={getProjectEditHref(project.id)}
                       >
                         Editar projeto
@@ -595,7 +594,7 @@ function ProjectReviewSection({
         <div className="grid gap-3">
           {projects.map((project) => (
             <article
-              className="rounded-md border border-zinc-200 bg-white p-4"
+              className="project-card app-card-interactive p-4"
               key={project.id}
             >
               <div className="grid gap-3 md:grid-cols-[1fr_auto]">
@@ -616,7 +615,7 @@ function ProjectReviewSection({
                   </p>
                 </div>
                 <Link
-                  className="inline-flex items-center justify-center rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                  className="soft-button px-3 py-2 text-sm font-semibold"
                   href={getProjectEditHref(project.id)}
                 >
                   Editar projeto

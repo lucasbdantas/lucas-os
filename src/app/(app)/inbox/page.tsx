@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { TaskForm } from "@/components/tasks/task-form";
 import { TaskList, type TaskListItem } from "@/components/tasks/task-list";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDateTime } from "@/lib/format";
 import { getGmailActionInboxForUser } from "@/lib/integrations/google/gmail";
@@ -96,7 +97,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
   }));
 
   return (
-    <main className="px-6 py-8">
+    <main className="app-page mx-auto max-w-6xl">
       <PageHeader
         eyebrow="Operacional"
         title="Inbox"
@@ -104,34 +105,30 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
       />
 
       {pageError ? (
-        <p className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {pageError}
         </p>
       ) : null}
 
       {notice ? (
-        <p className="mt-6 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+        <p className="mt-6 rounded-2xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
           {notice}
         </p>
       ) : null}
 
-      <section className="mt-8">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-semibold text-zinc-950">
-              Gmail Action Inbox
-            </h2>
-            <p className="mt-1 text-sm text-zinc-600">
-              Emails recentes dos ultimos 14 dias, em modo somente leitura.
-            </p>
-          </div>
-          <Link
-            className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-            href="/settings/integrations"
-          >
-            Configurar Google
-          </Link>
-        </div>
+      <section className="section-shell mt-8">
+        <SectionHeader
+          action={
+            <Link
+              className="soft-button px-3 py-2 text-sm font-semibold"
+              href="/settings/integrations"
+            >
+              Configurar Google
+            </Link>
+          }
+          description="Emails recentes dos ultimos 14 dias, em modo somente leitura."
+          title="Gmail Action Inbox"
+        />
 
         {gmailInbox.connectedAccountCount === 0 ? (
           <EmptyState
@@ -141,14 +138,14 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
         ) : null}
 
         {gmailInbox.reconnectAccountEmails.length > 0 ? (
-          <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
             Reconecte {gmailInbox.reconnectAccountEmails.join(", ")} para
             conceder acesso somente leitura ao Gmail.
           </div>
         ) : null}
 
         {gmailInbox.warnings.length > 0 ? (
-          <div className="mb-3 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
+          <div className="app-card-muted mb-3 p-3 text-sm text-zinc-600">
             Algumas contas Google nao puderam carregar emails agora. A Inbox
             operacional continua funcionando.
           </div>
@@ -166,7 +163,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
           <div className="grid gap-3">
             {gmailInbox.messages.map((message) => (
               <article
-                className="rounded-md border border-zinc-200 bg-white p-4"
+                className="email-card app-card-interactive p-4"
                 key={`${message.accountId}:${message.id}`}
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -177,7 +174,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
                       </h3>
                       <StatusBadge label={message.accountEmail} tone="blue" />
                     </div>
-                    <div className="mt-2 grid gap-1 text-sm text-zinc-600">
+                    <div className="mt-2 grid gap-1 text-sm leading-6 text-zinc-600">
                       <p>De: {message.from}</p>
                       <p>
                         Data:{" "}
@@ -194,7 +191,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
 
                   <div className="flex flex-wrap gap-2">
                     <a
-                      className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                      className="soft-button px-3 py-2 text-sm font-semibold"
                       href={message.gmailUrl}
                       rel="noreferrer"
                       target="_blank"
@@ -229,7 +226,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
                         type="hidden"
                         value={message.snippet ?? ""}
                       />
-                      <button className="rounded-md bg-zinc-950 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800">
+                      <button className="primary-button px-3 py-2 text-sm font-semibold">
                         Enviar para Capture
                       </button>
                     </form>
@@ -257,10 +254,11 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
         )}
       </section>
 
-      <section className="mt-10">
-        <h2 className="mb-3 font-semibold text-zinc-950">
-          Itens abertos da Inbox operacional
-        </h2>
+      <section className="section-shell mt-10">
+        <SectionHeader
+          description="Tarefas abertas que ainda moram no dominio system Inbox."
+          title="Itens abertos da Inbox operacional"
+        />
         <TaskList
           emptyDescription="Nada pendente no dominio Inbox por enquanto."
           emptyTitle="Inbox vazia"

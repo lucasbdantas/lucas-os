@@ -63,7 +63,7 @@ export function TaskForm({
   return (
     <form
       action={action}
-      className="rounded-md border border-zinc-200 bg-white p-4"
+      className="app-card-soft p-4"
     >
       <input name="returnTo" type="hidden" value={returnTo} />
       {initialTask ? (
@@ -236,7 +236,7 @@ export function TaskForm({
               </label>
             ) : null}
 
-            <fieldset className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+            <fieldset className="app-card-muted p-3">
               <legend className="px-1 text-sm font-medium text-zinc-700">
                 Recorrência
               </legend>
@@ -301,7 +301,7 @@ export function TaskForm({
               </p>
             </fieldset>
 
-            <fieldset className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+            <fieldset className="app-card-muted p-3">
               <legend className="px-1 text-sm font-medium text-zinc-700">
                 Lembretes
               </legend>
@@ -313,7 +313,7 @@ export function TaskForm({
                   { label: "1 dia antes", value: 1440 },
                 ].map((option) => (
                   <label
-                    className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700"
+                    className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700"
                     key={option.value}
                   >
                     <input
@@ -343,12 +343,12 @@ export function TaskForm({
         )}
 
         <div className="flex flex-wrap gap-2">
-          <button className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800">
+          <button className="primary-button px-4 py-2.5 text-sm font-semibold">
             {isEditing ? "Salvar alteracoes" : "Criar tarefa"}
           </button>
           {isEditing ? (
             <a
-              className="rounded-md border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+              className="ghost-button px-4 py-2.5 text-sm font-semibold"
               href="/tasks"
             >
               Cancelar edicao

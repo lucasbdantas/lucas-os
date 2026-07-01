@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { AppNav } from "@/components/layout/app-nav";
+import type { AppAppearance } from "@/lib/app-settings/preferences";
 import { logout } from "@/lib/auth/actions";
 
 const navItems = [
@@ -14,77 +15,61 @@ const navItems = [
 ];
 
 type AppShellProps = {
+  appearance?: AppAppearance;
   children: React.ReactNode;
   notificationCount?: number;
   userEmail?: string;
 };
 
 export function AppShell({
+  appearance = "light",
   children,
   notificationCount = 0,
   userEmail,
 }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-950">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-zinc-200 bg-white px-4 py-5 md:flex md:flex-col">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-            Lucas OS
+    <div className="app-shell-surface min-h-screen" data-theme={appearance}>
+      <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-zinc-200 bg-white px-5 py-6 md:flex md:flex-col">
+        <div className="app-card-soft p-4">
+          <p className="section-kicker">Lucas OS</p>
+          <p className="mt-2 text-lg font-semibold text-zinc-950">
+            Caderno operacional
           </p>
-          <p className="mt-2 truncate text-sm text-zinc-700">{userEmail}</p>
+          <p className="mt-2 truncate text-sm text-zinc-600">{userEmail}</p>
         </div>
 
-        <nav className="mt-8 flex flex-1 flex-col gap-1">
-          {navItems.map((item) => (
-            <Link
-              className="rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950"
-              href={item.href}
-              key={item.href}
-            >
-              {item.label}
-              {item.href === "/notifications" && notificationCount > 0
-                ? ` (${notificationCount})`
-                : ""}
-            </Link>
-          ))}
-        </nav>
+        <AppNav
+          items={navItems}
+          notificationCount={notificationCount}
+          variant="desktop"
+        />
 
         <form action={logout}>
-          <button className="w-full rounded-md border border-zinc-200 px-3 py-2 text-left text-sm font-medium text-zinc-700 hover:bg-zinc-100">
+          <button className="soft-button w-full px-3 py-2.5 text-left text-sm font-medium">
             Sair
           </button>
         </form>
       </aside>
 
-      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 md:hidden">
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 backdrop-blur md:hidden">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-            Lucas OS
-          </p>
+          <p className="section-kicker">Lucas OS</p>
           <p className="max-w-48 truncate text-xs text-zinc-600">{userEmail}</p>
         </div>
         <form action={logout}>
-          <button className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700">
+          <button className="soft-button px-3 py-2 text-sm font-medium">
             Sair
           </button>
         </form>
       </header>
 
-      <div className="min-h-screen pb-20 md:pl-64 md:pb-0">{children}</div>
+      <div className="min-h-screen pb-24 md:pl-72 md:pb-0">{children}</div>
 
-      <nav className="fixed inset-x-0 bottom-0 grid grid-cols-9 border-t border-zinc-200 bg-white md:hidden">
-        {navItems.map((item) => (
-          <Link
-            className="px-1 py-3 text-center text-xs font-medium text-zinc-700"
-            href={item.href}
-            key={item.href}
-          >
-            {item.href === "/notifications" && notificationCount > 0
-              ? `${item.label} (${notificationCount})`
-              : item.label}
-          </Link>
-        ))}
-      </nav>
+      <AppNav
+        items={navItems}
+        notificationCount={notificationCount}
+        variant="mobile"
+      />
     </div>
   );
 }

@@ -14,12 +14,14 @@ describe("app preferences", () => {
   it("keeps valid values from stored json", () => {
     expect(
       parseAppPreferences({
+        appearance: "dark",
         preferredHome: "/quick-capture",
         showProjectsWithoutNextAction: false,
         timezone: "UTC",
         todayDensity: "compact",
       }),
     ).toEqual({
+      appearance: "dark",
       preferredHome: "/quick-capture",
       showProjectsWithoutNextAction: false,
       timezone: "UTC",
@@ -30,6 +32,7 @@ describe("app preferences", () => {
   it("falls back for invalid stored values", () => {
     expect(
       parseAppPreferences({
+        appearance: "sepia",
         preferredHome: "/admin",
         showProjectsWithoutNextAction: "yes",
         timezone: "Mars/Base",
@@ -40,12 +43,14 @@ describe("app preferences", () => {
 
   it("parses form values", () => {
     const formData = new FormData();
+    formData.set("appearance", "light");
     formData.set("timezone", "America/Sao_Paulo");
     formData.set("todayDensity", "compact");
     formData.set("preferredHome", "/quick-capture");
 
     expect(
       parseAppPreferencesForm({
+        appearance: formData.get("appearance"),
         preferredHome: formData.get("preferredHome"),
         showProjectsWithoutNextAction: formData.get(
           "showProjectsWithoutNextAction",
@@ -54,6 +59,7 @@ describe("app preferences", () => {
         todayDensity: formData.get("todayDensity"),
       }),
     ).toEqual({
+      appearance: "light",
       preferredHome: "/quick-capture",
       showProjectsWithoutNextAction: false,
       timezone: "America/Sao_Paulo",

@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { APP_THEME_COOKIE } from "@/lib/app-settings/preferences";
 import { getAppPreferencesForUser } from "@/lib/app-settings/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -74,12 +76,22 @@ export async function loginWithPassword(formData: FormData) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const preferredHome = user
-    ? (await getAppPreferencesForUser(supabase, user.id)).preferredHome
-    : "/today";
+  const preferences = user
+    ? await getAppPreferencesForUser(supabase, user.id)
+    : null;
+
+  if (preferences) {
+    const cookieStore = await cookies();
+    cookieStore.set(APP_THEME_COOKIE, preferences.appearance, {
+      maxAge: 60 * 60 * 24 * 365,
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    });
+  }
 
   revalidatePath("/", "layout");
-  redirect(returnTo ?? preferredHome);
+  redirect(returnTo ?? preferences?.preferredHome ?? "/today");
 }
 
 export async function logout() {

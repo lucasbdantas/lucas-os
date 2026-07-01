@@ -17,7 +17,7 @@ type CaptureTokenListProps = {
 export function CaptureTokenList({ tokens }: CaptureTokenListProps) {
   if (tokens.length === 0) {
     return (
-      <p className="mt-4 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
+      <p className="app-card-muted mt-4 px-3 py-2 text-sm text-zinc-600">
         Nenhum token criado ainda.
       </p>
     );
@@ -27,7 +27,7 @@ export function CaptureTokenList({ tokens }: CaptureTokenListProps) {
     <div className="mt-4 grid gap-3">
       {tokens.map((token) => (
         <article
-          className="rounded-md border border-zinc-200 bg-zinc-50 p-3"
+          className="app-card-soft p-3"
           key={token.id}
         >
           <div className="grid gap-3 md:grid-cols-[1fr_auto]">
@@ -75,7 +75,7 @@ export function CaptureTokenList({ tokens }: CaptureTokenListProps) {
             {!token.revoked_at ? (
               <form action={revokeCaptureToken}>
                 <input name="tokenId" type="hidden" value={token.id} />
-                <button className="rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
+                <button className="danger-button px-3 py-2 text-sm font-semibold">
                   Revogar
                 </button>
               </form>

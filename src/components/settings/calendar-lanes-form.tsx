@@ -29,7 +29,7 @@ export function CalendarLanesForm({
 }: CalendarLanesFormProps) {
   if (sources.length === 0) {
     return (
-      <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-600">
+      <div className="app-card-muted p-4 text-sm text-zinc-600">
         Nenhum calendario disponivel para configurar ainda. Conecte ou
         reconecte uma conta Google com Calendar read-only.
       </div>
@@ -44,7 +44,7 @@ export function CalendarLanesForm({
 
         return (
           <div
-            className="grid gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-4 md:grid-cols-[1fr_240px]"
+            className="app-card-muted grid gap-3 p-4 md:grid-cols-[1fr_240px]"
             key={calendarKey}
           >
             <div>
@@ -66,7 +66,7 @@ export function CalendarLanesForm({
             <label className="block">
               <span className="text-sm font-medium text-zinc-700">Lane</span>
               <select
-                className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+                className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
                 defaultValue={currentLane}
                 name={`lane:${calendarKey}`}
               >
@@ -79,7 +79,7 @@ export function CalendarLanesForm({
         );
       })}
 
-      <button className="w-fit rounded-md bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800">
+      <button className="primary-button w-fit px-4 py-2 text-sm font-semibold">
         Salvar calendarios
       </button>
     </form>

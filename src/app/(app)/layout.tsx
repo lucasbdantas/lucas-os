@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
+import { getAppPreferencesForUser } from "@/lib/app-settings/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -23,14 +24,21 @@ export default async function OperationalLayout({
     redirect("/login");
   }
 
-  const { count } = await supabase
-    .from("notifications")
-    .select("id", { count: "exact", head: true })
-    .eq("type", "task_reminder")
-    .eq("status", "unread");
+  const [notificationCountResult, preferences] = await Promise.all([
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("type", "task_reminder")
+      .eq("status", "unread"),
+    getAppPreferencesForUser(supabase, user.id),
+  ]);
 
   return (
-    <AppShell notificationCount={count ?? 0} userEmail={user.email}>
+    <AppShell
+      appearance={preferences.appearance}
+      notificationCount={notificationCountResult.count ?? 0}
+      userEmail={user.email}
+    >
       {children}
     </AppShell>
   );

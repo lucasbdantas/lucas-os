@@ -42,7 +42,7 @@ export default async function SettingsPage({
   }
 
   return (
-    <main className="px-6 py-8">
+    <main className="app-page mx-auto max-w-6xl">
       <PageHeader
         eyebrow="Operacional"
         title="Settings"
@@ -61,7 +61,7 @@ export default async function SettingsPage({
         </p>
       ) : null}
 
-      <section className="mt-8 max-w-2xl rounded-md border border-zinc-200 bg-white p-4">
+      <section className="app-card mt-8 max-w-2xl p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-zinc-950">Supabase Auth</h2>
@@ -80,7 +80,7 @@ export default async function SettingsPage({
         </dl>
       </section>
 
-      <section className="mt-8 max-w-4xl rounded-md border border-zinc-200 bg-white p-4">
+      <section className="app-card mt-8 max-w-4xl p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-zinc-950">
@@ -97,7 +97,7 @@ export default async function SettingsPage({
         <AppPreferencesForm preferences={preferences} />
       </section>
 
-      <section className="mt-8 max-w-4xl rounded-md border border-zinc-200 bg-white p-4">
+      <section className="app-card mt-8 max-w-4xl p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-zinc-950">Integracoes</h2>
@@ -115,7 +115,7 @@ export default async function SettingsPage({
         </div>
       </section>
 
-      <section className="mt-8 max-w-4xl rounded-md border border-zinc-200 bg-white p-4">
+      <section className="app-card mt-8 max-w-4xl p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-zinc-950">Captura externa</h2>

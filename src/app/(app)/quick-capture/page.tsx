@@ -5,14 +5,14 @@ export default async function QuickCapturePage() {
   await requireSession();
 
   return (
-    <main className="mx-auto max-w-xl px-4 py-6">
-      <header>
-        <p className="text-sm font-medium text-zinc-500">Lucas OS</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-normal text-zinc-950">
-          Captura rápida
+    <main className="app-page mx-auto max-w-2xl">
+      <header className="paper-panel p-6 sm:p-8">
+        <p className="section-kicker">Lucas OS</p>
+        <h1 className="mt-3 text-4xl font-semibold tracking-normal text-zinc-950">
+          Captura rapida
         </h1>
-        <p className="mt-3 text-sm leading-6 text-zinc-600">
-          Jogue aqui qualquer coisa solta. Você organiza depois em Captura.
+        <p className="mt-3 text-base leading-7 text-zinc-600">
+          Jogue aqui qualquer coisa solta. Voce organiza depois em Captura.
         </p>
       </header>
 

@@ -1,5 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { cookies } from "next/headers";
+import {
+  APP_THEME_COOKIE,
+  parseThemeCookie,
+} from "@/lib/app-settings/preferences";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,18 +34,23 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#18181b",
+  themeColor: "#f4efe4",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const theme = parseThemeCookie(cookieStore.get(APP_THEME_COOKIE)?.value);
+
   return (
     <html
       lang="pt-BR"
+      data-theme={theme}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

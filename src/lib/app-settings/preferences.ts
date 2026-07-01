@@ -9,12 +9,16 @@ export const supportedTimezones = [
 
 export const todayDensityValues = ["compact", "comfortable"] as const;
 export const preferredHomeValues = ["/today", "/quick-capture"] as const;
+export const appearanceValues = ["light", "dark", "system"] as const;
+export const APP_THEME_COOKIE = "lucas-os-theme";
 
 export type SupportedTimezone = (typeof supportedTimezones)[number];
 export type TodayDensity = (typeof todayDensityValues)[number];
 export type PreferredHome = (typeof preferredHomeValues)[number];
+export type AppAppearance = (typeof appearanceValues)[number];
 
 export type AppPreferences = {
+  appearance: AppAppearance;
   preferredHome: PreferredHome;
   showProjectsWithoutNextAction: boolean;
   timezone: SupportedTimezone;
@@ -22,6 +26,7 @@ export type AppPreferences = {
 };
 
 export const defaultAppPreferences: AppPreferences = {
+  appearance: "light",
   preferredHome: "/today",
   showProjectsWithoutNextAction: true,
   timezone: "America/Sao_Paulo",
@@ -51,12 +56,25 @@ function isPreferredHome(value: unknown): value is PreferredHome {
   );
 }
 
+export function isAppAppearance(value: unknown): value is AppAppearance {
+  return (
+    typeof value === "string" && appearanceValues.includes(value as AppAppearance)
+  );
+}
+
+export function parseThemeCookie(value: unknown): AppAppearance {
+  return isAppAppearance(value) ? value : defaultAppPreferences.appearance;
+}
+
 export function parseAppPreferences(value: unknown): AppPreferences {
   if (!isRecord(value)) {
     return defaultAppPreferences;
   }
 
   return {
+    appearance: isAppAppearance(value.appearance)
+      ? value.appearance
+      : defaultAppPreferences.appearance,
     preferredHome: isPreferredHome(value.preferredHome)
       ? value.preferredHome
       : defaultAppPreferences.preferredHome,
@@ -74,12 +92,14 @@ export function parseAppPreferences(value: unknown): AppPreferences {
 }
 
 export function parseAppPreferencesForm(input: {
+  appearance: FormDataEntryValue | null;
   preferredHome: FormDataEntryValue | null;
   showProjectsWithoutNextAction: FormDataEntryValue | null;
   timezone: FormDataEntryValue | null;
   todayDensity: FormDataEntryValue | null;
 }): AppPreferences {
   const preferences = parseAppPreferences({
+    appearance: input.appearance,
     preferredHome: input.preferredHome,
     showProjectsWithoutNextAction:
       input.showProjectsWithoutNextAction === "on",

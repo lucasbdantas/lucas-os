@@ -6,9 +6,11 @@ type StatCardProps = {
 
 export function StatCard({ label, value, detail }: StatCardProps) {
   return (
-    <div className="rounded-md border border-zinc-200 bg-white p-4">
-      <p className="text-sm font-medium text-zinc-500">{label}</p>
-      <p className="mt-2 text-3xl font-semibold text-zinc-950">{value}</p>
+    <div className="metric-card p-5">
+      <p className="text-sm font-semibold text-zinc-600">{label}</p>
+      <p className="mt-3 font-mono text-4xl font-semibold tracking-tight text-zinc-950">
+        {value}
+      </p>
       {detail ? <p className="mt-2 text-sm text-zinc-600">{detail}</p> : null}
     </div>
   );

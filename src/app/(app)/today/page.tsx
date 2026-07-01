@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SectionHeader } from "@/components/ui/section-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -155,16 +156,12 @@ function TaskSection({
   projectNameById: Map<string, string>;
 }) {
   return (
-    <section>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-semibold text-zinc-950">{title}</h2>
-          {description ? (
-            <p className="mt-1 text-sm text-zinc-600">{description}</p>
-          ) : null}
-        </div>
-        <StatusBadge label={`${tasks.length}`} />
-      </div>
+    <section className="section-shell">
+      <SectionHeader
+        action={<StatusBadge label={`${tasks.length}`} />}
+        description={description}
+        title={title}
+      />
 
       {tasks.length === 0 ? (
         <EmptyState title={emptyTitle} description={emptyDescription} />
@@ -172,7 +169,7 @@ function TaskSection({
         <div className="grid gap-3">
           {tasks.map((task) => (
             <article
-              className="rounded-md border border-zinc-200 bg-white p-4"
+              className="task-card app-card-interactive p-4"
               key={task.id}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -228,7 +225,7 @@ function TaskSection({
 function QuickLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
-      className="rounded-md border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-800 hover:bg-zinc-100"
+      className="soft-button px-4 py-3 text-sm font-semibold"
       href={href}
     >
       {label}
@@ -275,11 +272,7 @@ function CalendarEventList({
     <div className="grid gap-3">
       {events.map((event) => (
         <article
-          className={`rounded-md border p-4 ${
-            isContext
-              ? "border-zinc-200 bg-zinc-50"
-              : "border-zinc-200 bg-white"
-          }`}
+          className={`event-card p-4 ${isContext ? "event-card-context" : ""}`}
           key={event.id}
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -297,7 +290,7 @@ function CalendarEventList({
             </div>
             {event.htmlLink ? (
               <a
-                className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                className="soft-button px-3 py-2 text-sm font-medium"
                 href={event.htmlLink}
                 rel="noreferrer"
                 target="_blank"
@@ -333,21 +326,19 @@ function CalendarSection({
     contextTodayEvents.length > 0 || contextNextEvents.length > 0;
 
   return (
-    <section>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-semibold text-zinc-950">Agenda</h2>
-          <p className="mt-1 text-sm text-zinc-600">
-            Eventos Google Calendar em lanes para reduzir ruido.
-          </p>
-        </div>
-        <Link
-          className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-          href="/settings/integrations"
-        >
-          Configurar Google
-        </Link>
-      </div>
+    <section className="section-shell">
+      <SectionHeader
+        action={
+          <Link
+            className="soft-button px-3 py-2 text-sm font-medium"
+            href="/settings/integrations"
+          >
+            Configurar Google
+          </Link>
+        }
+        description="Eventos Google Calendar em lanes para reduzir ruido."
+        title="Agenda"
+      />
 
       {agenda.connectedAccountCount === 0 ? (
         <EmptyState
@@ -357,7 +348,7 @@ function CalendarSection({
       ) : null}
 
       {agenda.reconnectAccountEmails.length > 0 ? (
-        <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+        <div className="app-card-muted mb-3 p-3 text-sm text-amber-800">
           Reconecte{" "}
           {agenda.reconnectAccountEmails.join(", ")} para conceder acesso
           somente leitura ao Calendar.
@@ -365,7 +356,7 @@ function CalendarSection({
       ) : null}
 
       {agenda.warnings.length > 0 ? (
-        <div className="mb-3 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
+        <div className="app-card-muted mb-3 p-3 text-sm text-zinc-600">
           Algumas contas Google nao puderam ser sincronizadas agora. O restante
           do Today continua funcionando.
         </div>
@@ -381,8 +372,8 @@ function CalendarSection({
       ) : null}
 
       {hasPrimaryEvents || hasContextEvents ? (
-        <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.85fr)]">
-          <div>
+        <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.85fr)]">
+          <div className="app-card-soft p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <h3 className="font-semibold text-zinc-950">
@@ -431,7 +422,7 @@ function CalendarSection({
             )}
           </div>
 
-          <div>
+          <div className="app-card-soft p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <h3 className="font-semibold text-zinc-800">
@@ -698,31 +689,36 @@ export default async function TodayPage() {
   });
 
   return (
-    <main className="px-6 py-8">
-      <PageHeader
-        eyebrow="Lucas OS"
-        title="Today"
-        description={`Painel operacional do dia em ${preferences.timezone}.`}
-      />
+    <main className="app-page mx-auto max-w-7xl">
+      <section className="paper-panel p-5 sm:p-7">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-end">
+          <PageHeader
+            eyebrow="Lucas OS"
+            title="Today"
+            description={`Painel operacional do dia em ${preferences.timezone}. Um caderno curto para decidir o que merece atencao agora.`}
+          />
+          <div className="app-card-soft p-4">
+            <p className="section-eyebrow">Inbox calma</p>
+            <p className="mt-2 text-3xl font-semibold text-zinc-950">
+              {pendingCapturesCount}
+            </p>
+            <p className="mt-1 text-sm leading-6 text-zinc-600">
+              capturas pendentes aguardando triagem humana.
+            </p>
+            <Link
+              className="primary-button mt-4 w-full px-4 py-3 text-sm font-semibold"
+              href="/capture"
+            >
+              Abrir Capture
+            </Link>
+          </div>
+        </div>
 
-      <section className="mt-8 grid gap-3 md:grid-cols-[1fr_auto]">
-        <StatCard
-          detail="Texto bruto aguardando triagem"
-          label="Capturas pendentes"
-          value={pendingCapturesCount}
-        />
-        <Link
-          className="inline-flex items-center justify-center rounded-md bg-zinc-950 px-4 py-3 text-sm font-medium text-white hover:bg-zinc-800"
-          href="/capture"
-        >
-          Abrir Capture
-        </Link>
-      </section>
-
-      <section className="mt-8 grid gap-3 sm:grid-cols-3">
-        <StatCard label="Vencidas" value={overdueTasks.length} />
-        <StatCard label="Hoje" value={todayTasks.length} />
-        <StatCard label="Proximos 7 dias" value={nextTasks.length} />
+        <section className="mt-6 grid gap-3 sm:grid-cols-3">
+          <StatCard label="Vencidas" value={overdueTasks.length} />
+          <StatCard label="Hoje" value={todayTasks.length} />
+          <StatCard label="Proximos 7 dias" value={nextTasks.length} />
+        </section>
       </section>
 
       <div className={sectionGapClass}>
@@ -744,21 +740,19 @@ export default async function TodayPage() {
           timezone={preferences.timezone}
         />
 
-        <section>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-semibold text-zinc-950">Lembretes</h2>
-              <p className="mt-1 text-sm text-zinc-600">
-                Lembretes internos vencidos ou previstos para hoje.
-              </p>
-            </div>
-            <Link
-              className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-              href="/notifications"
-            >
-              Abrir notificações
-            </Link>
-          </div>
+        <section className="section-shell">
+          <SectionHeader
+            action={
+              <Link
+                className="soft-button px-3 py-2 text-sm font-medium"
+                href="/notifications"
+              >
+                Abrir notificacoes
+              </Link>
+            }
+            description="Lembretes internos vencidos ou previstos para hoje."
+            title="Lembretes"
+          />
 
           {todayReminders.length === 0 ? (
             <EmptyState
@@ -769,7 +763,7 @@ export default async function TodayPage() {
             <div className="grid gap-3">
               {todayReminders.map((reminder) => (
                 <article
-                  className="rounded-md border border-zinc-200 bg-white p-4"
+                  className="app-card-soft p-4"
                   key={reminder.id}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -793,7 +787,7 @@ export default async function TodayPage() {
                     </div>
                     {reminder.source_url ? (
                       <Link
-                        className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                        className="soft-button px-3 py-2 text-sm font-medium"
                         href={reminder.source_url}
                       >
                         Abrir task
@@ -836,18 +830,12 @@ export default async function TodayPage() {
           title="Proximos 7 dias"
         />
 
-        <section>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-semibold text-zinc-950">
-                Projetos com prazo proximo
-              </h2>
-              <p className="mt-1 text-sm text-zinc-600">
-                Projetos ativos ou waiting com target nos proximos 14 dias.
-              </p>
-            </div>
-            <StatusBadge label={`${displayedUpcomingProjects.length}`} />
-          </div>
+        <section className="section-shell">
+          <SectionHeader
+            action={<StatusBadge label={`${displayedUpcomingProjects.length}`} />}
+            description="Projetos ativos ou waiting com target nos proximos 14 dias."
+            title="Projetos com prazo proximo"
+          />
 
           {displayedUpcomingProjects.length === 0 ? (
             <EmptyState
@@ -858,7 +846,7 @@ export default async function TodayPage() {
             <div className="grid gap-3">
               {displayedUpcomingProjects.map((project) => (
                 <article
-                  className="rounded-md border border-zinc-200 bg-white p-4"
+                  className="project-card app-card-interactive p-4"
                   key={project.id}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -886,20 +874,16 @@ export default async function TodayPage() {
         </section>
 
         {preferences.showProjectsWithoutNextAction ? (
-        <section>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-semibold text-zinc-950">
-                Projetos ativos sem proxima acao
-              </h2>
-              <p className="mt-1 text-sm text-zinc-600">
-                Projetos ativos que nao possuem nenhuma task aberta associada.
-              </p>
-            </div>
-            <StatusBadge
-              label={`${projectsWithoutNextAction.slice(0, projectDisplayLimit).length}`}
-            />
-          </div>
+        <section className="section-shell">
+          <SectionHeader
+            action={
+              <StatusBadge
+                label={`${projectsWithoutNextAction.slice(0, projectDisplayLimit).length}`}
+              />
+            }
+            description="Projetos ativos que nao possuem nenhuma task aberta associada."
+            title="Projetos ativos sem proxima acao"
+          />
 
           {projectsWithoutNextAction.length === 0 ? (
             <EmptyState
@@ -912,7 +896,7 @@ export default async function TodayPage() {
                 .slice(0, projectDisplayLimit)
                 .map((project) => (
                 <article
-                  className="rounded-md border border-zinc-200 bg-white p-4"
+                  className="project-card app-card-interactive p-4"
                   key={project.id}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -930,10 +914,10 @@ export default async function TodayPage() {
                     <div className="flex flex-wrap gap-2">
                       <StatusBadge label="sem proxima acao" tone="amber" />
                       <Link
-                        className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                        className="soft-button px-3 py-2 text-sm font-medium"
                         href={getNextActionHref(project)}
                       >
-                        Criar próxima ação
+                        Criar proxima acao
                       </Link>
                     </div>
                   </div>
@@ -944,8 +928,11 @@ export default async function TodayPage() {
         </section>
         ) : null}
 
-        <section>
-          <h2 className="mb-3 font-semibold text-zinc-950">Acoes rapidas</h2>
+        <section className="section-shell">
+          <SectionHeader
+            description="Atalhos curtos para capturar, revisar e ajustar o sistema."
+            title="Acoes rapidas"
+          />
           <div className="grid gap-3 sm:grid-cols-4">
             <QuickLink href="/capture" label="Nova captura" />
             <QuickLink href="/review" label="Weekly Review" />

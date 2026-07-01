@@ -8,7 +8,7 @@ export function DomainForm({ returnTo }: DomainFormProps) {
   return (
     <form
       action={createDomain}
-      className="rounded-md border border-zinc-200 bg-white p-4"
+      className="app-card-soft p-4"
     >
       <input name="returnTo" type="hidden" value={returnTo} />
 
@@ -16,7 +16,7 @@ export function DomainForm({ returnTo }: DomainFormProps) {
         <label className="block">
           <span className="text-sm font-medium text-zinc-700">Nome</span>
           <input
-            className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+            className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
             maxLength={120}
             name="name"
             required
@@ -27,7 +27,7 @@ export function DomainForm({ returnTo }: DomainFormProps) {
         <label className="block">
           <span className="text-sm font-medium text-zinc-700">Descrição</span>
           <textarea
-            className="mt-2 min-h-20 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+            className="field-control mt-2 min-h-20 w-full px-3 py-2 text-sm outline-none"
             maxLength={4000}
             name="description"
           />
@@ -37,7 +37,7 @@ export function DomainForm({ returnTo }: DomainFormProps) {
           <label className="block">
             <span className="text-sm font-medium text-zinc-700">Cor</span>
             <input
-              className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+              className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
               maxLength={32}
               name="color"
               placeholder="#2563eb"
@@ -47,7 +47,7 @@ export function DomainForm({ returnTo }: DomainFormProps) {
           <label className="block">
             <span className="text-sm font-medium text-zinc-700">Ícone</span>
             <input
-              className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+              className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
               maxLength={64}
               name="icon"
               placeholder="folder"
@@ -56,7 +56,7 @@ export function DomainForm({ returnTo }: DomainFormProps) {
           </label>
         </div>
 
-        <button className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800">
+        <button className="primary-button px-4 py-2.5 text-sm font-semibold">
           Criar domínio
         </button>
       </div>

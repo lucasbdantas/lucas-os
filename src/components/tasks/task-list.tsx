@@ -63,16 +63,15 @@ export function TaskList({
   }
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-4">
       {tasks.map((task) => (
-        <article
-          className="rounded-md border border-zinc-200 bg-white p-4"
-          key={task.id}
-        >
+        <article className="task-card app-card-interactive p-4" key={task.id}>
           <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="font-semibold text-zinc-950">{task.title}</h2>
+                <h2 className="text-lg font-semibold text-zinc-950">
+                  {task.title}
+                </h2>
                 <StatusBadge label={task.status} tone="blue" />
                 <StatusBadge
                   label={task.priority}
@@ -90,7 +89,7 @@ export function TaskList({
                   {task.notes}
                 </p>
               ) : null}
-              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-600">
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm leading-6 text-zinc-600">
                 <span>
                   Prazo: {formatDate(task.due_date)}
                   {task.due_time ? ` as ${task.due_time.slice(0, 5)}` : ""}

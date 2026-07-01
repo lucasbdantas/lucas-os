@@ -12,7 +12,7 @@ export function MilestoneActions({ milestoneId, returnTo }: MilestoneActionsProp
         <input name="milestoneId" type="hidden" value={milestoneId} />
         <input name="status" type="hidden" value="done" />
         <input name="returnTo" type="hidden" value={returnTo} />
-        <button className="rounded-md border border-green-200 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-50">
+        <button className="soft-button px-3 py-2 text-sm font-semibold">
           Done
         </button>
       </form>
@@ -20,7 +20,7 @@ export function MilestoneActions({ milestoneId, returnTo }: MilestoneActionsProp
         <input name="milestoneId" type="hidden" value={milestoneId} />
         <input name="status" type="hidden" value="canceled" />
         <input name="returnTo" type="hidden" value={returnTo} />
-        <button className="rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
+        <button className="danger-button px-3 py-2 text-sm font-semibold">
           Cancelar
         </button>
       </form>

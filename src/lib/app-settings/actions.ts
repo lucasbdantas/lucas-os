@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
+  APP_THEME_COOKIE,
   APP_PREFERENCES_KEY,
   parseAppPreferencesForm,
 } from "@/lib/app-settings/preferences";
@@ -14,6 +16,7 @@ import { requireSession } from "@/lib/supabase/require-session";
 
 export async function updateAppPreferences(formData: FormData) {
   const preferences = parseAppPreferencesForm({
+    appearance: formData.get("appearance"),
     preferredHome: formData.get("preferredHome"),
     showProjectsWithoutNextAction: formData.get(
       "showProjectsWithoutNextAction",
@@ -36,7 +39,16 @@ export async function updateAppPreferences(formData: FormData) {
     redirect(`/settings?error=${encodeURIComponent(error.message)}`);
   }
 
+  const cookieStore = await cookies();
+  cookieStore.set(APP_THEME_COOKIE, preferences.appearance, {
+    maxAge: 60 * 60 * 24 * 365,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+
   revalidatePath("/");
+  revalidatePath("/login");
   revalidatePath("/settings");
   revalidatePath("/today");
   revalidatePath("/review");

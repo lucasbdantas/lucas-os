@@ -79,7 +79,7 @@ export default async function IntegrationsPage({
   }
 
   return (
-    <main className="px-6 py-8">
+    <main className="app-page mx-auto max-w-6xl">
       <PageHeader
         eyebrow="Configuracoes"
         title="Integracoes"
@@ -116,7 +116,7 @@ export default async function IntegrationsPage({
         </p>
       ) : null}
 
-      <section className="mt-8 max-w-4xl rounded-md border border-zinc-200 bg-white p-4">
+      <section className="app-card mt-8 max-w-4xl p-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="font-semibold text-zinc-950">Google</h2>
@@ -128,7 +128,7 @@ export default async function IntegrationsPage({
           </div>
 
           <Link
-            className="inline-flex rounded-md bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+              className="primary-button inline-flex px-4 py-2 text-sm font-semibold"
             href="/api/integrations/google/start"
           >
             Conectar Google
@@ -144,7 +144,7 @@ export default async function IntegrationsPage({
 
           {connectedAccountsResult.data.map((account) => (
             <article
-              className="rounded-md border border-zinc-200 bg-zinc-50 p-4"
+              className="app-card-muted p-4"
               key={account.id}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -228,7 +228,7 @@ export default async function IntegrationsPage({
                   method="post"
                 >
                   <input name="accountId" type="hidden" value={account.id} />
-                  <button className="rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
+                  <button className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
                     Desconectar
                   </button>
                 </form>
@@ -238,7 +238,7 @@ export default async function IntegrationsPage({
         </div>
       </section>
 
-      <section className="mt-8 max-w-4xl rounded-md border border-zinc-200 bg-white p-4">
+      <section className="app-card mt-8 max-w-4xl p-4">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-zinc-950">
