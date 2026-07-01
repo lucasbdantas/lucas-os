@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  googleCalendarReadonlyScope,
   normalizeGoogleConnectedAccount,
   normalizeGoogleScopes,
 } from "./connected-account";
@@ -31,7 +32,12 @@ describe("google connected account normalization", () => {
   });
 
   test("uses identity scopes when token response omits scopes", () => {
-    expect(normalizeGoogleScopes()).toEqual(["openid", "email", "profile"]);
+    expect(normalizeGoogleScopes()).toEqual([
+      "openid",
+      "email",
+      "profile",
+      googleCalendarReadonlyScope,
+    ]);
   });
 
   test("rejects missing provider account id", () => {

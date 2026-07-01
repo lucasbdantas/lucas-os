@@ -1,4 +1,10 @@
 export const googleIdentityScopes = ["openid", "email", "profile"] as const;
+export const googleCalendarReadonlyScope =
+  "https://www.googleapis.com/auth/calendar.readonly";
+export const googleRequestedScopes = [
+  ...googleIdentityScopes,
+  googleCalendarReadonlyScope,
+] as const;
 
 export type GoogleTokenResponse = {
   access_token?: string;
@@ -26,7 +32,7 @@ export type NormalizedGoogleConnectedAccount = {
 
 export function normalizeGoogleScopes(scopeValue?: string) {
   if (!scopeValue?.trim()) {
-    return [...googleIdentityScopes];
+    return [...googleRequestedScopes];
   }
 
   return Array.from(

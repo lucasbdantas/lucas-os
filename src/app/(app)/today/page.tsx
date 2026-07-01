@@ -10,6 +10,11 @@ import {
 import { getAppPreferencesForUser } from "@/lib/app-settings/server";
 import { formatDate, formatDateTime } from "@/lib/format";
 import {
+  getGoogleCalendarAgendaForUser,
+  type GoogleCalendarAgenda,
+} from "@/lib/integrations/google/calendar";
+import type { NormalizedGoogleCalendarEvent } from "@/lib/integrations/google/calendar-events";
+import {
   isReminderOverdue,
   parseReminderPayload,
   type ReminderPayload,
@@ -233,6 +238,156 @@ function getNextActionHref(project: Pick<ProjectRow, "id" | "domain_id">) {
   return `/tasks?domain=${project.domain_id}&project=${project.id}#task-form`;
 }
 
+function getCalendarEventDateOnly(
+  event: NormalizedGoogleCalendarEvent,
+  timezone: Parameters<typeof toDateOnlyInTimezone>[0],
+) {
+  if (event.isAllDay) {
+    return event.start;
+  }
+
+  return toDateOnlyInTimezone(timezone, new Date(event.start));
+}
+
+function formatCalendarEventTime(
+  event: NormalizedGoogleCalendarEvent,
+  timezone: Parameters<typeof toDateOnlyInTimezone>[0],
+) {
+  if (event.isAllDay) {
+    return "Dia todo";
+  }
+
+  return formatDateTime(event.start, "Sem horario", timezone);
+}
+
+function CalendarEventList({
+  events,
+  timezone,
+}: {
+  events: NormalizedGoogleCalendarEvent[];
+  timezone: Parameters<typeof toDateOnlyInTimezone>[0];
+}) {
+  return (
+    <div className="grid gap-3">
+      {events.map((event) => (
+        <article
+          className="rounded-md border border-zinc-200 bg-white p-4"
+          key={event.id}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-medium text-zinc-950">{event.title}</h3>
+                {event.isAllDay ? <StatusBadge label="dia todo" /> : null}
+              </div>
+              <div className="mt-2 grid gap-1 text-sm text-zinc-600">
+                <p>{formatCalendarEventTime(event, timezone)}</p>
+                <p>Conta: {event.accountEmail}</p>
+                <p>Calendario: {event.calendarSummary}</p>
+                {event.location ? <p>Local: {event.location}</p> : null}
+              </div>
+            </div>
+            {event.htmlLink ? (
+              <a
+                className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                href={event.htmlLink}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Abrir no Google
+              </a>
+            ) : null}
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function CalendarSection({
+  agenda,
+  nextEvents,
+  timezone,
+  todayEvents,
+}: {
+  agenda: GoogleCalendarAgenda;
+  nextEvents: NormalizedGoogleCalendarEvent[];
+  timezone: Parameters<typeof toDateOnlyInTimezone>[0];
+  todayEvents: NormalizedGoogleCalendarEvent[];
+}) {
+  return (
+    <section>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-semibold text-zinc-950">Agenda</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Eventos Google Calendar em modo somente leitura.
+          </p>
+        </div>
+        <Link
+          className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          href="/settings/integrations"
+        >
+          Configurar Google
+        </Link>
+      </div>
+
+      {agenda.connectedAccountCount === 0 ? (
+        <EmptyState
+          description="Conecte uma conta Google em Settings para ver sua agenda aqui."
+          title="Nenhuma conta Google conectada"
+        />
+      ) : null}
+
+      {agenda.reconnectAccountEmails.length > 0 ? (
+        <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          Reconecte{" "}
+          {agenda.reconnectAccountEmails.join(", ")} para conceder acesso
+          somente leitura ao Calendar.
+        </div>
+      ) : null}
+
+      {agenda.warnings.length > 0 ? (
+        <div className="mb-3 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
+          Algumas contas Google nao puderam ser sincronizadas agora. O restante
+          do Today continua funcionando.
+        </div>
+      ) : null}
+
+      {agenda.connectedAccountCount > 0 &&
+      todayEvents.length === 0 &&
+      nextEvents.length === 0 ? (
+        <EmptyState
+          description="Nenhum evento encontrado para hoje ou proximos 7 dias."
+          title="Agenda livre"
+        />
+      ) : null}
+
+      {todayEvents.length > 0 ? (
+        <div className="mt-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-zinc-950">Hoje</h3>
+            <StatusBadge label={`${todayEvents.length}`} />
+          </div>
+          <CalendarEventList events={todayEvents} timezone={timezone} />
+        </div>
+      ) : null}
+
+      {nextEvents.length > 0 ? (
+        <div className="mt-6">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-zinc-950">
+              Proximos 7 dias
+            </h3>
+            <StatusBadge label={`${nextEvents.length}`} />
+          </div>
+          <CalendarEventList events={nextEvents} timezone={timezone} />
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 export default async function TodayPage() {
   const { supabase, user } = await requireSession();
   const preferences = await getAppPreferencesForUser(supabase, user.id);
@@ -247,6 +402,10 @@ export default async function TodayPage() {
     preferences.timezone,
     addDays(now, 14),
   );
+  const calendarTimeMin = new Date(`${today}T00:00:00.000Z`).toISOString();
+  const calendarTimeMax = new Date(
+    `${nextSevenDays}T23:59:59.999Z`,
+  ).toISOString();
   const isCompact = preferences.todayDensity === "compact";
   const sectionGapClass = isCompact ? "mt-6 grid gap-6" : "mt-8 grid gap-8";
   const taskDisplayLimit = isCompact ? 5 : 20;
@@ -261,6 +420,7 @@ export default async function TodayPage() {
     activeProjectsResult,
     openProjectTasksResult,
     remindersResult,
+    googleCalendarAgenda,
     domainsResult,
     projectsForNamesResult,
   ] = await Promise.all([
@@ -330,6 +490,12 @@ export default async function TodayPage() {
       .order("created_at", { ascending: false })
       .limit(50)
       .returns<NotificationRow[]>(),
+    getGoogleCalendarAgendaForUser({
+      supabase,
+      timeMax: calendarTimeMax,
+      timeMin: calendarTimeMin,
+      userId: user.id,
+    }),
     supabase.from("domains").select("id,name").returns<DomainRow[]>(),
     supabase
       .from("projects")
@@ -409,6 +575,14 @@ export default async function TodayPage() {
       first.payload.reminder_at.localeCompare(second.payload.reminder_at),
     )
     .slice(0, isCompact ? 3 : 5);
+  const todayCalendarEvents = googleCalendarAgenda.events.filter(
+    (event) => getCalendarEventDateOnly(event, preferences.timezone) === today,
+  );
+  const nextCalendarEvents = googleCalendarAgenda.events.filter((event) => {
+    const eventDate = getCalendarEventDateOnly(event, preferences.timezone);
+
+    return eventDate > today && eventDate <= nextSevenDays;
+  });
 
   return (
     <main className="px-6 py-8">
@@ -439,6 +613,13 @@ export default async function TodayPage() {
       </section>
 
       <div className={sectionGapClass}>
+        <CalendarSection
+          agenda={googleCalendarAgenda}
+          nextEvents={nextCalendarEvents.slice(0, isCompact ? 5 : 15)}
+          timezone={preferences.timezone}
+          todayEvents={todayCalendarEvents.slice(0, isCompact ? 5 : 15)}
+        />
+
         <section>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>

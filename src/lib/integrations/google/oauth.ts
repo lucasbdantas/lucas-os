@@ -3,7 +3,7 @@ import "server-only";
 import {
   type GoogleTokenResponse,
   type GoogleUserInfo,
-  googleIdentityScopes,
+  googleRequestedScopes,
 } from "@/lib/integrations/google/connected-account";
 
 export type GoogleOAuthEnv = {
@@ -40,7 +40,7 @@ export function buildGoogleAuthorizationUrl(input: {
   url.searchParams.set("client_id", input.env.clientId);
   url.searchParams.set("redirect_uri", input.env.redirectUri);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", googleIdentityScopes.join(" "));
+  url.searchParams.set("scope", googleRequestedScopes.join(" "));
   url.searchParams.set("state", input.state);
   url.searchParams.set("access_type", "offline");
   url.searchParams.set("prompt", "consent");
@@ -85,6 +85,30 @@ export async function fetchGoogleUserInfo(
 
   if (!response.ok) {
     throw new Error("Falha ao carregar perfil Google.");
+  }
+
+  return response.json();
+}
+
+export async function refreshGoogleAccessToken(input: {
+  env: GoogleOAuthEnv;
+  refreshToken: string;
+}): Promise<GoogleTokenResponse> {
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    body: new URLSearchParams({
+      client_id: input.env.clientId,
+      client_secret: input.env.clientSecret,
+      grant_type: "refresh_token",
+      refresh_token: input.refreshToken,
+    }),
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error("Falha ao renovar token Google.");
   }
 
   return response.json();

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDateTime } from "@/lib/format";
+import { hasGoogleCalendarReadonlyScope } from "@/lib/integrations/google/calendar-events";
 import { requireSession } from "@/lib/supabase/require-session";
 
 type ConnectedAccountListItem = {
@@ -72,7 +73,7 @@ export default async function IntegrationsPage({
       <PageHeader
         eyebrow="Configuracoes"
         title="Integracoes"
-        description="Conecte contas externas com tokens criptografados no servidor. Nesta etapa, Google usa apenas identidade/email."
+        description="Conecte contas externas com tokens criptografados no servidor. Google Calendar usa acesso somente leitura."
       />
 
       <div className="mt-4">
@@ -104,8 +105,8 @@ export default async function IntegrationsPage({
           <div>
             <h2 className="font-semibold text-zinc-950">Google</h2>
             <p className="mt-1 text-sm text-zinc-600">
-              Fundacao OAuth para multiplas contas. Gmail e Calendar entram em
-              etapas futuras, com novos escopos explicitos.
+              Fundacao OAuth para multiplas contas. Calendar read-only esta
+              disponivel; Gmail entra em etapa futura com novo escopo explicito.
             </p>
           </div>
 
@@ -138,8 +139,27 @@ export default async function IntegrationsPage({
                     {account.account_email}
                   </p>
                 </div>
-                <StatusBadge label={account.status} tone={statusTone(account.status)} />
+                <div className="flex flex-wrap gap-2">
+                  <StatusBadge
+                    label={account.status}
+                    tone={statusTone(account.status)}
+                  />
+                  {hasGoogleCalendarReadonlyScope(account.scopes) ? (
+                    <StatusBadge label="Calendar read-only" tone="green" />
+                  ) : (
+                    <StatusBadge label="reconectar para Calendar" tone="amber" />
+                  )}
+                </div>
               </div>
+
+              {!hasGoogleCalendarReadonlyScope(account.scopes) &&
+              account.status !== "revoked" ? (
+                <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  Esta conta foi conectada antes do escopo Calendar. Clique em
+                  Conectar Google novamente e escolha esta conta para conceder
+                  acesso somente leitura.
+                </p>
+              ) : null}
 
               <dl className="mt-4 grid gap-3 text-sm md:grid-cols-2">
                 <div>
