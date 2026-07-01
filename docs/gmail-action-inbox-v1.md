@@ -109,6 +109,25 @@ Depois, o usuario pode triar em `/capture` e transformar em task manualmente, co
 5. Reconecte Google em `/settings/integrations`.
 6. Abra `/inbox`.
 
+## Validacao em producao preview
+
+Validado em producao preview:
+
+- Gmail API habilitada no Google Cloud;
+- conta Google reconectada com Gmail read-only;
+- `/inbox` carregando emails recentes;
+- acao `Enviar para Capture` testada;
+- pending capture confirmada em `/capture`;
+- nenhuma acao destrutiva implementada.
+
+Confirmacoes de seguranca:
+
+- sem envio de email;
+- sem upload/arquivamento de arquivo;
+- sem delete;
+- sem arquivamento;
+- sem mark-as-read.
+
 ## Limites de privacidade
 
 O app nao salva corpo completo do email por padrao.
@@ -130,6 +149,8 @@ Tokens continuam criptografados no banco e nunca sao expostos no client.
 
 ## Proximos passos
 
+- Inbox Filters V1.
+- Email to Task Confirmation V1.
 - Filtros por conta.
 - Filtros por sender/dominio.
 - Classificacao por IA com confirmacao.
