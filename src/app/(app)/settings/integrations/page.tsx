@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
+import { CalendarLanesForm } from "@/components/settings/calendar-lanes-form";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDateTime } from "@/lib/format";
+import { getCalendarLanePreferencesForUser } from "@/lib/integrations/google/calendar-lane-settings";
 import { hasGoogleCalendarReadonlyScope } from "@/lib/integrations/google/calendar-events";
+import { getGoogleCalendarSourcesForUser } from "@/lib/integrations/google/calendar";
 import { requireSession } from "@/lib/supabase/require-session";
 
 type ConnectedAccountListItem = {
@@ -20,6 +23,7 @@ type ConnectedAccountListItem = {
 type IntegrationsPageProps = {
   searchParams: Promise<{
     connected?: string;
+    calendar_lanes?: string;
     disconnected?: string;
     error?: string;
   }>;
@@ -54,18 +58,23 @@ export default async function IntegrationsPage({
   searchParams,
 }: IntegrationsPageProps) {
   const params = await searchParams;
-  const { supabase } = await requireSession();
-  const { data, error } = await supabase
-    .from("connected_accounts")
-    .select(
-      "id,provider,account_email,display_name,scopes,status,expires_at,last_sync_at,created_at",
-    )
-    .eq("provider", "google")
-    .order("created_at", { ascending: false })
-    .returns<ConnectedAccountListItem[]>();
+  const { supabase, user } = await requireSession();
+  const [connectedAccountsResult, calendarLanePreferences, calendarSources] =
+    await Promise.all([
+      supabase
+        .from("connected_accounts")
+        .select(
+          "id,provider,account_email,display_name,scopes,status,expires_at,last_sync_at,created_at",
+        )
+        .eq("provider", "google")
+        .order("created_at", { ascending: false })
+        .returns<ConnectedAccountListItem[]>(),
+      getCalendarLanePreferencesForUser(supabase, user.id),
+      getGoogleCalendarSourcesForUser({ supabase, userId: user.id }),
+    ]);
 
-  if (error) {
-    throw new Error(error.message);
+  if (connectedAccountsResult.error) {
+    throw new Error(connectedAccountsResult.error.message);
   }
 
   return (
@@ -94,6 +103,12 @@ export default async function IntegrationsPage({
         </p>
       ) : null}
 
+      {params.calendar_lanes === "saved" ? (
+        <p className="mt-6 max-w-4xl rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+          Preferencias de calendarios salvas.
+        </p>
+      ) : null}
+
       {params.error ? (
         <p className="mt-6 max-w-4xl rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {errorMessages[params.error] ?? "Erro ao processar integracao."}
@@ -119,13 +134,13 @@ export default async function IntegrationsPage({
         </div>
 
         <div className="mt-6 grid gap-3">
-          {data.length === 0 ? (
+          {connectedAccountsResult.data.length === 0 ? (
             <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-600">
               Nenhuma conta Google conectada ainda.
             </div>
           ) : null}
 
-          {data.map((account) => (
+          {connectedAccountsResult.data.map((account) => (
             <article
               className="rounded-md border border-zinc-200 bg-zinc-50 p-4"
               key={account.id}
@@ -205,6 +220,33 @@ export default async function IntegrationsPage({
             </article>
           ))}
         </div>
+      </section>
+
+      <section className="mt-8 max-w-4xl rounded-md border border-zinc-200 bg-white p-4">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-zinc-950">
+              Calendarios no Today
+            </h2>
+            <p className="mt-1 text-sm text-zinc-600">
+              Separe calendarios principais, contexto/interesses e ocultos sem
+              editar nada no Google.
+            </p>
+          </div>
+          <StatusBadge label="app_settings" tone="blue" />
+        </div>
+
+        {calendarSources.warnings.length > 0 ? (
+          <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            Algumas contas nao puderam carregar calendarios agora. Contas antigas
+            podem precisar reconectar para conceder Calendar read-only.
+          </div>
+        ) : null}
+
+        <CalendarLanesForm
+          preferences={calendarLanePreferences}
+          sources={calendarSources.sources}
+        />
       </section>
     </main>
   );

@@ -24,6 +24,7 @@ export type GoogleCalendarApiCalendar = {
 
 export type NormalizedGoogleCalendarEvent = {
   accountEmail: string;
+  accountId: string;
   calendarId: string;
   calendarSummary: string;
   end: string | null;
@@ -73,6 +74,7 @@ export function getGoogleTokenExpiryIso(
 
 export function normalizeGoogleCalendarEvent(input: {
   accountEmail: string;
+  accountId: string;
   calendar: GoogleCalendarApiCalendar;
   event: GoogleCalendarApiEvent;
 }): NormalizedGoogleCalendarEvent | null {
@@ -91,6 +93,7 @@ export function normalizeGoogleCalendarEvent(input: {
 
   return {
     accountEmail: input.accountEmail,
+    accountId: input.accountId,
     calendarId: input.calendar.id,
     calendarSummary: input.calendar.summary || "Calendario sem nome",
     end: endValue,

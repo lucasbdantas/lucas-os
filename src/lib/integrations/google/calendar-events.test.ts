@@ -19,6 +19,7 @@ describe("google calendar event helpers", () => {
   test("normalizes timed events", () => {
     const event = normalizeGoogleCalendarEvent({
       accountEmail: "lucas@example.com",
+      accountId: "account-1",
       calendar: { id: "primary", summary: "Lucas" },
       event: {
         id: "event-1",
@@ -41,6 +42,7 @@ describe("google calendar event helpers", () => {
   test("normalizes all-day events", () => {
     const event = normalizeGoogleCalendarEvent({
       accountEmail: "lucas@example.com",
+      accountId: "account-1",
       calendar: { id: "primary" },
       event: {
         id: "event-1",
@@ -60,6 +62,7 @@ describe("google calendar event helpers", () => {
     expect(
       normalizeGoogleCalendarEvent({
         accountEmail: "lucas@example.com",
+        accountId: "account-1",
         calendar: { id: "primary" },
         event: {
           id: "event-1",
@@ -91,6 +94,7 @@ describe("google calendar event helpers", () => {
     const sorted = sortGoogleCalendarEvents([
       {
         accountEmail: "lucas@example.com",
+        accountId: "account-1",
         calendarId: "primary",
         calendarSummary: "Lucas",
         end: null,
@@ -104,6 +108,7 @@ describe("google calendar event helpers", () => {
       },
       {
         accountEmail: "lucas@example.com",
+        accountId: "account-1",
         calendarId: "primary",
         calendarSummary: "Lucas",
         end: null,

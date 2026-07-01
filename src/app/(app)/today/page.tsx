@@ -13,6 +13,8 @@ import {
   getGoogleCalendarAgendaForUser,
   type GoogleCalendarAgenda,
 } from "@/lib/integrations/google/calendar";
+import { getCalendarLanePreferencesForUser } from "@/lib/integrations/google/calendar-lane-settings";
+import { splitCalendarEventsByLane } from "@/lib/integrations/google/calendar-lanes";
 import type { NormalizedGoogleCalendarEvent } from "@/lib/integrations/google/calendar-events";
 import {
   isReminderOverdue,
@@ -262,16 +264,22 @@ function formatCalendarEventTime(
 
 function CalendarEventList({
   events,
+  isContext = false,
   timezone,
 }: {
   events: NormalizedGoogleCalendarEvent[];
+  isContext?: boolean;
   timezone: Parameters<typeof toDateOnlyInTimezone>[0];
 }) {
   return (
     <div className="grid gap-3">
       {events.map((event) => (
         <article
-          className="rounded-md border border-zinc-200 bg-white p-4"
+          className={`rounded-md border p-4 ${
+            isContext
+              ? "border-zinc-200 bg-zinc-50"
+              : "border-zinc-200 bg-white"
+          }`}
           key={event.id}
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -306,22 +314,31 @@ function CalendarEventList({
 
 function CalendarSection({
   agenda,
-  nextEvents,
+  contextNextEvents,
+  contextTodayEvents,
+  primaryNextEvents,
+  primaryTodayEvents,
   timezone,
-  todayEvents,
 }: {
   agenda: GoogleCalendarAgenda;
-  nextEvents: NormalizedGoogleCalendarEvent[];
+  contextNextEvents: NormalizedGoogleCalendarEvent[];
+  contextTodayEvents: NormalizedGoogleCalendarEvent[];
+  primaryNextEvents: NormalizedGoogleCalendarEvent[];
+  primaryTodayEvents: NormalizedGoogleCalendarEvent[];
   timezone: Parameters<typeof toDateOnlyInTimezone>[0];
-  todayEvents: NormalizedGoogleCalendarEvent[];
 }) {
+  const hasPrimaryEvents =
+    primaryTodayEvents.length > 0 || primaryNextEvents.length > 0;
+  const hasContextEvents =
+    contextTodayEvents.length > 0 || contextNextEvents.length > 0;
+
   return (
     <section>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-semibold text-zinc-950">Agenda</h2>
           <p className="mt-1 text-sm text-zinc-600">
-            Eventos Google Calendar em modo somente leitura.
+            Eventos Google Calendar em lanes para reduzir ruido.
           </p>
         </div>
         <Link
@@ -355,33 +372,115 @@ function CalendarSection({
       ) : null}
 
       {agenda.connectedAccountCount > 0 &&
-      todayEvents.length === 0 &&
-      nextEvents.length === 0 ? (
+      !hasPrimaryEvents &&
+      !hasContextEvents ? (
         <EmptyState
-          description="Nenhum evento encontrado para hoje ou proximos 7 dias."
+          description="Nenhum evento visivel encontrado para hoje ou proximos 7 dias. Calendarios ocultos ficam fora do Today."
           title="Agenda livre"
         />
       ) : null}
 
-      {todayEvents.length > 0 ? (
-        <div className="mt-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-semibold text-zinc-950">Hoje</h3>
-            <StatusBadge label={`${todayEvents.length}`} />
-          </div>
-          <CalendarEventList events={todayEvents} timezone={timezone} />
-        </div>
-      ) : null}
+      {hasPrimaryEvents || hasContextEvents ? (
+        <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.85fr)]">
+          <div>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-zinc-950">
+                  Agenda principal
+                </h3>
+                <p className="mt-1 text-sm text-zinc-600">
+                  Aulas, reunioes, prazos e compromissos que competem pelo dia.
+                </p>
+              </div>
+              <StatusBadge
+                label={`${primaryTodayEvents.length + primaryNextEvents.length}`}
+              />
+            </div>
 
-      {nextEvents.length > 0 ? (
-        <div className="mt-6">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-semibold text-zinc-950">
-              Proximos 7 dias
-            </h3>
-            <StatusBadge label={`${nextEvents.length}`} />
+            {hasPrimaryEvents ? (
+              <div className="grid gap-5">
+                {primaryTodayEvents.length > 0 ? (
+                  <div>
+                    <h4 className="mb-2 text-sm font-medium text-zinc-700">
+                      Hoje
+                    </h4>
+                    <CalendarEventList
+                      events={primaryTodayEvents}
+                      timezone={timezone}
+                    />
+                  </div>
+                ) : null}
+
+                {primaryNextEvents.length > 0 ? (
+                  <div>
+                    <h4 className="mb-2 text-sm font-medium text-zinc-700">
+                      Proximos 7 dias
+                    </h4>
+                    <CalendarEventList
+                      events={primaryNextEvents}
+                      timezone={timezone}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <EmptyState
+                description="Nenhum evento marcado como agenda principal."
+                title="Agenda principal livre"
+              />
+            )}
           </div>
-          <CalendarEventList events={nextEvents} timezone={timezone} />
+
+          <div>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-zinc-800">
+                  Contexto / Interesses
+                </h3>
+                <p className="mt-1 text-sm text-zinc-600">
+                  Calendarios uteis que nao devem competir com compromissos.
+                </p>
+              </div>
+              <StatusBadge
+                label={`${contextTodayEvents.length + contextNextEvents.length}`}
+              />
+            </div>
+
+            {hasContextEvents ? (
+              <div className="grid gap-5">
+                {contextTodayEvents.length > 0 ? (
+                  <div>
+                    <h4 className="mb-2 text-sm font-medium text-zinc-600">
+                      Hoje
+                    </h4>
+                    <CalendarEventList
+                      events={contextTodayEvents}
+                      isContext
+                      timezone={timezone}
+                    />
+                  </div>
+                ) : null}
+
+                {contextNextEvents.length > 0 ? (
+                  <div>
+                    <h4 className="mb-2 text-sm font-medium text-zinc-600">
+                      Proximos 7 dias
+                    </h4>
+                    <CalendarEventList
+                      events={contextNextEvents}
+                      isContext
+                      timezone={timezone}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <EmptyState
+                description="Calendarios de contexto aparecerao aqui quando tiverem eventos visiveis."
+                title="Sem contexto agora"
+              />
+            )}
+          </div>
         </div>
       ) : null}
     </section>
@@ -421,6 +520,7 @@ export default async function TodayPage() {
     openProjectTasksResult,
     remindersResult,
     googleCalendarAgenda,
+    calendarLanePreferences,
     domainsResult,
     projectsForNamesResult,
   ] = await Promise.all([
@@ -496,6 +596,7 @@ export default async function TodayPage() {
       timeMin: calendarTimeMin,
       userId: user.id,
     }),
+    getCalendarLanePreferencesForUser(supabase, user.id),
     supabase.from("domains").select("id,name").returns<DomainRow[]>(),
     supabase
       .from("projects")
@@ -575,10 +676,22 @@ export default async function TodayPage() {
       first.payload.reminder_at.localeCompare(second.payload.reminder_at),
     )
     .slice(0, isCompact ? 3 : 5);
-  const todayCalendarEvents = googleCalendarAgenda.events.filter(
+  const calendarEventsByLane = splitCalendarEventsByLane(
+    googleCalendarAgenda.events,
+    calendarLanePreferences,
+  );
+  const primaryTodayCalendarEvents = calendarEventsByLane.primary.filter(
     (event) => getCalendarEventDateOnly(event, preferences.timezone) === today,
   );
-  const nextCalendarEvents = googleCalendarAgenda.events.filter((event) => {
+  const primaryNextCalendarEvents = calendarEventsByLane.primary.filter((event) => {
+    const eventDate = getCalendarEventDateOnly(event, preferences.timezone);
+
+    return eventDate > today && eventDate <= nextSevenDays;
+  });
+  const contextTodayCalendarEvents = calendarEventsByLane.context.filter(
+    (event) => getCalendarEventDateOnly(event, preferences.timezone) === today,
+  );
+  const contextNextCalendarEvents = calendarEventsByLane.context.filter((event) => {
     const eventDate = getCalendarEventDateOnly(event, preferences.timezone);
 
     return eventDate > today && eventDate <= nextSevenDays;
@@ -615,9 +728,20 @@ export default async function TodayPage() {
       <div className={sectionGapClass}>
         <CalendarSection
           agenda={googleCalendarAgenda}
-          nextEvents={nextCalendarEvents.slice(0, isCompact ? 5 : 15)}
+          contextNextEvents={contextNextCalendarEvents.slice(0, isCompact ? 5 : 15)}
+          contextTodayEvents={contextTodayCalendarEvents.slice(
+            0,
+            isCompact ? 5 : 15,
+          )}
+          primaryNextEvents={primaryNextCalendarEvents.slice(
+            0,
+            isCompact ? 5 : 15,
+          )}
+          primaryTodayEvents={primaryTodayCalendarEvents.slice(
+            0,
+            isCompact ? 5 : 15,
+          )}
           timezone={preferences.timezone}
-          todayEvents={todayCalendarEvents.slice(0, isCompact ? 5 : 15)}
         />
 
         <section>

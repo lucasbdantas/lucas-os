@@ -129,6 +129,11 @@ Mostra secao `Agenda` com:
 - Perder `INTEGRATIONS_ENCRYPTION_KEY` impede descriptografar tokens existentes.
 - Falhas temporarias do Google podem ocultar agenda de uma conta; o Today deve continuar funcionando.
 
+## Complemento implementado
+
+Calendar Lanes V1 separa eventos em `Agenda principal`, `Contexto / Interesses`
+e `Oculto`. Veja `docs/calendar-lanes-v1.md`.
+
 ## Proximos passos
 
 1. Gmail Action Inbox V1.

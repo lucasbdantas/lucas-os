@@ -12,6 +12,7 @@ import {
   shouldRefreshGoogleToken,
   sortGoogleCalendarEvents,
 } from "@/lib/integrations/google/calendar-events";
+import type { CalendarLaneSource } from "@/lib/integrations/google/calendar-lanes";
 import { normalizeGoogleScopes } from "@/lib/integrations/google/connected-account";
 import {
   getGoogleOAuthEnv,
@@ -52,6 +53,13 @@ export type GoogleCalendarAgenda = {
   connectedAccountCount: number;
   events: NormalizedGoogleCalendarEvent[];
   reconnectAccountEmails: string[];
+  warnings: GoogleCalendarWarning[];
+};
+
+export type GoogleCalendarSourcesResult = {
+  connectedAccountCount: number;
+  reconnectAccountEmails: string[];
+  sources: CalendarLaneSource[];
   warnings: GoogleCalendarWarning[];
 };
 
@@ -135,11 +143,9 @@ async function getFreshAccessToken(input: {
   }
 }
 
-async function fetchEventsForAccount(input: {
+async function fetchCalendarSourcesForAccount(input: {
   accessToken: string;
   account: ConnectedGoogleCalendarAccount;
-  timeMax: string;
-  timeMin: string;
 }) {
   const calendarListUrl = new URL(
     "https://www.googleapis.com/calendar/v3/users/me/calendarList",
@@ -150,13 +156,31 @@ async function fetchEventsForAccount(input: {
     calendarListUrl,
     input.accessToken,
   );
-  const calendars =
-    calendarList.items?.filter((calendar) => Boolean(calendar.id)) ?? [];
+
+  return (
+    calendarList.items
+      ?.filter((calendar) => Boolean(calendar.id))
+      .map((calendar) => ({
+        accountEmail: input.account.account_email,
+        accountId: input.account.id,
+        calendarId: calendar.id,
+        calendarSummary: calendar.summary || "Calendario sem nome",
+      })) ?? []
+  );
+}
+
+async function fetchEventsForAccount(input: {
+  accessToken: string;
+  account: ConnectedGoogleCalendarAccount;
+  sources: CalendarLaneSource[];
+  timeMax: string;
+  timeMin: string;
+}) {
   const events: NormalizedGoogleCalendarEvent[] = [];
 
-  for (const calendar of calendars) {
+  for (const source of input.sources) {
     const eventsUrl = new URL(
-      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendar.id)}/events`,
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(source.calendarId)}/events`,
     );
     eventsUrl.searchParams.set("singleEvents", "true");
     eventsUrl.searchParams.set("orderBy", "startTime");
@@ -172,7 +196,11 @@ async function fetchEventsForAccount(input: {
     for (const event of eventsResponse.items ?? []) {
       const normalized = normalizeGoogleCalendarEvent({
         accountEmail: input.account.account_email,
-        calendar,
+        accountId: input.account.id,
+        calendar: {
+          id: source.calendarId,
+          summary: source.calendarSummary,
+        },
         event,
       });
 
@@ -185,23 +213,16 @@ async function fetchEventsForAccount(input: {
   return events;
 }
 
-export async function getGoogleCalendarAgendaForUser(input: {
-  supabase: SupabaseClient;
-  timeMax: string;
-  timeMin: string;
-  userId: string;
-}): Promise<GoogleCalendarAgenda> {
-  const env = getGoogleOAuthEnv();
-  const warnings: GoogleCalendarWarning[] = [];
-  const events: NormalizedGoogleCalendarEvent[] = [];
-  const reconnectAccountEmails: string[] = [];
-
-  const { data, error } = await input.supabase
+async function getActiveGoogleCalendarAccounts(
+  supabase: SupabaseClient,
+  userId: string,
+) {
+  const { data, error } = await supabase
     .from("connected_accounts")
     .select(
       "id,account_email,access_token_encrypted,refresh_token_encrypted,scopes,expires_at,status",
     )
-    .eq("user_id", input.userId)
+    .eq("user_id", userId)
     .eq("provider", "google")
     .eq("status", "active")
     .returns<ConnectedGoogleCalendarAccount[]>();
@@ -210,11 +231,27 @@ export async function getGoogleCalendarAgendaForUser(input: {
     throw new Error(error.message);
   }
 
+  return data;
+}
+
+export async function getGoogleCalendarSourcesForUser(input: {
+  supabase: SupabaseClient;
+  userId: string;
+}): Promise<GoogleCalendarSourcesResult> {
+  const env = getGoogleOAuthEnv();
+  const warnings: GoogleCalendarWarning[] = [];
+  const sources: CalendarLaneSource[] = [];
+  const reconnectAccountEmails: string[] = [];
+  const accounts = await getActiveGoogleCalendarAccounts(
+    input.supabase,
+    input.userId,
+  );
+
   if (!env) {
     return {
-      connectedAccountCount: data.length,
-      events: [],
+      connectedAccountCount: accounts.length,
       reconnectAccountEmails: [],
+      sources: [],
       warnings: [
         {
           code: "google_env_missing",
@@ -224,7 +261,7 @@ export async function getGoogleCalendarAgendaForUser(input: {
     };
   }
 
-  for (const account of data) {
+  for (const account of accounts) {
     if (!hasGoogleCalendarReadonlyScope(account.scopes)) {
       reconnectAccountEmails.push(account.account_email);
       warnings.push({
@@ -252,9 +289,85 @@ export async function getGoogleCalendarAgendaForUser(input: {
     }
 
     try {
+      const accountSources = await fetchCalendarSourcesForAccount({
+        accessToken: tokenResult.accessToken,
+        account,
+      });
+
+      sources.push(...accountSources);
+    } catch {
+      warnings.push({
+        accountEmail: account.account_email,
+        code: "sync_failed",
+        message: "Nao foi possivel carregar calendarios desta conta Google.",
+      });
+    }
+  }
+
+  return {
+    connectedAccountCount: accounts.length,
+    reconnectAccountEmails,
+    sources,
+    warnings,
+  };
+}
+
+export async function getGoogleCalendarAgendaForUser(input: {
+  supabase: SupabaseClient;
+  timeMax: string;
+  timeMin: string;
+  userId: string;
+}): Promise<GoogleCalendarAgenda> {
+  const warnings: GoogleCalendarWarning[] = [];
+  const events: NormalizedGoogleCalendarEvent[] = [];
+  const sourcesResult = await getGoogleCalendarSourcesForUser({
+    supabase: input.supabase,
+    userId: input.userId,
+  });
+
+  warnings.push(...sourcesResult.warnings);
+
+  for (const accountEmail of new Set(
+    sourcesResult.sources.map((source) => source.accountEmail),
+  )) {
+    const accountSources = sourcesResult.sources.filter(
+      (source) => source.accountEmail === accountEmail,
+    );
+    const account = (
+      await getActiveGoogleCalendarAccounts(input.supabase, input.userId)
+    ).find((candidate) => candidate.id === accountSources[0]?.accountId);
+
+    if (!account) {
+      continue;
+    }
+
+    const env = getGoogleOAuthEnv();
+
+    if (!env) {
+      continue;
+    }
+
+    const tokenResult = await getFreshAccessToken({
+      account,
+      encryptionKey: env.encryptionKey,
+      now: new Date(),
+      supabase: input.supabase,
+    });
+
+    if (!tokenResult.accessToken) {
+      warnings.push({
+        accountEmail: account.account_email,
+        code: tokenResult.warningCode ?? "sync_failed",
+        message: "Nao foi possivel autenticar esta conta Google.",
+      });
+      continue;
+    }
+
+    try {
       const accountEvents = await fetchEventsForAccount({
         accessToken: tokenResult.accessToken,
         account,
+        sources: accountSources,
         timeMax: input.timeMax,
         timeMin: input.timeMin,
       });
@@ -275,9 +388,9 @@ export async function getGoogleCalendarAgendaForUser(input: {
   }
 
   return {
-    connectedAccountCount: data.length,
+    connectedAccountCount: sourcesResult.connectedAccountCount,
     events: sortGoogleCalendarEvents(events),
-    reconnectAccountEmails,
+    reconnectAccountEmails: sourcesResult.reconnectAccountEmails,
     warnings,
   };
 }
