@@ -29,6 +29,7 @@ describe("gmail message helpers", () => {
             { name: "From", value: "Professor <prof@example.com>" },
             { name: "Subject", value: "Entrega do relatório" },
           ],
+          parts: [{ filename: "relatorio.pdf" }],
         },
         snippet: "Favor revisar...",
         threadId: "thread-1",
@@ -39,6 +40,7 @@ describe("gmail message helpers", () => {
       accountEmail: "lucas@example.com",
       accountId: "account-1",
       from: "Professor <prof@example.com>",
+      hasAttachment: true,
       id: "msg-1",
       labelIds: ["INBOX", "IMPORTANT"],
       snippet: "Favor revisar...",
@@ -65,6 +67,7 @@ describe("gmail message helpers", () => {
         date: "2026-07-01T12:00:00.000Z",
         from: "A",
         gmailUrl: "https://mail.google.com",
+        hasAttachment: false,
         id: "1",
         labelIds: [],
         snippet: null,
@@ -77,6 +80,7 @@ describe("gmail message helpers", () => {
         date: "2026-07-02T12:00:00.000Z",
         from: "B",
         gmailUrl: "https://mail.google.com",
+        hasAttachment: false,
         id: "2",
         labelIds: [],
         snippet: null,
@@ -86,6 +90,21 @@ describe("gmail message helpers", () => {
     ]);
 
     expect(sorted.map((message) => message.subject)).toEqual(["new", "old"]);
+  });
+
+  test("detects attachments from metadata parts when available", () => {
+    const message = normalizeGmailMessage({
+      accountEmail: "lucas@example.com",
+      accountId: "account-1",
+      message: {
+        id: "msg-attachment",
+        payload: {
+          parts: [{ filename: "" }, { filename: "edital.pdf" }],
+        },
+      },
+    });
+
+    expect(message.hasAttachment).toBe(true);
   });
 
   test("builds pending capture text without full body", () => {

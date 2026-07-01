@@ -15,6 +15,13 @@ import {
   sortGmailMessages,
 } from "@/lib/integrations/google/gmail-messages";
 import {
+  type GmailInboxFilters,
+  buildGmailSearchQuery,
+  filterGmailMessages,
+  getAvailableGmailLabels,
+  normalizeGmailInboxFilters,
+} from "@/lib/integrations/google/gmail-filters";
+import {
   getGoogleOAuthEnv,
   refreshGoogleAccessToken,
 } from "@/lib/integrations/google/oauth";
@@ -46,6 +53,12 @@ export type GmailInboxWarning = {
 };
 
 export type GmailActionInbox = {
+  accounts: Array<{
+    accountEmail: string;
+    hasGmailScope: boolean;
+    id: string;
+  }>;
+  availableLabels: string[];
   connectedAccountCount: number;
   messages: NormalizedGmailMessage[];
   reconnectAccountEmails: string[];
@@ -155,11 +168,12 @@ async function fetchMessagesForAccount(input: {
   accessToken: string;
   account: ConnectedGoogleGmailAccount;
   maxResults: number;
+  searchQuery: string;
 }) {
   const listUrl = new URL(
     "https://gmail.googleapis.com/gmail/v1/users/me/messages",
   );
-  listUrl.searchParams.set("q", "newer_than:14d");
+  listUrl.searchParams.set("q", input.searchQuery);
   listUrl.searchParams.set("maxResults", String(input.maxResults));
 
   const listResponse = await fetchGoogleJson<GmailListMessagesResponse>(
@@ -196,6 +210,7 @@ async function fetchMessagesForAccount(input: {
 }
 
 export async function getGmailActionInboxForUser(input: {
+  filters?: GmailInboxFilters;
   maxResultsPerAccount?: number;
   supabase: SupabaseClient;
   userId: string;
@@ -204,13 +219,24 @@ export async function getGmailActionInboxForUser(input: {
   const warnings: GmailInboxWarning[] = [];
   const messages: NormalizedGmailMessage[] = [];
   const reconnectAccountEmails: string[] = [];
+  const filters = input.filters ?? normalizeGmailInboxFilters({});
   const accounts = await getActiveGoogleGmailAccounts(
     input.supabase,
     input.userId,
   );
+  const accountSummaries = accounts.map((account) => ({
+    accountEmail: account.account_email,
+    hasGmailScope: hasGoogleGmailReadonlyScope(account.scopes),
+    id: account.id,
+  }));
+  const selectedAccounts = filters.accountId
+    ? accounts.filter((account) => account.id === filters.accountId)
+    : accounts;
 
   if (!env) {
     return {
+      accounts: accountSummaries,
+      availableLabels: [],
       connectedAccountCount: accounts.length,
       messages: [],
       reconnectAccountEmails: [],
@@ -223,7 +249,7 @@ export async function getGmailActionInboxForUser(input: {
     };
   }
 
-  for (const account of accounts) {
+  for (const account of selectedAccounts) {
     if (!hasGoogleGmailReadonlyScope(account.scopes)) {
       reconnectAccountEmails.push(account.account_email);
       warnings.push({
@@ -255,6 +281,7 @@ export async function getGmailActionInboxForUser(input: {
         accessToken: tokenResult.accessToken,
         account,
         maxResults: input.maxResultsPerAccount ?? 10,
+        searchQuery: buildGmailSearchQuery(filters),
       });
 
       messages.push(...accountMessages);
@@ -272,9 +299,14 @@ export async function getGmailActionInboxForUser(input: {
     }
   }
 
+  const availableLabels = getAvailableGmailLabels(messages);
+  const filteredMessages = filterGmailMessages(messages, filters);
+
   return {
+    accounts: accountSummaries,
+    availableLabels,
     connectedAccountCount: accounts.length,
-    messages: sortGmailMessages(messages),
+    messages: sortGmailMessages(filteredMessages),
     reconnectAccountEmails,
     warnings,
   };

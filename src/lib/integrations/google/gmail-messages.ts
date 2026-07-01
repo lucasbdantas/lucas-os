@@ -10,10 +10,17 @@ export type GmailApiMessage = {
   internalDate?: string;
   labelIds?: string[];
   payload?: {
+    filename?: string;
     headers?: GmailApiMessageHeader[];
+    parts?: GmailApiMessagePart[];
   };
   snippet?: string;
   threadId?: string;
+};
+
+export type GmailApiMessagePart = {
+  filename?: string;
+  parts?: GmailApiMessagePart[];
 };
 
 export type NormalizedGmailMessage = {
@@ -22,6 +29,7 @@ export type NormalizedGmailMessage = {
   date: string | null;
   from: string;
   gmailUrl: string;
+  hasAttachment: boolean;
   id: string;
   labelIds: string[];
   snippet: string | null;
@@ -66,6 +74,18 @@ function normalizeEmailDate(message: GmailApiMessage) {
   return null;
 }
 
+function hasAttachmentPart(part: GmailApiMessagePart | undefined): boolean {
+  if (!part) {
+    return false;
+  }
+
+  if (part.filename?.trim()) {
+    return true;
+  }
+
+  return part.parts?.some(hasAttachmentPart) ?? false;
+}
+
 export function buildGmailMessageUrl(input: {
   accountEmail: string;
   messageId: string;
@@ -93,6 +113,7 @@ export function normalizeGmailMessage(input: {
       accountEmail: input.accountEmail,
       messageId: input.message.id,
     }),
+    hasAttachment: hasAttachmentPart(input.message.payload),
     id: input.message.id,
     labelIds: input.message.labelIds ?? [],
     snippet: input.message.snippet?.trim() || null,
