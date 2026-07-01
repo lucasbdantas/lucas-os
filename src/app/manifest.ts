@@ -25,5 +25,26 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "maskable",
       },
     ],
+    share_target: {
+      action: "/share/target",
+      enctype: "multipart/form-data",
+      method: "POST",
+      params: {
+        text: "text",
+        title: "title",
+        url: "url",
+      },
+    },
+  } as MetadataRoute.Manifest & {
+    share_target: {
+      action: string;
+      enctype: "multipart/form-data";
+      method: "POST";
+      params: {
+        text: string;
+        title: string;
+        url: string;
+      };
+    };
   };
 }

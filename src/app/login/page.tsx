@@ -7,10 +7,21 @@ export const dynamic = "force-dynamic";
 type LoginPageProps = {
   searchParams: Promise<{
     error?: string;
+    returnTo?: string;
   }>;
 };
 
+function getSafeReturnTo(value: string | undefined) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return null;
+  }
+
+  return value;
+}
+
 export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const { error, returnTo } = await searchParams;
+  const safeReturnTo = getSafeReturnTo(returnTo);
   const supabase = await createSupabaseServerClient();
 
   if (supabase) {
@@ -19,11 +30,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     } = await supabase.auth.getUser();
 
     if (user) {
-      redirect("/today");
+      redirect(safeReturnTo ?? "/today");
     }
   }
-
-  const { error } = await searchParams;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground">
@@ -31,6 +40,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <p className="text-sm font-medium text-zinc-500">Lucas OS</p>
         <h1 className="mt-3 text-3xl font-semibold">Entrar</h1>
         <form action={loginWithPassword} className="mt-8 space-y-4">
+          {safeReturnTo ? (
+            <input name="returnTo" type="hidden" value={safeReturnTo} />
+          ) : null}
+
           <label className="block">
             <span className="text-sm font-medium text-zinc-700">Email</span>
             <input

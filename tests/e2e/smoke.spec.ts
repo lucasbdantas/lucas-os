@@ -32,6 +32,14 @@ test.describe("public smoke", () => {
       service: "lucas-os",
     });
   });
+
+  test("/share carrega fallback publico", async ({ page }) => {
+    await page.goto("/share");
+
+    await expect(
+      page.getByRole("heading", { name: "Compartilhar captura" }),
+    ).toBeVisible();
+  });
 });
 
 test.describe("authenticated smoke", () => {
