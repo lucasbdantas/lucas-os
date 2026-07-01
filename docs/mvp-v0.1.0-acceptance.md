@@ -59,9 +59,10 @@ O Lucas OS v0.1.0 esta pronto para uso real controlado em deploy preview da Verc
 - [x] `/settings` salva preferencias.
 - [x] `/api/capture` funciona com token.
 - [x] Token revogado deixa de funcionar.
-- [x] E2E passou 10/10.
 - [x] Unit tests passaram.
 - [x] Build passou.
+- [x] E2E publico passou.
+- [x] E2E autenticado e suportado e passa quando `E2E_TEST_EMAIL` e `E2E_TEST_PASSWORD` estao configurados corretamente. No fechamento atual, os testes autenticados podem ficar skipped se as credenciais locais estiverem comentadas.
 
 ## Riscos conhecidos
 
