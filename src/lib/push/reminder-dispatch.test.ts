@@ -1,8 +1,11 @@
 import { describe, expect, test } from "vitest";
 import {
   buildPushPayload,
+  countPushSkippedReasons,
   getDuePushReminders,
+  getPendingPushDeliveryDiagnostics,
   getPendingPushDeliveryTargets,
+  getPushReminderEligibilityDiagnostics,
   type DuePushReminder,
 } from "./reminder-dispatch";
 
@@ -104,5 +107,59 @@ describe("push reminder dispatch helpers", () => {
 
     expect(targets).toHaveLength(1);
     expect(targets[0]?.subscription.id).toBe("subscription-2");
+  });
+
+  test("reports already delivered skips safely", () => {
+    const diagnostics = getPendingPushDeliveryDiagnostics({
+      deliveries: [
+        {
+          notification_id: "notification-1",
+          subscription_id: "subscription-1",
+        },
+      ],
+      notifications: [dueReminder()],
+      subscriptions: [
+        {
+          auth: "auth",
+          endpoint: "https://push.example.com/1",
+          id: "subscription-1",
+          p256dh: "p256dh",
+        },
+      ],
+    });
+
+    expect(diagnostics.targets).toHaveLength(0);
+    expect(diagnostics.skippedReasons.already_delivered).toBe(1);
+    expect(diagnostics.examples).toEqual([
+      {
+        notification: "cation-1",
+        reason: "already_delivered",
+        subscription: "iption-1",
+      },
+    ]);
+  });
+
+  test("reports invalid payload and not due reminders", () => {
+    const diagnostics = getPushReminderEligibilityDiagnostics(
+      [
+        dueReminder({ id: "invalid", undo_payload: {} }),
+        dueReminder({
+          id: "future",
+          undo_payload: {
+            due_at: "2026-07-02T15:00:00.000Z",
+            offset_minutes: 15,
+            reminder_at: "2026-07-02T14:45:00.000Z",
+            task_id: "task-2",
+            timezone: "America/Sao_Paulo",
+          },
+        }),
+      ],
+      "2026-07-01T14:46:00.000Z",
+    );
+
+    expect(diagnostics.dueReminders).toHaveLength(0);
+    expect(diagnostics.skippedReasons.invalid_payload).toBe(1);
+    expect(diagnostics.skippedReasons.notification_not_due).toBe(1);
+    expect(countPushSkippedReasons(diagnostics.skippedReasons)).toBe(2);
   });
 });

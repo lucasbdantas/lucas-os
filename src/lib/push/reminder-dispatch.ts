@@ -26,6 +26,23 @@ export type PushSubscriptionTarget = {
   p256dh: string;
 };
 
+export type PushSkippedReason =
+  | "already_delivered"
+  | "invalid_payload"
+  | "missing_subscription"
+  | "missing_task"
+  | "notification_not_due"
+  | "subscription_revoked"
+  | "unknown";
+
+export type PushSkippedReasons = Record<PushSkippedReason, number>;
+
+export type PushSkippedExample = {
+  notification?: string;
+  reason: PushSkippedReason;
+  subscription?: string;
+};
+
 export type PushDeliveryRecord = {
   notification_id: string;
   subscription_id: string;
@@ -35,6 +52,40 @@ export type PushDeliveryTarget = {
   notification: DuePushReminder;
   subscription: PushSubscriptionTarget;
 };
+
+export function createEmptyPushSkippedReasons(): PushSkippedReasons {
+  return {
+    already_delivered: 0,
+    invalid_payload: 0,
+    missing_subscription: 0,
+    missing_task: 0,
+    notification_not_due: 0,
+    subscription_revoked: 0,
+    unknown: 0,
+  };
+}
+
+function safeIdSuffix(value: string | null | undefined) {
+  return value ? value.slice(-8) : undefined;
+}
+
+function addSkippedReason(input: {
+  examples: PushSkippedExample[];
+  notificationId?: string;
+  reason: PushSkippedReason;
+  skippedReasons: PushSkippedReasons;
+  subscriptionId?: string;
+}) {
+  input.skippedReasons[input.reason] += 1;
+
+  if (input.examples.length < 5) {
+    input.examples.push({
+      notification: safeIdSuffix(input.notificationId),
+      reason: input.reason,
+      subscription: safeIdSuffix(input.subscriptionId),
+    });
+  }
+}
 
 function sanitizeSingleLine(value: string | null | undefined, fallback: string) {
   const cleaned = value?.replace(/\s+/g, " ").trim();
@@ -71,6 +122,57 @@ export function getDuePushReminders(
 
     return [{ ...notification, payload }];
   });
+}
+
+export function getPushReminderEligibilityDiagnostics(
+  notifications: PushReminderNotification[],
+  now = new Date().toISOString(),
+) {
+  const dueReminders: DuePushReminder[] = [];
+  const skippedReasons = createEmptyPushSkippedReasons();
+  const examples: PushSkippedExample[] = [];
+
+  for (const notification of notifications) {
+    if (notification.type !== "task_reminder" || notification.status !== "unread") {
+      addSkippedReason({
+        examples,
+        notificationId: notification.id,
+        reason: "unknown",
+        skippedReasons,
+      });
+      continue;
+    }
+
+    const payload = parseReminderPayload(notification.undo_payload);
+
+    if (!payload?.reminder_at) {
+      addSkippedReason({
+        examples,
+        notificationId: notification.id,
+        reason: "invalid_payload",
+        skippedReasons,
+      });
+      continue;
+    }
+
+    if (!isReminderOverdue(payload.reminder_at, now)) {
+      addSkippedReason({
+        examples,
+        notificationId: notification.id,
+        reason: "notification_not_due",
+        skippedReasons,
+      });
+      continue;
+    }
+
+    dueReminders.push({ ...notification, payload });
+  }
+
+  return {
+    dueReminders,
+    examples,
+    skippedReasons,
+  };
 }
 
 export function buildPushPayload(notification: DuePushReminder) {
@@ -116,4 +218,60 @@ export function getPendingPushDeliveryTargets(input: {
   }
 
   return targets;
+}
+
+export function getPendingPushDeliveryDiagnostics(input: {
+  deliveries: PushDeliveryRecord[];
+  notifications: DuePushReminder[];
+  subscriptions: PushSubscriptionTarget[];
+}) {
+  const deliveredKeys = new Set(
+    input.deliveries.map(
+      (delivery) =>
+        `${delivery.notification_id}:${delivery.subscription_id}`,
+    ),
+  );
+  const examples: PushSkippedExample[] = [];
+  const skippedReasons = createEmptyPushSkippedReasons();
+  const targets: PushDeliveryTarget[] = [];
+
+  for (const notification of input.notifications) {
+    for (const subscription of input.subscriptions) {
+      const key = `${notification.id}:${subscription.id}`;
+
+      if (deliveredKeys.has(key)) {
+        addSkippedReason({
+          examples,
+          notificationId: notification.id,
+          reason: "already_delivered",
+          skippedReasons,
+          subscriptionId: subscription.id,
+        });
+      } else {
+        targets.push({ notification, subscription });
+      }
+    }
+  }
+
+  return {
+    examples,
+    skippedReasons,
+    targets,
+  };
+}
+
+export function mergePushSkippedReasons(
+  ...reasons: PushSkippedReasons[]
+): PushSkippedReasons {
+  return reasons.reduce((merged, current) => {
+    for (const reason of Object.keys(merged) as PushSkippedReason[]) {
+      merged[reason] += current[reason];
+    }
+
+    return merged;
+  }, createEmptyPushSkippedReasons());
+}
+
+export function countPushSkippedReasons(reasons: PushSkippedReasons) {
+  return Object.values(reasons).reduce((total, count) => total + count, 0);
 }

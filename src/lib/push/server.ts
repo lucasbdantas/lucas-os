@@ -5,10 +5,15 @@ import webpush from "web-push";
 import { getWebPushEnv } from "@/lib/push/env";
 import {
   buildPushPayload,
-  getDuePushReminders,
-  getPendingPushDeliveryTargets,
+  countPushSkippedReasons,
+  createEmptyPushSkippedReasons,
+  getPendingPushDeliveryDiagnostics,
+  getPushReminderEligibilityDiagnostics,
+  mergePushSkippedReasons,
   type PushDeliveryRecord,
   type PushReminderNotification,
+  type PushSkippedExample,
+  type PushSkippedReasons,
   type PushSubscriptionTarget,
 } from "@/lib/push/reminder-dispatch";
 
@@ -22,7 +27,13 @@ type ProcessDuePushRemindersResult = {
   missingConfiguration: boolean;
   pendingReminders: number;
   skipped: number;
+  skippedExamples: PushSkippedExample[];
+  skippedReasons: PushSkippedReasons;
   subscriptions: number;
+};
+
+type PushSubscriptionRow = PushSubscriptionTarget & {
+  revoked_at: string | null;
 };
 
 function configureWebPush() {
@@ -73,6 +84,8 @@ export async function processDuePushRemindersForUser(input: {
       missingConfiguration: true,
       pendingReminders: 0,
       skipped: 0,
+      skippedExamples: [],
+      skippedReasons: createEmptyPushSkippedReasons(),
       subscriptions: 0,
     };
   }
@@ -80,10 +93,9 @@ export async function processDuePushRemindersForUser(input: {
   const [subscriptionsResult, notificationsResult] = await Promise.all([
     input.supabase
       .from("push_subscriptions")
-      .select("id,endpoint,p256dh,auth")
+      .select("id,endpoint,p256dh,auth,revoked_at")
       .eq("user_id", input.userId)
-      .is("revoked_at", null)
-      .returns<PushSubscriptionTarget[]>(),
+      .returns<PushSubscriptionRow[]>(),
     input.supabase
       .from("notifications")
       .select("id,user_id,type,title,body,status,source_url,undo_payload")
@@ -102,20 +114,82 @@ export async function processDuePushRemindersForUser(input: {
     throw new Error(notificationsResult.error.message);
   }
 
-  const subscriptions = subscriptionsResult.data;
-  const dueReminders = getDuePushReminders(
+  const activeSubscriptions = subscriptionsResult.data.filter(
+    (subscription) => !subscription.revoked_at,
+  );
+  const revokedSubscriptionCount =
+    subscriptionsResult.data.length - activeSubscriptions.length;
+  const eligibility = getPushReminderEligibilityDiagnostics(
     notificationsResult.data,
     (input.now ?? new Date()).toISOString(),
   );
+  const taskIds = Array.from(
+    new Set(eligibility.dueReminders.map((notification) => notification.payload.task_id)),
+  );
+  let dueReminders = eligibility.dueReminders;
+  let skippedReasons = eligibility.skippedReasons;
+  const skippedExamples = [...eligibility.examples];
 
-  if (subscriptions.length === 0 || dueReminders.length === 0) {
+  if (taskIds.length > 0) {
+    const { data: existingTasks, error: tasksError } = await input.supabase
+      .from("tasks")
+      .select("id")
+      .eq("user_id", input.userId)
+      .in("id", taskIds)
+      .returns<Array<{ id: string }>>();
+
+    if (tasksError) {
+      throw new Error(tasksError.message);
+    }
+
+    const existingTaskIds = new Set(existingTasks.map((task) => task.id));
+    const validDueReminders = [];
+    const missingTaskReasons = createEmptyPushSkippedReasons();
+
+    for (const reminder of dueReminders) {
+      if (existingTaskIds.has(reminder.payload.task_id)) {
+        validDueReminders.push(reminder);
+      } else {
+        missingTaskReasons.missing_task += 1;
+
+        if (skippedExamples.length < 5) {
+          skippedExamples.push({
+            notification: reminder.id.slice(-8),
+            reason: "missing_task",
+          });
+        }
+      }
+    }
+
+    dueReminders = validDueReminders;
+    skippedReasons = mergePushSkippedReasons(skippedReasons, missingTaskReasons);
+  }
+
+  if (activeSubscriptions.length === 0 || dueReminders.length === 0) {
+    const subscriptionReasons = createEmptyPushSkippedReasons();
+
+    if (dueReminders.length > 0) {
+      if (subscriptionsResult.data.length === 0) {
+        subscriptionReasons.missing_subscription = dueReminders.length;
+      } else if (revokedSubscriptionCount > 0) {
+        subscriptionReasons.subscription_revoked = dueReminders.length;
+      }
+    }
+
+    skippedReasons = mergePushSkippedReasons(
+      skippedReasons,
+      subscriptionReasons,
+    );
+
     return {
       delivered: 0,
       failed: 0,
       missingConfiguration: false,
       pendingReminders: dueReminders.length,
-      skipped: 0,
-      subscriptions: subscriptions.length,
+      skipped: countPushSkippedReasons(skippedReasons),
+      skippedExamples,
+      skippedReasons,
+      subscriptions: activeSubscriptions.length,
     };
   }
 
@@ -129,7 +203,7 @@ export async function processDuePushRemindersForUser(input: {
     )
     .in(
       "subscription_id",
-      subscriptions.map((subscription) => subscription.id),
+      activeSubscriptions.map((subscription) => subscription.id),
     )
     .returns<PushDeliveryRecord[]>();
 
@@ -137,14 +211,19 @@ export async function processDuePushRemindersForUser(input: {
     throw new Error(deliveriesError.message);
   }
 
-  const targets = getPendingPushDeliveryTargets({
+  const deliveryDiagnostics = getPendingPushDeliveryDiagnostics({
     deliveries,
     notifications: dueReminders,
-    subscriptions,
+    subscriptions: activeSubscriptions,
   });
+  skippedReasons = mergePushSkippedReasons(
+    skippedReasons,
+    deliveryDiagnostics.skippedReasons,
+  );
+  skippedExamples.push(...deliveryDiagnostics.examples.slice(0, 5 - skippedExamples.length));
+  const targets = deliveryDiagnostics.targets;
   let delivered = 0;
   let failed = 0;
-  let skipped = dueReminders.length * subscriptions.length - targets.length;
 
   for (const target of targets) {
     const { data: delivery, error: insertError } = await input.supabase
@@ -160,7 +239,15 @@ export async function processDuePushRemindersForUser(input: {
 
     if (insertError) {
       if (insertError.code === "23505") {
-        skipped += 1;
+        skippedReasons.already_delivered += 1;
+
+        if (skippedExamples.length < 5) {
+          skippedExamples.push({
+            notification: target.notification.id.slice(-8),
+            reason: "already_delivered",
+            subscription: target.subscription.id.slice(-8),
+          });
+        }
         continue;
       }
 
@@ -168,7 +255,15 @@ export async function processDuePushRemindersForUser(input: {
     }
 
     if (!delivery) {
-      skipped += 1;
+      skippedReasons.unknown += 1;
+
+      if (skippedExamples.length < 5) {
+        skippedExamples.push({
+          notification: target.notification.id.slice(-8),
+          reason: "unknown",
+          subscription: target.subscription.id.slice(-8),
+        });
+      }
       continue;
     }
 
@@ -222,7 +317,9 @@ export async function processDuePushRemindersForUser(input: {
     failed,
     missingConfiguration: false,
     pendingReminders: dueReminders.length,
-    skipped,
-    subscriptions: subscriptions.length,
+    skipped: countPushSkippedReasons(skippedReasons),
+    skippedExamples,
+    skippedReasons,
+    subscriptions: activeSubscriptions.length,
   };
 }

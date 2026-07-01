@@ -85,6 +85,31 @@ Para envio automatico real no futuro, existem duas opcoes seguras:
 
 Essa etapa ficou documentada para Push Notifications V2.
 
+## Diagnostico de `/api/push/process`
+
+O endpoint retorna um JSON com contadores seguros:
+
+- `delivered`: pushes enviados com sucesso nesta execucao;
+- `failed`: tentativas que falharam no provedor de push;
+- `skipped`: total de itens pulados por motivos conhecidos;
+- `pendingReminders`: lembretes vencidos e elegiveis depois das validacoes;
+- `subscriptions`: subscriptions ativas consideradas;
+- `skippedReasons`: contagem por motivo;
+- `skippedExamples`: ate 5 exemplos seguros com apenas sufixos curtos de IDs internos.
+
+Motivos possiveis em `skippedReasons`:
+
+- `already_delivered`: ja existe registro em `push_notification_deliveries` para aquele par lembrete/dispositivo. Isso indica idempotencia funcionando e e a causa mais provavel quando `delivered: 0`, `failed: 0`, `pendingReminders > 0`, `subscriptions > 0` e `skipped > 0`;
+- `subscription_revoked`: havia subscription registrada, mas nenhuma ativa para envio;
+- `missing_subscription`: nao ha subscription ativa nem revogada para o usuario;
+- `notification_not_due`: o lembrete existe, mas `reminder_at` ainda nao venceu;
+- `missing_task`: o lembrete aponta para uma task que nao existe mais para o usuario;
+- `invalid_payload`: `undo_payload` nao tem o formato esperado de reminder;
+- `unknown`: fallback para caso nao classificado.
+
+O diagnostico nao retorna titulo de task, corpo da notificacao, endpoint de push,
+chaves de subscription ou secrets.
+
 ## Seguranca
 
 - O app nao usa `SUPABASE_SERVICE_ROLE_KEY`;
