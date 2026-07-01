@@ -24,6 +24,8 @@ Plataformas equivalentes tambem servem se suportarem Next.js 16, rotas API e var
 - Variaveis de ambiente cadastradas na plataforma.
 - Build local validado.
 
+Antes de criar o deploy Vercel, siga `docs/supabase-production-setup-v1.md` para preparar o banco de producao.
+
 ## Variaveis de ambiente de producao
 
 ### Publicas
