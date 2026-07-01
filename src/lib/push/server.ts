@@ -4,13 +4,18 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import webpush from "web-push";
 import { getWebPushEnv } from "@/lib/push/env";
 import {
+  addFailedReason,
   buildPushPayload,
+  classifyPushFailure,
   countPushSkippedReasons,
+  createEmptyPushFailedReasons,
   createEmptyPushSkippedReasons,
   getPendingPushDeliveryDiagnostics,
   getPushReminderEligibilityDiagnostics,
   mergePushSkippedReasons,
   type PushDeliveryRecord,
+  type PushFailedExample,
+  type PushFailedReasons,
   type PushReminderNotification,
   type PushSkippedExample,
   type PushSkippedReasons,
@@ -24,6 +29,8 @@ type DeliveryInsertResult = {
 type ProcessDuePushRemindersResult = {
   delivered: number;
   failed: number;
+  failedExamples: PushFailedExample[];
+  failedReasons: PushFailedReasons;
   missingConfiguration: boolean;
   pendingReminders: number;
   skipped: number;
@@ -60,16 +67,6 @@ function shouldRevokeSubscriptionAfterError(error: unknown) {
   return statusCode === 404 || statusCode === 410;
 }
 
-function getSafeErrorMessage(error: unknown) {
-  const statusCode = getPushError(error).statusCode;
-
-  if (statusCode) {
-    return `web_push_${statusCode}`;
-  }
-
-  return "web_push_failed";
-}
-
 export async function processDuePushRemindersForUser(input: {
   now?: Date;
   supabase: SupabaseClient;
@@ -81,6 +78,8 @@ export async function processDuePushRemindersForUser(input: {
     return {
       delivered: 0,
       failed: 0,
+      failedExamples: [],
+      failedReasons: createEmptyPushFailedReasons(),
       missingConfiguration: true,
       pendingReminders: 0,
       skipped: 0,
@@ -184,6 +183,8 @@ export async function processDuePushRemindersForUser(input: {
     return {
       delivered: 0,
       failed: 0,
+      failedExamples: [],
+      failedReasons: createEmptyPushFailedReasons(),
       missingConfiguration: false,
       pendingReminders: dueReminders.length,
       skipped: countPushSkippedReasons(skippedReasons),
@@ -224,6 +225,8 @@ export async function processDuePushRemindersForUser(input: {
   const targets = deliveryDiagnostics.targets;
   let delivered = 0;
   let failed = 0;
+  const failedExamples: PushFailedExample[] = [];
+  const failedReasons = createEmptyPushFailedReasons();
 
   for (const target of targets) {
     const { data: delivery, error: insertError } = await input.supabase
@@ -292,11 +295,20 @@ export async function processDuePushRemindersForUser(input: {
       delivered += 1;
     } catch (error) {
       failed += 1;
+      const failedReason = classifyPushFailure(error);
+
+      addFailedReason({
+        examples: failedExamples,
+        failedReasons,
+        notificationId: target.notification.id,
+        reason: failedReason,
+        subscriptionId: target.subscription.id,
+      });
 
       await input.supabase
         .from("push_notification_deliveries")
         .update({
-          error: getSafeErrorMessage(error),
+          error: failedReason,
           status: "failed",
         })
         .eq("id", delivery.id)
@@ -315,6 +327,8 @@ export async function processDuePushRemindersForUser(input: {
   return {
     delivered,
     failed,
+    failedExamples,
+    failedReasons,
     missingConfiguration: false,
     pendingReminders: dueReminders.length,
     skipped: countPushSkippedReasons(skippedReasons),

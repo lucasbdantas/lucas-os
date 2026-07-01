@@ -43,6 +43,22 @@ export type PushSkippedExample = {
   subscription?: string;
 };
 
+export type PushFailedReason =
+  | "web_push_bad_subscription"
+  | "web_push_gone"
+  | "web_push_not_found"
+  | "web_push_payload_error"
+  | "web_push_unauthorized"
+  | "web_push_unknown";
+
+export type PushFailedReasons = Record<PushFailedReason, number>;
+
+export type PushFailedExample = {
+  notification?: string;
+  reason: PushFailedReason;
+  subscription?: string;
+};
+
 export type PushDeliveryRecord = {
   notification_id: string;
   subscription_id: string;
@@ -65,6 +81,17 @@ export function createEmptyPushSkippedReasons(): PushSkippedReasons {
   };
 }
 
+export function createEmptyPushFailedReasons(): PushFailedReasons {
+  return {
+    web_push_bad_subscription: 0,
+    web_push_gone: 0,
+    web_push_not_found: 0,
+    web_push_payload_error: 0,
+    web_push_unauthorized: 0,
+    web_push_unknown: 0,
+  };
+}
+
 function safeIdSuffix(value: string | null | undefined) {
   return value ? value.slice(-8) : undefined;
 }
@@ -77,6 +104,53 @@ function addSkippedReason(input: {
   subscriptionId?: string;
 }) {
   input.skippedReasons[input.reason] += 1;
+
+  if (input.examples.length < 5) {
+    input.examples.push({
+      notification: safeIdSuffix(input.notificationId),
+      reason: input.reason,
+      subscription: safeIdSuffix(input.subscriptionId),
+    });
+  }
+}
+
+export function classifyPushFailure(error: unknown): PushFailedReason {
+  const statusCode =
+    error && typeof error === "object" && "statusCode" in error
+      ? Number((error as { statusCode?: unknown }).statusCode)
+      : null;
+
+  if (statusCode === 401 || statusCode === 403) {
+    return "web_push_unauthorized";
+  }
+
+  if (statusCode === 404) {
+    return "web_push_not_found";
+  }
+
+  if (statusCode === 410) {
+    return "web_push_gone";
+  }
+
+  if (statusCode === 400) {
+    return "web_push_bad_subscription";
+  }
+
+  if (statusCode === 413) {
+    return "web_push_payload_error";
+  }
+
+  return "web_push_unknown";
+}
+
+export function addFailedReason(input: {
+  examples: PushFailedExample[];
+  failedReasons: PushFailedReasons;
+  notificationId?: string;
+  reason: PushFailedReason;
+  subscriptionId?: string;
+}) {
+  input.failedReasons[input.reason] += 1;
 
   if (input.examples.length < 5) {
     input.examples.push({

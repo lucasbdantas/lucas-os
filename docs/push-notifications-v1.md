@@ -96,6 +96,8 @@ O endpoint retorna um JSON com contadores seguros:
 - `subscriptions`: subscriptions ativas consideradas;
 - `skippedReasons`: contagem por motivo;
 - `skippedExamples`: ate 5 exemplos seguros com apenas sufixos curtos de IDs internos.
+- `failedReasons`: contagem por tipo de falha retornada pelo provedor Web Push;
+- `failedExamples`: ate 5 exemplos seguros com apenas sufixos curtos de IDs internos.
 
 Motivos possiveis em `skippedReasons`:
 
@@ -109,6 +111,20 @@ Motivos possiveis em `skippedReasons`:
 
 O diagnostico nao retorna titulo de task, corpo da notificacao, endpoint de push,
 chaves de subscription ou secrets.
+
+Motivos possiveis em `failedReasons`:
+
+- `web_push_unauthorized`: geralmente VAPID keys incorretas, subject invalido ou configuracao Web Push rejeitada pelo provedor;
+- `web_push_gone`: subscription expirada/removida pelo navegador ou provedor. O Lucas OS revoga a subscription localmente;
+- `web_push_not_found`: endpoint nao encontrado. O Lucas OS revoga a subscription localmente;
+- `web_push_bad_subscription`: subscription malformada ou rejeitada;
+- `web_push_payload_error`: payload grande/invalido para envio;
+- `web_push_unknown`: falha nao classificada.
+
+Quando `failed > 0`, olhe primeiro `failedReasons`. Se aparecer
+`web_push_unauthorized`, revise `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY` e
+`WEB_PUSH_SUBJECT` no ambiente. Se aparecer `web_push_gone` ou
+`web_push_not_found`, desative e ative novamente as notificacoes no dispositivo.
 
 ## Seguranca
 

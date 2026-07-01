@@ -1,12 +1,16 @@
 import { describe, expect, test } from "vitest";
 import {
+  addFailedReason,
   buildPushPayload,
+  classifyPushFailure,
   countPushSkippedReasons,
+  createEmptyPushFailedReasons,
   getDuePushReminders,
   getPendingPushDeliveryDiagnostics,
   getPendingPushDeliveryTargets,
   getPushReminderEligibilityDiagnostics,
   type DuePushReminder,
+  type PushFailedExample,
 } from "./reminder-dispatch";
 
 function dueReminder(overrides: Partial<DuePushReminder> = {}): DuePushReminder {
@@ -161,5 +165,47 @@ describe("push reminder dispatch helpers", () => {
     expect(diagnostics.skippedReasons.invalid_payload).toBe(1);
     expect(diagnostics.skippedReasons.notification_not_due).toBe(1);
     expect(countPushSkippedReasons(diagnostics.skippedReasons)).toBe(2);
+  });
+
+  test("classifies provider push failures safely", () => {
+    expect(classifyPushFailure({ statusCode: 401 })).toBe(
+      "web_push_unauthorized",
+    );
+    expect(classifyPushFailure({ statusCode: 403 })).toBe(
+      "web_push_unauthorized",
+    );
+    expect(classifyPushFailure({ statusCode: 404 })).toBe(
+      "web_push_not_found",
+    );
+    expect(classifyPushFailure({ statusCode: 410 })).toBe("web_push_gone");
+    expect(classifyPushFailure({ statusCode: 400 })).toBe(
+      "web_push_bad_subscription",
+    );
+    expect(classifyPushFailure({ statusCode: 413 })).toBe(
+      "web_push_payload_error",
+    );
+    expect(classifyPushFailure(new Error("network"))).toBe("web_push_unknown");
+  });
+
+  test("records failed reasons with limited safe examples", () => {
+    const failedReasons = createEmptyPushFailedReasons();
+    const examples: PushFailedExample[] = [];
+
+    addFailedReason({
+      examples,
+      failedReasons,
+      notificationId: "notification-12345678",
+      reason: "web_push_gone",
+      subscriptionId: "subscription-87654321",
+    });
+
+    expect(failedReasons.web_push_gone).toBe(1);
+    expect(examples).toEqual([
+      {
+        notification: "12345678",
+        reason: "web_push_gone",
+        subscription: "87654321",
+      },
+    ]);
   });
 });
