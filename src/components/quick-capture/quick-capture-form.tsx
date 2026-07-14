@@ -191,13 +191,15 @@ export function QuickCaptureForm() {
             Texto bruto
           </span>
           <textarea
+            autoCapitalize="sentences"
             autoFocus
-            className="field-control mt-2 min-h-[48vh] w-full resize-y px-4 py-4 text-base leading-7 outline-none"
+            className="field-control mt-2 min-h-[52svh] w-full resize-y px-4 py-4 text-base leading-7 outline-none sm:min-h-[48vh]"
             maxLength={12000}
             name="rawText"
             placeholder="Jogue aqui qualquer coisa solta. Você organiza depois em Captura."
             ref={textareaRef}
             required
+            spellCheck
           />
         </label>
 
@@ -235,15 +237,15 @@ export function QuickCaptureForm() {
         <SubmitButton />
       </form>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <Link
-          className="soft-button px-4 py-3 text-center text-sm font-semibold"
+          className="soft-button min-h-12 px-4 py-3 text-center text-sm font-semibold"
           href="/capture"
         >
           Ver pendências
         </Link>
         <Link
-          className="ghost-button px-4 py-3 text-center text-sm font-semibold"
+          className="ghost-button min-h-12 px-4 py-3 text-center text-sm font-semibold"
           href="/today"
         >
           Hoje

@@ -64,10 +64,12 @@ export default async function SharePage({ searchParams }: SharePageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-background px-5 py-8 text-zinc-950">
-      <section className="paper-panel mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md flex-col justify-center p-6">
+    <main className="min-h-[100svh] bg-background px-4 py-4 text-zinc-950 sm:px-5 sm:py-8">
+      <section className="paper-panel mx-auto flex min-h-[calc(100svh-2rem)] w-full max-w-md flex-col justify-center p-5 sm:min-h-[calc(100vh-4rem)] sm:p-6">
         <p className="section-kicker">Lucas OS</p>
-        <h1 className="mt-3 text-4xl font-semibold">Compartilhar captura</h1>
+        <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">
+          Compartilhar captura
+        </h1>
         <p className="mt-3 text-sm leading-6 text-zinc-600">
           Revise o texto recebido e salve como pending capture. Nada vira task
           automaticamente.
@@ -93,7 +95,7 @@ export default async function SharePage({ searchParams }: SharePageProps) {
                 required
               />
             </label>
-            <button className="primary-button px-4 py-3 text-base font-semibold">
+            <button className="primary-button min-h-12 px-4 py-3 text-base font-semibold">
               Salvar captura
             </button>
           </form>
@@ -106,19 +108,19 @@ export default async function SharePage({ searchParams }: SharePageProps) {
 
         <div className="mt-4 grid gap-2">
           <Link
-            className="soft-button px-4 py-3 text-center text-sm font-semibold"
+            className="soft-button min-h-12 px-4 py-3 text-center text-sm font-semibold"
             href="/quick-capture"
           >
             Nova captura
           </Link>
           <Link
-            className="soft-button px-4 py-3 text-center text-sm font-semibold"
+            className="soft-button min-h-12 px-4 py-3 text-center text-sm font-semibold"
             href="/capture"
           >
             Ver inbox
           </Link>
           <Link
-            className="ghost-button px-4 py-3 text-center text-sm font-semibold"
+            className="ghost-button min-h-12 px-4 py-3 text-center text-sm font-semibold"
             href="/today"
           >
             Voltar para Today
