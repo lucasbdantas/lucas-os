@@ -99,6 +99,23 @@ export const pendingCaptureStatusEnum = pgEnum("pending_capture_status", [
   "expired",
 ]);
 
+export const connectedAccountProviderEnum = pgEnum(
+  "connected_account_provider",
+  ["google"],
+);
+
+export const connectedAccountStatusEnum = pgEnum("connected_account_status", [
+  "active",
+  "revoked",
+  "error",
+]);
+
+export const pushDeliveryStatusEnum = pgEnum("push_delivery_status", [
+  "pending",
+  "sent",
+  "failed",
+]);
+
 export const domains = pgTable(
   "domains",
   {
@@ -379,5 +396,106 @@ export const captureTokens = pgTable(
       table.createdAt,
     ),
     index("capture_tokens_user_active_idx").on(table.userId, table.revokedAt),
+  ],
+);
+
+export const connectedAccounts = pgTable(
+  "connected_accounts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    provider: connectedAccountProviderEnum("provider").notNull().default("google"),
+    providerAccountId: text("provider_account_id").notNull(),
+    accountEmail: text("account_email").notNull(),
+    displayName: text("display_name"),
+    accessTokenEncrypted: text("access_token_encrypted"),
+    refreshTokenEncrypted: text("refresh_token_encrypted"),
+    scopes: jsonb("scopes").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    status: connectedAccountStatusEnum("status").notNull().default("active"),
+    lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("connected_accounts_user_provider_account_unique").on(
+      table.userId,
+      table.provider,
+      table.providerAccountId,
+    ),
+    index("connected_accounts_user_provider_idx").on(
+      table.userId,
+      table.provider,
+    ),
+    index("connected_accounts_user_status_idx").on(table.userId, table.status),
+  ],
+);
+
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("push_subscriptions_endpoint_unique").on(table.endpoint),
+    index("push_subscriptions_user_active_idx").on(
+      table.userId,
+      table.revokedAt,
+    ),
+  ],
+);
+
+export const pushNotificationDeliveries = pgTable(
+  "push_notification_deliveries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    notificationId: uuid("notification_id")
+      .notNull()
+      .references(() => notifications.id, { onDelete: "cascade" }),
+    subscriptionId: uuid("subscription_id")
+      .notNull()
+      .references(() => pushSubscriptions.id, { onDelete: "cascade" }),
+    status: pushDeliveryStatusEnum("status").notNull().default("pending"),
+    error: text("error"),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex(
+      "push_notification_deliveries_notification_subscription_unique",
+    ).on(table.notificationId, table.subscriptionId),
+    index("push_notification_deliveries_user_status_idx").on(
+      table.userId,
+      table.status,
+      table.createdAt,
+    ),
+    index("push_notification_deliveries_notification_idx").on(
+      table.notificationId,
+    ),
   ],
 );

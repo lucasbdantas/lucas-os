@@ -8,6 +8,7 @@ import type {
   CaptureProjectOption,
 } from "@/components/capture/capture-task-form";
 import { PageHeader } from "@/components/layout/page-header";
+import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireSession } from "@/lib/supabase/require-session";
 
@@ -82,7 +83,7 @@ export default async function CapturePage({ searchParams }: CapturePageProps) {
   );
 
   return (
-    <main className="px-6 py-8">
+    <main className="app-page mx-auto max-w-6xl">
       <PageHeader
         eyebrow="Fase 2"
         title="Capture"
@@ -95,11 +96,12 @@ export default async function CapturePage({ searchParams }: CapturePageProps) {
         </p>
       ) : null}
 
-      <section className="mt-8">
-        <div className="mb-3 flex items-center gap-2">
-          <h2 className="font-semibold text-zinc-950">Captura inteligente</h2>
-          <StatusBadge label="deterministica" />
-        </div>
+      <section className="section-shell mt-8">
+        <SectionHeader
+          action={<StatusBadge label="deterministica" />}
+          description="Use regra local ou IA opcional para preparar uma sugestao antes de salvar."
+          title="Captura inteligente"
+        />
         <SmartCaptureForm
           domains={selectableDomains}
           projects={projectOptions}
@@ -107,11 +109,12 @@ export default async function CapturePage({ searchParams }: CapturePageProps) {
         />
       </section>
 
-      <section className="mt-10">
-        <div className="mb-3 flex items-center gap-2">
-          <h2 className="font-semibold text-zinc-950">Pendentes</h2>
-          <StatusBadge label={`${capturesResult.data.length}`} tone="amber" />
-        </div>
+      <section className="section-shell mt-10">
+        <SectionHeader
+          action={<StatusBadge label={`${capturesResult.data.length}`} tone="amber" />}
+          description="Caixa de entrada para textos que ainda precisam virar task, nota ou decisao."
+          title="Pendentes"
+        />
         <PendingCaptureList
           captures={capturesResult.data}
           domains={selectableDomains}

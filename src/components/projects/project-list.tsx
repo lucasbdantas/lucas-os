@@ -72,12 +72,9 @@ export function ProjectList({ projects, returnTo }: ProjectListProps) {
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-5">
       {projects.map((project) => (
-        <article
-          className="rounded-md border border-zinc-200 bg-white p-4"
-          key={project.id}
-        >
+        <article className="project-card app-card-interactive p-5" key={project.id}>
           <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -124,14 +121,14 @@ export function ProjectList({ projects, returnTo }: ProjectListProps) {
             </div>
             <div className="flex flex-wrap gap-2 lg:justify-end">
               <Link
-                className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+              className="soft-button px-3 py-2 text-sm font-medium"
                 href={getEditHref(project.id)}
               >
                 Editar
               </Link>
               {["active", "waiting"].includes(project.status) ? (
                 <Link
-                  className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                  className="soft-button px-3 py-2 text-sm font-medium"
                   href={getNextActionHref(project)}
                 >
                   Criar próxima ação
@@ -163,7 +160,7 @@ export function ProjectList({ projects, returnTo }: ProjectListProps) {
               <div className="mt-4 grid gap-2">
                 {project.milestones.map((milestone) => (
                   <div
-                    className="grid gap-3 rounded-md border border-zinc-100 bg-zinc-50 p-3 md:grid-cols-[1fr_auto]"
+                    className="app-card-soft grid gap-3 p-3 md:grid-cols-[1fr_auto]"
                     key={milestone.id}
                   >
                     <div>

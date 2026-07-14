@@ -15,7 +15,7 @@ export function PendingCaptureActions({
         <input name="captureId" type="hidden" value={captureId} />
         <input name="returnTo" type="hidden" value={returnTo} />
         <input name="status" type="hidden" value="resolved" />
-        <button className="rounded-md border border-green-200 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-50">
+        <button className="soft-button px-3 py-2 text-sm font-semibold">
           Resolvida
         </button>
       </form>
@@ -23,7 +23,7 @@ export function PendingCaptureActions({
         <input name="captureId" type="hidden" value={captureId} />
         <input name="returnTo" type="hidden" value={returnTo} />
         <input name="status" type="hidden" value="dismissed" />
-        <button className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100">
+        <button className="ghost-button px-3 py-2 text-sm font-semibold">
           Dispensar
         </button>
       </form>
@@ -31,7 +31,7 @@ export function PendingCaptureActions({
         <input name="captureId" type="hidden" value={captureId} />
         <input name="returnTo" type="hidden" value={returnTo} />
         <input name="status" type="hidden" value="expired" />
-        <button className="rounded-md border border-amber-200 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50">
+        <button className="soft-button px-3 py-2 text-sm font-semibold">
           Expirada
         </button>
       </form>

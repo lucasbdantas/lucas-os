@@ -1,5 +1,6 @@
 import { updateAppPreferences } from "@/lib/app-settings/actions";
 import {
+  appearanceValues,
   preferredHomeValues,
   supportedTimezones,
   todayDensityValues,
@@ -20,14 +21,39 @@ const homeLabels = {
   "/today": "Today",
 };
 
+const appearanceLabels = {
+  dark: "Escuro",
+  light: "Claro",
+  system: "Sistema",
+};
+
 export function AppPreferencesForm({ preferences }: AppPreferencesFormProps) {
   return (
     <form action={updateAppPreferences} className="mt-4 grid gap-4">
+      <label className="block">
+        <span className="text-sm font-medium text-zinc-700">Aparencia</span>
+        <select
+          className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
+          defaultValue={preferences.appearance}
+          name="appearance"
+        >
+          {appearanceValues.map((appearance) => (
+            <option key={appearance} value={appearance}>
+              {appearanceLabels[appearance]}
+            </option>
+          ))}
+        </select>
+        <span className="mt-1 block text-xs leading-5 text-zinc-500">
+          Controla o tema do Lucas OS. Nao depende da caixa visual das Next Dev
+          Tools.
+        </span>
+      </label>
+
       <div className="grid gap-4 md:grid-cols-2">
         <label className="block">
           <span className="text-sm font-medium text-zinc-700">Timezone</span>
           <select
-            className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+            className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
             defaultValue={preferences.timezone}
             name="timezone"
           >
@@ -44,7 +70,7 @@ export function AppPreferencesForm({ preferences }: AppPreferencesFormProps) {
             Densidade do Today
           </span>
           <select
-            className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+            className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
             defaultValue={preferences.todayDensity}
             name="todayDensity"
           >
@@ -62,7 +88,7 @@ export function AppPreferencesForm({ preferences }: AppPreferencesFormProps) {
           Página inicial preferida
         </span>
         <select
-          className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+          className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
           defaultValue={preferences.preferredHome}
           name="preferredHome"
         >
@@ -74,7 +100,7 @@ export function AppPreferencesForm({ preferences }: AppPreferencesFormProps) {
         </select>
       </label>
 
-      <label className="flex items-start gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-3">
+      <label className="app-card-muted flex items-start gap-3 p-3">
         <input
           className="mt-1"
           defaultChecked={preferences.showProjectsWithoutNextAction}
@@ -91,7 +117,7 @@ export function AppPreferencesForm({ preferences }: AppPreferencesFormProps) {
         </span>
       </label>
 
-      <button className="w-fit rounded-md bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800">
+      <button className="primary-button w-fit px-4 py-2.5 text-sm font-semibold">
         Salvar preferências
       </button>
     </form>

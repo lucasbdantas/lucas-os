@@ -85,6 +85,7 @@ O seed e idempotente para domains e projects.
 - `docs/deploy-readiness-v1.md`
 - `docs/deploy-v1-plan.md`
 - `docs/supabase-production-setup-v1.md`
+- `docs/backup-recovery-v1.md`
 - `docs/e2e-smoke-tests-v1.md`
 
 ## Health check

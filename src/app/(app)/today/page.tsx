@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SectionHeader } from "@/components/ui/section-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -9,6 +10,13 @@ import {
 } from "@/lib/app-settings/preferences";
 import { getAppPreferencesForUser } from "@/lib/app-settings/server";
 import { formatDate, formatDateTime } from "@/lib/format";
+import {
+  getGoogleCalendarAgendaForUser,
+  type GoogleCalendarAgenda,
+} from "@/lib/integrations/google/calendar";
+import { getCalendarLanePreferencesForUser } from "@/lib/integrations/google/calendar-lane-settings";
+import { splitCalendarEventsByLane } from "@/lib/integrations/google/calendar-lanes";
+import type { NormalizedGoogleCalendarEvent } from "@/lib/integrations/google/calendar-events";
 import {
   isReminderOverdue,
   parseReminderPayload,
@@ -148,16 +156,12 @@ function TaskSection({
   projectNameById: Map<string, string>;
 }) {
   return (
-    <section>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-semibold text-zinc-950">{title}</h2>
-          {description ? (
-            <p className="mt-1 text-sm text-zinc-600">{description}</p>
-          ) : null}
-        </div>
-        <StatusBadge label={`${tasks.length}`} />
-      </div>
+    <section className="section-shell">
+      <SectionHeader
+        action={<StatusBadge label={`${tasks.length}`} />}
+        description={description}
+        title={title}
+      />
 
       {tasks.length === 0 ? (
         <EmptyState title={emptyTitle} description={emptyDescription} />
@@ -165,7 +169,7 @@ function TaskSection({
         <div className="grid gap-3">
           {tasks.map((task) => (
             <article
-              className="rounded-md border border-zinc-200 bg-white p-4"
+              className="task-card app-card-interactive p-4"
               key={task.id}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -221,7 +225,7 @@ function TaskSection({
 function QuickLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
-      className="rounded-md border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-800 hover:bg-zinc-100"
+      className="soft-button px-4 py-3 text-sm font-semibold"
       href={href}
     >
       {label}
@@ -231,6 +235,247 @@ function QuickLink({ href, label }: { href: string; label: string }) {
 
 function getNextActionHref(project: Pick<ProjectRow, "id" | "domain_id">) {
   return `/tasks?domain=${project.domain_id}&project=${project.id}#task-form`;
+}
+
+function getCalendarEventDateOnly(
+  event: NormalizedGoogleCalendarEvent,
+  timezone: Parameters<typeof toDateOnlyInTimezone>[0],
+) {
+  if (event.isAllDay) {
+    return event.start;
+  }
+
+  return toDateOnlyInTimezone(timezone, new Date(event.start));
+}
+
+function formatCalendarEventTime(
+  event: NormalizedGoogleCalendarEvent,
+  timezone: Parameters<typeof toDateOnlyInTimezone>[0],
+) {
+  if (event.isAllDay) {
+    return "Dia todo";
+  }
+
+  return formatDateTime(event.start, "Sem horario", timezone);
+}
+
+function CalendarEventList({
+  events,
+  isContext = false,
+  timezone,
+}: {
+  events: NormalizedGoogleCalendarEvent[];
+  isContext?: boolean;
+  timezone: Parameters<typeof toDateOnlyInTimezone>[0];
+}) {
+  return (
+    <div className="grid gap-3">
+      {events.map((event) => (
+        <article
+          className={`event-card p-4 ${isContext ? "event-card-context" : ""}`}
+          key={event.id}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-medium text-zinc-950">{event.title}</h3>
+                {event.isAllDay ? <StatusBadge label="dia todo" /> : null}
+              </div>
+              <div className="mt-2 grid gap-1 text-sm text-zinc-600">
+                <p>{formatCalendarEventTime(event, timezone)}</p>
+                <p>Conta: {event.accountEmail}</p>
+                <p>Calendario: {event.calendarSummary}</p>
+                {event.location ? <p>Local: {event.location}</p> : null}
+              </div>
+            </div>
+            {event.htmlLink ? (
+              <a
+                className="soft-button px-3 py-2 text-sm font-medium"
+                href={event.htmlLink}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Abrir no Google
+              </a>
+            ) : null}
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function CalendarSection({
+  agenda,
+  contextNextEvents,
+  contextTodayEvents,
+  primaryNextEvents,
+  primaryTodayEvents,
+  timezone,
+}: {
+  agenda: GoogleCalendarAgenda;
+  contextNextEvents: NormalizedGoogleCalendarEvent[];
+  contextTodayEvents: NormalizedGoogleCalendarEvent[];
+  primaryNextEvents: NormalizedGoogleCalendarEvent[];
+  primaryTodayEvents: NormalizedGoogleCalendarEvent[];
+  timezone: Parameters<typeof toDateOnlyInTimezone>[0];
+}) {
+  const hasPrimaryEvents =
+    primaryTodayEvents.length > 0 || primaryNextEvents.length > 0;
+  const hasContextEvents =
+    contextTodayEvents.length > 0 || contextNextEvents.length > 0;
+
+  return (
+    <section className="section-shell">
+      <SectionHeader
+        action={
+          <Link
+            className="soft-button px-3 py-2 text-sm font-medium"
+            href="/settings/integrations"
+          >
+            Configurar Google
+          </Link>
+        }
+        description="Eventos Google Calendar em lanes para reduzir ruido."
+        title="Agenda"
+      />
+
+      {agenda.connectedAccountCount === 0 ? (
+        <EmptyState
+          description="Conecte uma conta Google em Settings para ver sua agenda aqui."
+          title="Nenhuma conta Google conectada"
+        />
+      ) : null}
+
+      {agenda.reconnectAccountEmails.length > 0 ? (
+        <div className="app-card-muted mb-3 p-3 text-sm text-amber-800">
+          Reconecte{" "}
+          {agenda.reconnectAccountEmails.join(", ")} para conceder acesso
+          somente leitura ao Calendar.
+        </div>
+      ) : null}
+
+      {agenda.warnings.length > 0 ? (
+        <div className="app-card-muted mb-3 p-3 text-sm text-zinc-600">
+          Algumas contas Google nao puderam ser sincronizadas agora. O restante
+          do Today continua funcionando.
+        </div>
+      ) : null}
+
+      {agenda.connectedAccountCount > 0 &&
+      !hasPrimaryEvents &&
+      !hasContextEvents ? (
+        <EmptyState
+          description="Nenhum evento visivel encontrado para hoje ou proximos 7 dias. Calendarios ocultos ficam fora do Today."
+          title="Agenda livre"
+        />
+      ) : null}
+
+      {hasPrimaryEvents || hasContextEvents ? (
+        <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.85fr)]">
+          <div className="app-card-soft p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-zinc-950">
+                  Agenda principal
+                </h3>
+                <p className="mt-1 text-sm text-zinc-600">
+                  Aulas, reunioes, prazos e compromissos que competem pelo dia.
+                </p>
+              </div>
+              <StatusBadge
+                label={`${primaryTodayEvents.length + primaryNextEvents.length}`}
+              />
+            </div>
+
+            {hasPrimaryEvents ? (
+              <div className="grid gap-5">
+                {primaryTodayEvents.length > 0 ? (
+                  <div>
+                    <h4 className="mb-2 text-sm font-medium text-zinc-700">
+                      Hoje
+                    </h4>
+                    <CalendarEventList
+                      events={primaryTodayEvents}
+                      timezone={timezone}
+                    />
+                  </div>
+                ) : null}
+
+                {primaryNextEvents.length > 0 ? (
+                  <div>
+                    <h4 className="mb-2 text-sm font-medium text-zinc-700">
+                      Proximos 7 dias
+                    </h4>
+                    <CalendarEventList
+                      events={primaryNextEvents}
+                      timezone={timezone}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <EmptyState
+                description="Nenhum evento marcado como agenda principal."
+                title="Agenda principal livre"
+              />
+            )}
+          </div>
+
+          <div className="app-card-soft p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-zinc-800">
+                  Contexto / Interesses
+                </h3>
+                <p className="mt-1 text-sm text-zinc-600">
+                  Calendarios uteis que nao devem competir com compromissos.
+                </p>
+              </div>
+              <StatusBadge
+                label={`${contextTodayEvents.length + contextNextEvents.length}`}
+              />
+            </div>
+
+            {hasContextEvents ? (
+              <div className="grid gap-5">
+                {contextTodayEvents.length > 0 ? (
+                  <div>
+                    <h4 className="mb-2 text-sm font-medium text-zinc-600">
+                      Hoje
+                    </h4>
+                    <CalendarEventList
+                      events={contextTodayEvents}
+                      isContext
+                      timezone={timezone}
+                    />
+                  </div>
+                ) : null}
+
+                {contextNextEvents.length > 0 ? (
+                  <div>
+                    <h4 className="mb-2 text-sm font-medium text-zinc-600">
+                      Proximos 7 dias
+                    </h4>
+                    <CalendarEventList
+                      events={contextNextEvents}
+                      isContext
+                      timezone={timezone}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <EmptyState
+                description="Calendarios de contexto aparecerao aqui quando tiverem eventos visiveis."
+                title="Sem contexto agora"
+              />
+            )}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
 }
 
 export default async function TodayPage() {
@@ -247,6 +492,10 @@ export default async function TodayPage() {
     preferences.timezone,
     addDays(now, 14),
   );
+  const calendarTimeMin = new Date(`${today}T00:00:00.000Z`).toISOString();
+  const calendarTimeMax = new Date(
+    `${nextSevenDays}T23:59:59.999Z`,
+  ).toISOString();
   const isCompact = preferences.todayDensity === "compact";
   const sectionGapClass = isCompact ? "mt-6 grid gap-6" : "mt-8 grid gap-8";
   const taskDisplayLimit = isCompact ? 5 : 20;
@@ -261,6 +510,8 @@ export default async function TodayPage() {
     activeProjectsResult,
     openProjectTasksResult,
     remindersResult,
+    googleCalendarAgenda,
+    calendarLanePreferences,
     domainsResult,
     projectsForNamesResult,
   ] = await Promise.all([
@@ -330,6 +581,13 @@ export default async function TodayPage() {
       .order("created_at", { ascending: false })
       .limit(50)
       .returns<NotificationRow[]>(),
+    getGoogleCalendarAgendaForUser({
+      supabase,
+      timeMax: calendarTimeMax,
+      timeMin: calendarTimeMin,
+      userId: user.id,
+    }),
+    getCalendarLanePreferencesForUser(supabase, user.id),
     supabase.from("domains").select("id,name").returns<DomainRow[]>(),
     supabase
       .from("projects")
@@ -409,51 +667,92 @@ export default async function TodayPage() {
       first.payload.reminder_at.localeCompare(second.payload.reminder_at),
     )
     .slice(0, isCompact ? 3 : 5);
+  const calendarEventsByLane = splitCalendarEventsByLane(
+    googleCalendarAgenda.events,
+    calendarLanePreferences,
+  );
+  const primaryTodayCalendarEvents = calendarEventsByLane.primary.filter(
+    (event) => getCalendarEventDateOnly(event, preferences.timezone) === today,
+  );
+  const primaryNextCalendarEvents = calendarEventsByLane.primary.filter((event) => {
+    const eventDate = getCalendarEventDateOnly(event, preferences.timezone);
+
+    return eventDate > today && eventDate <= nextSevenDays;
+  });
+  const contextTodayCalendarEvents = calendarEventsByLane.context.filter(
+    (event) => getCalendarEventDateOnly(event, preferences.timezone) === today,
+  );
+  const contextNextCalendarEvents = calendarEventsByLane.context.filter((event) => {
+    const eventDate = getCalendarEventDateOnly(event, preferences.timezone);
+
+    return eventDate > today && eventDate <= nextSevenDays;
+  });
 
   return (
-    <main className="px-6 py-8">
-      <PageHeader
-        eyebrow="Lucas OS"
-        title="Today"
-        description={`Painel operacional do dia em ${preferences.timezone}.`}
-      />
+    <main className="app-page mx-auto max-w-7xl">
+      <section className="paper-panel p-5 sm:p-7">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-end">
+          <PageHeader
+            eyebrow="Lucas OS"
+            title="Today"
+            description={`Painel operacional do dia em ${preferences.timezone}. Um caderno curto para decidir o que merece atencao agora.`}
+          />
+          <div className="app-card-soft p-4">
+            <p className="section-eyebrow">Inbox calma</p>
+            <p className="mt-2 text-3xl font-semibold text-zinc-950">
+              {pendingCapturesCount}
+            </p>
+            <p className="mt-1 text-sm leading-6 text-zinc-600">
+              capturas pendentes aguardando triagem humana.
+            </p>
+            <Link
+              className="primary-button mt-4 w-full px-4 py-3 text-sm font-semibold"
+              href="/capture"
+            >
+              Abrir Capture
+            </Link>
+          </div>
+        </div>
 
-      <section className="mt-8 grid gap-3 md:grid-cols-[1fr_auto]">
-        <StatCard
-          detail="Texto bruto aguardando triagem"
-          label="Capturas pendentes"
-          value={pendingCapturesCount}
-        />
-        <Link
-          className="inline-flex items-center justify-center rounded-md bg-zinc-950 px-4 py-3 text-sm font-medium text-white hover:bg-zinc-800"
-          href="/capture"
-        >
-          Abrir Capture
-        </Link>
-      </section>
-
-      <section className="mt-8 grid gap-3 sm:grid-cols-3">
-        <StatCard label="Vencidas" value={overdueTasks.length} />
-        <StatCard label="Hoje" value={todayTasks.length} />
-        <StatCard label="Proximos 7 dias" value={nextTasks.length} />
+        <section className="mt-6 grid gap-3 sm:grid-cols-3">
+          <StatCard label="Vencidas" value={overdueTasks.length} />
+          <StatCard label="Hoje" value={todayTasks.length} />
+          <StatCard label="Proximos 7 dias" value={nextTasks.length} />
+        </section>
       </section>
 
       <div className={sectionGapClass}>
-        <section>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-semibold text-zinc-950">Lembretes</h2>
-              <p className="mt-1 text-sm text-zinc-600">
-                Lembretes internos vencidos ou previstos para hoje.
-              </p>
-            </div>
-            <Link
-              className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-              href="/notifications"
-            >
-              Abrir notificações
-            </Link>
-          </div>
+        <CalendarSection
+          agenda={googleCalendarAgenda}
+          contextNextEvents={contextNextCalendarEvents.slice(0, isCompact ? 5 : 15)}
+          contextTodayEvents={contextTodayCalendarEvents.slice(
+            0,
+            isCompact ? 5 : 15,
+          )}
+          primaryNextEvents={primaryNextCalendarEvents.slice(
+            0,
+            isCompact ? 5 : 15,
+          )}
+          primaryTodayEvents={primaryTodayCalendarEvents.slice(
+            0,
+            isCompact ? 5 : 15,
+          )}
+          timezone={preferences.timezone}
+        />
+
+        <section className="section-shell">
+          <SectionHeader
+            action={
+              <Link
+                className="soft-button px-3 py-2 text-sm font-medium"
+                href="/notifications"
+              >
+                Abrir notificacoes
+              </Link>
+            }
+            description="Lembretes internos vencidos ou previstos para hoje."
+            title="Lembretes"
+          />
 
           {todayReminders.length === 0 ? (
             <EmptyState
@@ -464,7 +763,7 @@ export default async function TodayPage() {
             <div className="grid gap-3">
               {todayReminders.map((reminder) => (
                 <article
-                  className="rounded-md border border-zinc-200 bg-white p-4"
+                  className="app-card-soft p-4"
                   key={reminder.id}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -488,7 +787,7 @@ export default async function TodayPage() {
                     </div>
                     {reminder.source_url ? (
                       <Link
-                        className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                        className="soft-button px-3 py-2 text-sm font-medium"
                         href={reminder.source_url}
                       >
                         Abrir task
@@ -531,18 +830,12 @@ export default async function TodayPage() {
           title="Proximos 7 dias"
         />
 
-        <section>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-semibold text-zinc-950">
-                Projetos com prazo proximo
-              </h2>
-              <p className="mt-1 text-sm text-zinc-600">
-                Projetos ativos ou waiting com target nos proximos 14 dias.
-              </p>
-            </div>
-            <StatusBadge label={`${displayedUpcomingProjects.length}`} />
-          </div>
+        <section className="section-shell">
+          <SectionHeader
+            action={<StatusBadge label={`${displayedUpcomingProjects.length}`} />}
+            description="Projetos ativos ou waiting com target nos proximos 14 dias."
+            title="Projetos com prazo proximo"
+          />
 
           {displayedUpcomingProjects.length === 0 ? (
             <EmptyState
@@ -553,7 +846,7 @@ export default async function TodayPage() {
             <div className="grid gap-3">
               {displayedUpcomingProjects.map((project) => (
                 <article
-                  className="rounded-md border border-zinc-200 bg-white p-4"
+                  className="project-card app-card-interactive p-4"
                   key={project.id}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -581,20 +874,16 @@ export default async function TodayPage() {
         </section>
 
         {preferences.showProjectsWithoutNextAction ? (
-        <section>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-semibold text-zinc-950">
-                Projetos ativos sem proxima acao
-              </h2>
-              <p className="mt-1 text-sm text-zinc-600">
-                Projetos ativos que nao possuem nenhuma task aberta associada.
-              </p>
-            </div>
-            <StatusBadge
-              label={`${projectsWithoutNextAction.slice(0, projectDisplayLimit).length}`}
-            />
-          </div>
+        <section className="section-shell">
+          <SectionHeader
+            action={
+              <StatusBadge
+                label={`${projectsWithoutNextAction.slice(0, projectDisplayLimit).length}`}
+              />
+            }
+            description="Projetos ativos que nao possuem nenhuma task aberta associada."
+            title="Projetos ativos sem proxima acao"
+          />
 
           {projectsWithoutNextAction.length === 0 ? (
             <EmptyState
@@ -607,7 +896,7 @@ export default async function TodayPage() {
                 .slice(0, projectDisplayLimit)
                 .map((project) => (
                 <article
-                  className="rounded-md border border-zinc-200 bg-white p-4"
+                  className="project-card app-card-interactive p-4"
                   key={project.id}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -625,10 +914,10 @@ export default async function TodayPage() {
                     <div className="flex flex-wrap gap-2">
                       <StatusBadge label="sem proxima acao" tone="amber" />
                       <Link
-                        className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                        className="soft-button px-3 py-2 text-sm font-medium"
                         href={getNextActionHref(project)}
                       >
-                        Criar próxima ação
+                        Criar proxima acao
                       </Link>
                     </div>
                   </div>
@@ -639,8 +928,11 @@ export default async function TodayPage() {
         </section>
         ) : null}
 
-        <section>
-          <h2 className="mb-3 font-semibold text-zinc-950">Acoes rapidas</h2>
+        <section className="section-shell">
+          <SectionHeader
+            description="Atalhos curtos para capturar, revisar e ajustar o sistema."
+            title="Acoes rapidas"
+          />
           <div className="grid gap-3 sm:grid-cols-4">
             <QuickLink href="/capture" label="Nova captura" />
             <QuickLink href="/review" label="Weekly Review" />

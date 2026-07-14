@@ -46,12 +46,9 @@ export function PendingCaptureList({
   }
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-4">
       {captures.map((capture) => (
-        <article
-          className="rounded-md border border-zinc-200 bg-white p-4"
-          key={capture.id}
-        >
+        <article className="capture-card app-card-interactive p-4" key={capture.id}>
           <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -61,7 +58,7 @@ export function PendingCaptureList({
                   {formatCapturedAt(capture.captured_at)}
                 </span>
               </div>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-700">
+              <p className="mt-3 whitespace-pre-wrap rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm leading-6 text-zinc-700">
                 {capture.raw_text}
               </p>
             </div>

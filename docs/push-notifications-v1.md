@@ -1,0 +1,156 @@
+# Push Notifications V1
+
+## Objetivo
+
+Push Notifications V1 adiciona infraestrutura real de Web Push/PWA para lembretes de tasks no Lucas OS, sempre com consentimento explicito por dispositivo.
+
+Esta versao nao pede permissao no primeiro carregamento do app. O usuario precisa abrir `/settings/notifications` e clicar em `Ativar notificacoes`.
+
+## Arquitetura
+
+Componentes principais:
+
+- `public/sw.js`: service worker minimo para receber push e abrir a URL do lembrete;
+- `/settings/notifications`: UI de consentimento e status por dispositivo;
+- `/api/push/public-key`: expõe apenas a public key VAPID;
+- `/api/push/subscribe`: salva subscription do navegador autenticado;
+- `/api/push/revoke`: revoga a subscription do navegador autenticado;
+- `/api/push/process`: processa lembretes vencidos do usuario autenticado e envia push real;
+- `push_subscriptions`: subscriptions ativas/revogadas por usuario;
+- `push_notification_deliveries`: registro de envio por notification/subscription para evitar duplicidade.
+
+## Env vars necessarias
+
+```text
+WEB_PUSH_PUBLIC_KEY=
+WEB_PUSH_PRIVATE_KEY=
+WEB_PUSH_SUBJECT=mailto:you@example.com
+```
+
+`WEB_PUSH_PUBLIC_KEY` pode ser exposta ao browser, mas continua vindo por rota server-side. `WEB_PUSH_PRIVATE_KEY` nunca deve aparecer no client ou no Git.
+
+`CRON_SECRET` fica reservado para um scheduler futuro. A V1 nao usa cron automatico.
+
+## Como gerar VAPID keys
+
+Depois de instalar dependencias, gere as chaves localmente com:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Copie os valores para o ambiente local/Vercel:
+
+- public key -> `WEB_PUSH_PUBLIC_KEY`;
+- private key -> `WEB_PUSH_PRIVATE_KEY`;
+- subject -> `WEB_PUSH_SUBJECT`, por exemplo `mailto:lucas@example.com`.
+
+Nao commitar esses valores.
+
+## Como testar localmente
+
+1. Aplique a migration `20260701000007_push_notifications.sql`.
+2. Configure `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY` e `WEB_PUSH_SUBJECT`.
+3. Rode o app.
+4. Abra `/settings/notifications`.
+5. Clique em `Ativar notificacoes`.
+6. Crie uma task com `due_date`, `due_time` e lembrete.
+7. Quando o lembrete estiver vencido, clique em `Verificar lembretes vencidos agora`.
+8. Confirme que o navegador recebe a notificacao.
+9. Clique na notificacao e confirme que abre a task ou `/notifications`.
+
+## Como testar na Vercel
+
+1. Aplique a migration no Supabase de producao.
+2. Configure env vars na Vercel:
+   - `WEB_PUSH_PUBLIC_KEY`;
+   - `WEB_PUSH_PRIVATE_KEY`;
+   - `WEB_PUSH_SUBJECT`.
+3. Redeploy.
+4. Abra `/settings/notifications` no navegador/dispositivo desejado.
+5. Ative notificacoes.
+6. Crie um lembrete vencido.
+7. Use `Verificar lembretes vencidos agora` para validar envio real.
+
+## Scheduler/Cron
+
+A V1 nao promete envio automatico em segundo plano sem scheduler.
+
+O endpoint `/api/push/process` exige usuario autenticado e processa apenas os lembretes desse usuario, respeitando RLS. Isso evita service role e evita expor uma rota publica que varre dados de todos os usuarios.
+
+Para envio automatico real no futuro, existem duas opcoes seguras:
+
+1. criar um job/cron com um mecanismo server-side confiavel e segredo `CRON_SECRET`;
+2. criar uma funcao SQL/RPC de claim cuidadosamente protegida, sem expor subscriptions para anon.
+
+Essa etapa ficou documentada para Push Notifications V2.
+
+## Diagnostico de `/api/push/process`
+
+O endpoint retorna um JSON com contadores seguros:
+
+- `delivered`: pushes enviados com sucesso nesta execucao;
+- `failed`: tentativas que falharam no provedor de push;
+- `skipped`: total de itens pulados por motivos conhecidos;
+- `pendingReminders`: lembretes vencidos e elegiveis depois das validacoes;
+- `subscriptions`: subscriptions ativas consideradas;
+- `skippedReasons`: contagem por motivo;
+- `skippedExamples`: ate 5 exemplos seguros com apenas sufixos curtos de IDs internos.
+- `failedReasons`: contagem por tipo de falha retornada pelo provedor Web Push;
+- `failedExamples`: ate 5 exemplos seguros com apenas sufixos curtos de IDs internos.
+
+Motivos possiveis em `skippedReasons`:
+
+- `already_delivered`: ja existe registro em `push_notification_deliveries` para aquele par lembrete/dispositivo. Isso indica idempotencia funcionando e e a causa mais provavel quando `delivered: 0`, `failed: 0`, `pendingReminders > 0`, `subscriptions > 0` e `skipped > 0`;
+- `subscription_revoked`: havia subscription registrada, mas nenhuma ativa para envio;
+- `missing_subscription`: nao ha subscription ativa nem revogada para o usuario;
+- `notification_not_due`: o lembrete existe, mas `reminder_at` ainda nao venceu;
+- `missing_task`: o lembrete aponta para uma task que nao existe mais para o usuario;
+- `invalid_payload`: `undo_payload` nao tem o formato esperado de reminder;
+- `unknown`: fallback para caso nao classificado.
+
+O diagnostico nao retorna titulo de task, corpo da notificacao, endpoint de push,
+chaves de subscription ou secrets.
+
+Motivos possiveis em `failedReasons`:
+
+- `web_push_unauthorized`: geralmente VAPID keys incorretas, subject invalido ou configuracao Web Push rejeitada pelo provedor;
+- `web_push_gone`: subscription expirada/removida pelo navegador ou provedor. O Lucas OS revoga a subscription localmente;
+- `web_push_not_found`: endpoint nao encontrado. O Lucas OS revoga a subscription localmente;
+- `web_push_bad_subscription`: subscription malformada ou rejeitada;
+- `web_push_payload_error`: payload grande/invalido para envio;
+- `web_push_unknown`: falha nao classificada.
+
+Quando `failed > 0`, olhe primeiro `failedReasons`. Se aparecer
+`web_push_unauthorized`, revise `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY` e
+`WEB_PUSH_SUBJECT` no ambiente. Se aparecer `web_push_gone` ou
+`web_push_not_found`, desative e ative novamente as notificacoes no dispositivo.
+
+## Seguranca
+
+- O app nao usa `SUPABASE_SERVICE_ROLE_KEY`;
+- nao envia push sem opt-in;
+- nao pede permissao automaticamente;
+- cada reminder/subscription so gera uma entrega registrada;
+- reminders lidos ou dispensados nao sao enviados;
+- payload de push e sanitizado e curto;
+- subscriptions revogadas deixam de receber push;
+- erros 404/410 do provedor de push revogam a subscription local.
+
+## Limitacoes
+
+- iOS, Android e desktop têm suporte diferente a PWA push;
+- navegadores podem bloquear permissao;
+- push depende de HTTPS em producao;
+- local HTTP funciona apenas em `localhost` e casos permitidos pelo navegador;
+- sem cron automatico nesta versao;
+- sem push para emails, Calendar ou IA;
+- sem preferencias avancadas por horario silencioso.
+
+## Proximos passos
+
+- Push scheduler/cron V2;
+- quiet hours;
+- teste E2E autenticado de subscription quando viavel;
+- preferencias por tipo de notificacao;
+- push para eventos de calendario, com consentimento explicito.

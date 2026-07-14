@@ -7,7 +7,7 @@ export function CaptureTaskSubmitButton() {
 
   return (
     <button
-      className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+      className="primary-button px-4 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
       disabled={pending}
       type="submit"
     >

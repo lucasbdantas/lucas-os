@@ -40,8 +40,8 @@ export function DomainList({ domains, returnTo }: DomainListProps) {
     <div className="grid gap-4">
       {domains.map((domain) => (
         <article
-          className={`rounded-md border bg-white p-4 ${
-            isInbox(domain) ? "border-zinc-950" : "border-zinc-200"
+          className={`app-card-interactive p-4 ${
+            isInbox(domain) ? "app-card" : "app-card-soft"
           }`}
           key={domain.id}
         >
@@ -81,7 +81,7 @@ export function DomainList({ domains, returnTo }: DomainListProps) {
                   type="hidden"
                   value={domain.active ? "false" : "true"}
                 />
-                <button className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100">
+                <button className="soft-button px-3 py-2 text-sm font-semibold">
                   {domain.active ? "Desativar" : "Ativar"}
                 </button>
               </form>
@@ -96,7 +96,7 @@ export function DomainList({ domains, returnTo }: DomainListProps) {
               <input name="domainId" type="hidden" value={domain.id} />
               <input name="returnTo" type="hidden" value={returnTo} />
               <input
-                className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+                className="field-control px-3 py-2 text-sm outline-none"
                 defaultValue={domain.description ?? ""}
                 maxLength={4000}
                 name="description"
@@ -104,7 +104,7 @@ export function DomainList({ domains, returnTo }: DomainListProps) {
                 type="text"
               />
               <input
-                className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+                className="field-control px-3 py-2 text-sm outline-none"
                 defaultValue={domain.color ?? ""}
                 maxLength={32}
                 name="color"
@@ -112,14 +112,14 @@ export function DomainList({ domains, returnTo }: DomainListProps) {
                 type="text"
               />
               <input
-                className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+                className="field-control px-3 py-2 text-sm outline-none"
                 defaultValue={domain.icon ?? ""}
                 maxLength={64}
                 name="icon"
                 placeholder="Ícone"
                 type="text"
               />
-              <button className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100">
+              <button className="soft-button px-3 py-2 text-sm font-semibold">
                 Salvar
               </button>
             </form>

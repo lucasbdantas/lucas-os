@@ -42,7 +42,7 @@ export default async function SettingsPage({
   }
 
   return (
-    <main className="px-6 py-8">
+    <main className="app-page mx-auto max-w-6xl">
       <PageHeader
         eyebrow="Operacional"
         title="Settings"
@@ -61,7 +61,7 @@ export default async function SettingsPage({
         </p>
       ) : null}
 
-      <section className="mt-8 max-w-2xl rounded-md border border-zinc-200 bg-white p-4">
+      <section className="app-card mt-8 max-w-2xl p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-zinc-950">Supabase Auth</h2>
@@ -80,7 +80,7 @@ export default async function SettingsPage({
         </dl>
       </section>
 
-      <section className="mt-8 max-w-4xl rounded-md border border-zinc-200 bg-white p-4">
+      <section className="app-card mt-8 max-w-4xl p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-zinc-950">
@@ -97,7 +97,63 @@ export default async function SettingsPage({
         <AppPreferencesForm preferences={preferences} />
       </section>
 
-      <section className="mt-8 max-w-4xl rounded-md border border-zinc-200 bg-white p-4">
+      <section className="app-card mt-8 max-w-4xl p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-zinc-950">Integracoes</h2>
+            <p className="mt-1 text-sm text-zinc-600">
+              Conecte contas Google com OAuth seguro. Gmail e Calendar ainda nao
+              sao lidos nesta etapa.
+            </p>
+          </div>
+          <Link
+            className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+            href="/settings/integrations"
+          >
+            Abrir integracoes
+          </Link>
+        </div>
+      </section>
+
+      <section className="app-card mt-8 max-w-4xl p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-zinc-950">
+              Notificacoes push
+            </h2>
+            <p className="mt-1 text-sm text-zinc-600">
+              Ative push notifications por dispositivo para lembretes de tasks,
+              sempre com consentimento explicito.
+            </p>
+          </div>
+          <Link
+            className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+            href="/settings/notifications"
+          >
+            Abrir notificacoes
+          </Link>
+        </div>
+      </section>
+
+      <section className="app-card mt-8 max-w-4xl p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-zinc-950">Backup e export</h2>
+            <p className="mt-1 text-sm text-zinc-600">
+              Exporte seus dados em JSON e consulte o plano de recuperacao
+              manual. Secrets e tokens sensiveis ficam fora do arquivo.
+            </p>
+          </div>
+          <Link
+            className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+            href="/settings/backup"
+          >
+            Abrir backup
+          </Link>
+        </div>
+      </section>
+
+      <section className="app-card mt-8 max-w-4xl p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-zinc-950">Captura externa</h2>

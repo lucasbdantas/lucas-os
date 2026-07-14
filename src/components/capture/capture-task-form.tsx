@@ -53,7 +53,7 @@ export function CaptureTaskForm({
   const defaultTitle = defaultValues?.title ?? getDefaultTitle(rawText);
 
   return (
-    <details className="mt-4 rounded-md border border-zinc-200 bg-zinc-50 p-3">
+    <details className="app-card-soft mt-4 p-3">
       <summary className="cursor-pointer text-sm font-medium text-zinc-800">
         {label}
       </summary>
@@ -66,7 +66,7 @@ export function CaptureTaskForm({
         <label className="block">
           <span className="text-sm font-medium text-zinc-700">Titulo</span>
           <input
-            className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+            className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
             defaultValue={defaultTitle}
             maxLength={220}
             name="title"
@@ -78,7 +78,7 @@ export function CaptureTaskForm({
         <label className="block">
           <span className="text-sm font-medium text-zinc-700">Notas</span>
           <textarea
-            className="mt-2 min-h-20 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+            className="field-control mt-2 min-h-20 w-full px-3 py-2 text-sm outline-none"
             defaultValue={defaultValues?.notes ?? ""}
             maxLength={4000}
             name="notes"
@@ -89,7 +89,7 @@ export function CaptureTaskForm({
           <label className="block">
             <span className="text-sm font-medium text-zinc-700">Dominio</span>
             <select
-              className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+              className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
               defaultValue={defaultValues?.domainId ?? ""}
               name="domainId"
             >
@@ -107,7 +107,7 @@ export function CaptureTaskForm({
               Projeto opcional
             </span>
             <select
-              className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+              className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
               defaultValue={defaultValues?.projectId ?? ""}
               name="projectId"
             >
@@ -127,7 +127,7 @@ export function CaptureTaskForm({
           <label className="block">
             <span className="text-sm font-medium text-zinc-700">Data</span>
             <input
-              className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+              className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
               defaultValue={defaultValues?.dueDate ?? ""}
               name="dueDate"
               type="date"
@@ -136,7 +136,7 @@ export function CaptureTaskForm({
           <label className="block">
             <span className="text-sm font-medium text-zinc-700">Horario</span>
             <input
-              className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+              className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
               defaultValue={defaultValues?.dueTime ?? ""}
               name="dueTime"
               type="time"
@@ -150,7 +150,7 @@ export function CaptureTaskForm({
               Prioridade
             </span>
             <select
-              className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+              className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
               defaultValue={defaultValues?.priority ?? "medium"}
               name="priority"
             >
@@ -163,7 +163,7 @@ export function CaptureTaskForm({
           <label className="block">
             <span className="text-sm font-medium text-zinc-700">Energia</span>
             <select
-              className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+              className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
               defaultValue={defaultValues?.energyRequired ?? ""}
               name="energyRequired"
             >
@@ -176,7 +176,7 @@ export function CaptureTaskForm({
           <label className="block">
             <span className="text-sm font-medium text-zinc-700">Contexto</span>
             <input
-              className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+              className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
               defaultValue={defaultValues?.context ?? ""}
               maxLength={80}
               name="context"
@@ -187,7 +187,7 @@ export function CaptureTaskForm({
         </div>
 
         {defaultValues?.reason ? (
-          <p className="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+          <p className="rounded-2xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
             Motivo da IA: {defaultValues.reason}
           </p>
         ) : null}

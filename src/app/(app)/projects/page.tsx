@@ -103,7 +103,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const visibleError = pageError ?? editError;
 
   return (
-    <main className="px-6 py-8">
+    <main className="app-page mx-auto max-w-6xl">
       <PageHeader
         eyebrow="Operacional"
         title="Projects"

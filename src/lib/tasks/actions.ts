@@ -25,6 +25,13 @@ const taskStatusValues = [
   "canceled",
 ] as const;
 const taskRecurrenceTypeValues = ["none", "daily", "weekly", "monthly"] as const;
+const taskSourceValues = [
+  "manual",
+  "voice",
+  "email",
+  "observation",
+  "import",
+] as const;
 const openTaskStatuses = ["todo", "doing", "waiting"] as const;
 
 const optionalUuid = z
@@ -85,6 +92,7 @@ const taskFieldsSchema = z.object({
 
 const createTaskSchema = taskFieldsSchema.extend({
   domainId: optionalUuid,
+  source: z.enum(taskSourceValues).default("manual"),
 });
 
 const updateTaskSchema = taskFieldsSchema.extend({
@@ -465,6 +473,7 @@ export async function createTask(formData: FormData) {
     recurrenceAnchorDate: formData.get("recurrenceAnchorDate") ?? "",
     recurrenceEndDate: formData.get("recurrenceEndDate") ?? "",
     reminderOffsets: formData.getAll("reminderOffsets"),
+    source: formData.get("source") ?? "manual",
     returnTo,
   });
 
@@ -513,7 +522,7 @@ export async function createTask(formData: FormData) {
       energy_required: parsed.data.energyRequired,
       context: parsed.data.context,
       status: "todo",
-      source: "manual",
+      source: parsed.data.source,
       recurrence_type: recurrence.recurrenceType,
       recurrence_interval: recurrence.recurrenceInterval,
       recurrence_anchor_date: recurrence.recurrenceAnchorDate,
@@ -543,7 +552,11 @@ export async function createTask(formData: FormData) {
 
   revalidateTaskViews();
 
-  const notice = getReminderMissingTimeMessage(reminderStatus, "Tarefa criada");
+  const notice =
+    getReminderMissingTimeMessage(reminderStatus, "Tarefa criada") ??
+    (parsed.data.source === "email"
+      ? "Task criada a partir do email. Abra em Tasks para revisar depois."
+      : null);
 
   if (notice) {
     redirectWithNotice(returnTo, notice);
