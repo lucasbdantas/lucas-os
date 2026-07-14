@@ -513,3 +513,100 @@ textarea::placeholder {
 .muted-link:hover {
   color: var(--foreground);
 }
+
+.app-mobile-header {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+.mobile-bottom-nav {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.mobile-nav-link {
+  min-height: 3.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-menu-overlay {
+  background: rgb(32 35 29 / 0.22);
+  backdrop-filter: blur(8px);
+}
+
+.mobile-menu-panel {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.mobile-menu-card {
+  min-height: 5.5rem;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow-hairline);
+  text-decoration: none;
+}
+
+.mobile-menu-card-active {
+  border-color: color-mix(in srgb, var(--emerald) 38%, var(--border));
+  background: var(--emerald-soft);
+}
+
+@media (max-width: 767px) {
+  body {
+    background-size: 24px 24px, 24px 24px, auto;
+  }
+
+  .app-page {
+    width: 100%;
+    overflow-x: hidden;
+    padding: 1rem;
+    padding-bottom: calc(8rem + env(safe-area-inset-bottom));
+  }
+
+  .paper-panel {
+    border-radius: 22px;
+  }
+
+  .app-card,
+  .metric-card,
+  .task-card,
+  .project-card,
+  .event-card,
+  .email-card,
+  .capture-card,
+  .integration-card {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    border-radius: 18px;
+  }
+
+  .section-shell {
+    gap: 0.75rem;
+  }
+
+  .section-header {
+    align-items: flex-start;
+  }
+
+  .section-header > .shrink-0 {
+    width: 100%;
+  }
+
+  .section-header > .shrink-0 > * {
+    width: 100%;
+  }
+
+  .primary-button,
+  .soft-button,
+  .ghost-button,
+  .danger-button {
+    min-height: 44px;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

@@ -415,9 +415,9 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
                 key={`${message.accountId}:${message.id}`}
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-medium text-zinc-950">
+                      <h3 className="break-words font-medium text-zinc-950">
                         {message.subject}
                       </h3>
                       <StatusBadge label={message.accountEmail} tone="blue" />
@@ -442,7 +442,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
                     ) : null}
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap">
                     <a
                       className="soft-button px-3 py-2 text-sm font-semibold"
                       href={message.gmailUrl}
@@ -461,7 +461,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
                     >
                       Criar task
                     </Link>
-                    <form action={sendGmailMessageToCapture}>
+                    <form action={sendGmailMessageToCapture} className="sm:contents">
                       <input
                         name="returnTo"
                         type="hidden"
@@ -493,7 +493,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
                         type="hidden"
                         value={message.snippet ?? ""}
                       />
-                      <button className="primary-button px-3 py-2 text-sm font-semibold">
+                      <button className="primary-button w-full px-3 py-2 text-sm font-semibold sm:w-auto">
                         Enviar para Capture
                       </button>
                     </form>

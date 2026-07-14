@@ -4,6 +4,7 @@ import { logout } from "@/lib/auth/actions";
 
 const navItems = [
   { href: "/today", label: "Today" },
+  { href: "/quick-capture", label: "Quick" },
   { href: "/review", label: "Review" },
   { href: "/notifications", label: "Notificações" },
   { href: "/capture", label: "Capture" },
@@ -51,7 +52,7 @@ export function AppShell({
         </form>
       </aside>
 
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 backdrop-blur md:hidden">
+      <header className="app-mobile-header sticky top-0 z-20 flex items-center justify-between border-b border-zinc-200 bg-white px-4 pb-3 backdrop-blur md:hidden">
         <div>
           <p className="section-kicker">Lucas OS</p>
           <p className="max-w-48 truncate text-xs text-zinc-600">{userEmail}</p>
@@ -63,7 +64,7 @@ export function AppShell({
         </form>
       </header>
 
-      <div className="min-h-screen pb-24 md:pl-72 md:pb-0">{children}</div>
+      <div className="min-h-screen pb-32 md:pl-72 md:pb-0">{children}</div>
 
       <AppNav
         items={navItems}
