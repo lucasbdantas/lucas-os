@@ -3,6 +3,8 @@ import { getBackupExportFileName } from "@/lib/backup/export-sanitizers";
 import { getBackupExportForUser } from "@/lib/backup/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const supabase = await createSupabaseServerClient();
 
