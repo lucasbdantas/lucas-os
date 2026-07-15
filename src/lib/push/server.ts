@@ -49,6 +49,7 @@ export type SendPushTestResult = {
   missingConfiguration: boolean;
   ok: boolean;
   subscriptionFound: boolean;
+  subscriptionRevoked: boolean;
 };
 
 function configureWebPush() {
@@ -88,6 +89,7 @@ export async function sendPushTestToSubscription(input: {
       missingConfiguration: true,
       ok: false,
       subscriptionFound: false,
+      subscriptionRevoked: false,
     };
   }
 
@@ -96,7 +98,6 @@ export async function sendPushTestToSubscription(input: {
     .select("id,endpoint,p256dh,auth,revoked_at")
     .eq("user_id", input.userId)
     .eq("endpoint", input.endpoint)
-    .is("revoked_at", null)
     .maybeSingle<PushSubscriptionRow>();
 
   if (error) {
@@ -109,6 +110,17 @@ export async function sendPushTestToSubscription(input: {
       missingConfiguration: false,
       ok: false,
       subscriptionFound: false,
+      subscriptionRevoked: false,
+    };
+  }
+
+  if (subscription.revoked_at) {
+    return {
+      failureReason: null,
+      missingConfiguration: false,
+      ok: false,
+      subscriptionFound: true,
+      subscriptionRevoked: true,
     };
   }
 
@@ -134,6 +146,7 @@ export async function sendPushTestToSubscription(input: {
       missingConfiguration: false,
       ok: true,
       subscriptionFound: true,
+      subscriptionRevoked: false,
     };
   } catch (sendError) {
     const failureReason = classifyPushFailure(sendError);
@@ -151,6 +164,7 @@ export async function sendPushTestToSubscription(input: {
       missingConfiguration: false,
       ok: false,
       subscriptionFound: true,
+      subscriptionRevoked: false,
     };
   }
 }

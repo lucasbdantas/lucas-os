@@ -5,6 +5,12 @@ import type {
   PushSkippedReasons,
 } from "@/lib/push/reminder-dispatch";
 
+export type PushTestFailureReason =
+  | PushFailedReason
+  | "missing_configuration"
+  | "missing_subscription"
+  | "subscription_revoked";
+
 export type PushDiagnosticItem = {
   count: number;
   message: string;
@@ -43,6 +49,16 @@ const failedMessages: Record<PushFailedReason, string> = {
     "O provedor de push não concluiu o envio. Tente novamente e, se persistir, resete a inscrição.",
 };
 
+const testFailureMessages: Record<PushTestFailureReason, string> = {
+  ...failedMessages,
+  missing_configuration:
+    "Web Push nao esta configurado neste ambiente. Revise as env vars VAPID.",
+  missing_subscription:
+    "Este dispositivo nao tem inscricao ativa. Ative ou resete as notificacoes.",
+  subscription_revoked:
+    "A inscricao deste dispositivo foi revogada. Reative notificacoes neste dispositivo.",
+};
+
 export function getPushDiagnosticItems(
   skippedReasons: PushSkippedReasons,
   failedReasons: PushFailedReasons,
@@ -69,6 +85,6 @@ export function getPushDiagnosticItems(
   return [...failed, ...skipped];
 }
 
-export function getPushTestFailureMessage(reason: PushFailedReason) {
-  return failedMessages[reason];
+export function getPushTestFailureMessage(reason: PushTestFailureReason) {
+  return testFailureMessages[reason];
 }

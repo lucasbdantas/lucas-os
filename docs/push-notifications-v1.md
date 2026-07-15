@@ -65,6 +65,36 @@ Se a inscrição foi criada com VAPID antiga, expirou ou ficou inconsistente, us
 `Resetar inscrição deste dispositivo`. O app revoga a inscrição local anterior,
 remove-a do navegador e registra uma nova com a chave pública atual.
 
+## Diagnostico de `/api/push/test`
+
+`/api/push/test` deve sempre responder JSON. Mesmo quando falha, o contrato e:
+
+```json
+{
+  "ok": false,
+  "error": "Nao foi possivel enviar push de teste.",
+  "reason": "missing_subscription"
+}
+```
+
+`reason` nunca inclui endpoint completo, VAPID keys, token, texto sensivel ou
+payload privado. Motivos esperados:
+
+- `missing_configuration`: env vars Web Push/VAPID ausentes ou invalidas no ambiente;
+- `missing_subscription`: este navegador nao possui subscription ativa salva para o usuario;
+- `subscription_revoked`: a subscription existe, mas foi revogada localmente;
+- `web_push_unauthorized`: o provedor recusou a assinatura, geralmente por VAPID diferente;
+- `web_push_gone` ou `web_push_not_found`: a subscription expirou ou nao existe mais no navegador/provedor;
+- `web_push_bad_subscription`: o navegador enviou uma subscription invalida;
+- `web_push_payload_error`: o payload foi rejeitado pelo provedor;
+- `web_push_unknown`: erro nao classificado.
+
+Na Vercel, se `/api/push/public-key` retorna `enabled: true` mas `/api/push/test`
+falha, confira primeiro `reason`. Para `web_push_unauthorized`, reative ou resete
+a inscricao no dispositivo depois de confirmar as VAPID keys no ambiente. Para
+`missing_subscription` ou `subscription_revoked`, use `Ativar notificacoes neste
+dispositivo` ou `Resetar inscricao deste dispositivo`.
+
 ## Como testar na Vercel
 
 1. Aplique a migration no Supabase de producao.

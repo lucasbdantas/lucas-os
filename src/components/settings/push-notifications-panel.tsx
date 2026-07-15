@@ -17,9 +17,9 @@ import { useEffect, useState } from "react";
 import {
   getPushDiagnosticItems,
   getPushTestFailureMessage,
+  type PushTestFailureReason,
 } from "@/lib/push/diagnostics";
 import type {
-  PushFailedReason,
   PushFailedReasons,
   PushSkippedReasons,
 } from "@/lib/push/reminder-dispatch";
@@ -416,12 +416,15 @@ export function PushNotificationsPanel({
       });
       const payload = await readJsonResponse<{
         error?: string;
-        failureReason?: PushFailedReason;
+        failureReason?: PushTestFailureReason;
+        reason?: PushTestFailureReason;
       }>(response);
 
       if (!response.ok) {
-        if (payload.failureReason) {
-          throw new Error(getPushTestFailureMessage(payload.failureReason));
+        const reason = payload.reason ?? payload.failureReason;
+
+        if (reason) {
+          throw new Error(getPushTestFailureMessage(reason));
         }
 
         throw new Error(payload.error ?? "O push de teste falhou.");

@@ -40,6 +40,18 @@ describe("push diagnostics messages", () => {
     );
   });
 
+  test("explains push test route setup and subscription failures", () => {
+    expect(getPushTestFailureMessage("missing_configuration")).toContain(
+      "VAPID",
+    );
+    expect(getPushTestFailureMessage("missing_subscription")).toContain(
+      "nao tem inscricao ativa",
+    );
+    expect(getPushTestFailureMessage("subscription_revoked")).toContain(
+      "revogada",
+    );
+  });
+
   test("omits diagnostic reasons with zero occurrences", () => {
     expect(
       getPushDiagnosticItems(
