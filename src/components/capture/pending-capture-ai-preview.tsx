@@ -73,6 +73,12 @@ export function PendingCaptureAIPreview({
             {state.message ? (
               <p className="text-sm text-blue-900">{state.message}</p>
             ) : null}
+            {state.status === "task" && state.preview ? (
+              <StatusBadge
+                label={`confianca ${Math.round(state.preview.confidence * 100)}%`}
+                tone="blue"
+              />
+            ) : null}
           </div>
 
           {state.status === "task" && state.preview ? (
@@ -85,6 +91,7 @@ export function PendingCaptureAIPreview({
                 notes: state.preview.notes,
                 priority: state.preview.priority,
                 projectId: state.preview.projectId,
+                reminderOffsets: state.preview.reminderOffsets,
                 reason: state.preview.reason,
                 title: state.preview.title,
               }}

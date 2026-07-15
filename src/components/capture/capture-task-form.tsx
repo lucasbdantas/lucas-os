@@ -29,6 +29,7 @@ type CaptureTaskFormProps = {
     notes?: string | null;
     priority?: "low" | "medium" | "high" | "critical";
     projectId?: string | null;
+    reminderOffsets?: number[];
     reason?: string;
     title?: string;
   };
@@ -185,6 +186,32 @@ export function CaptureTaskForm({
             />
           </label>
         </div>
+
+        <fieldset className="grid gap-2">
+          <legend className="text-sm font-medium text-zinc-700">Lembretes</legend>
+          <div className="flex flex-wrap gap-3 text-sm text-zinc-700">
+            {[
+              [0, "Na hora"],
+              [15, "15 min antes"],
+              [60, "1 hora antes"],
+              [1440, "1 dia antes"],
+            ].map(([value, label]) => (
+              <label className="flex items-center gap-2" key={value}>
+                <input
+                  className="size-4 accent-[var(--emerald)]"
+                  defaultChecked={defaultValues?.reminderOffsets?.includes(Number(value))}
+                  name="reminderOffsets"
+                  type="checkbox"
+                  value={value}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          <p className="text-xs text-zinc-500">
+            Lembretes so funcionam quando a task tem data e horario.
+          </p>
+        </fieldset>
 
         {defaultValues?.reason ? (
           <p className="rounded-2xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">

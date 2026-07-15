@@ -2,6 +2,7 @@ import "server-only";
 
 import { zodTextFormat } from "openai/helpers/zod";
 import { getOpenAIClient } from "@/lib/ai/openai";
+import { buildAISuggestionPayload } from "@/lib/ai/suggestions";
 import {
   aiCaptureSuggestionSchema,
   type AICaptureSuggestion,
@@ -19,6 +20,7 @@ export type AICaptureContext = {
     name: string;
     domainName: string;
   }>;
+  source?: "capture" | "email";
 };
 
 export type AICaptureParseResult =
@@ -39,6 +41,7 @@ export async function parseCaptureWithAI({
   timezone,
   domains,
   projects,
+  source,
 }: AICaptureContext): Promise<AICaptureParseResult> {
   const client = getOpenAIClient();
 
@@ -64,6 +67,9 @@ export async function parseCaptureWithAI({
         "Only suggest project_name when it exactly matches one of the provided project names.",
         "If there is uncertainty between projects, omit project_name or return kind='none'.",
         "Relative dates may be interpreted only using the provided current date and timezone.",
+        source === "email"
+          ? "This input is a safe email summary. Do not infer from an email body, attachments, or hidden metadata. Return kind='task' only when the summary clearly suggests an action for the user."
+          : "This input is a user capture. Do not invent details that are not present.",
       ].join(" "),
       input: [
         {
@@ -71,13 +77,16 @@ export async function parseCaptureWithAI({
           content: [
             {
               type: "input_text",
-              text: JSON.stringify({
-                raw_text: rawText,
-                current_date: currentDate,
-                timezone,
-                domains,
-                projects,
-              }),
+              text: JSON.stringify(
+                buildAISuggestionPayload({
+                  currentDate,
+                  domains,
+                  projects,
+                  rawText,
+                  source,
+                  timezone,
+                }),
+              ),
             },
           ],
         },

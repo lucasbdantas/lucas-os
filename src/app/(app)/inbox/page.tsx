@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmailAIPreview } from "@/components/inbox/email-ai-preview";
 import { PageHeader } from "@/components/layout/page-header";
 import { TaskForm } from "@/components/tasks/task-form";
 import { TaskList, type TaskListItem } from "@/components/tasks/task-list";
@@ -25,6 +26,7 @@ type InboxPageProps = {
     attachment?: string;
     error?: string;
     emailTask?: string;
+    emailAi?: string;
     label?: string;
     notice?: string;
     period?: string;
@@ -123,6 +125,13 @@ function buildEmailTaskHref(filtersHref: string, accountId: string, id: string) 
   )}#email-task-form`;
 }
 
+function buildEmailAIHref(filtersHref: string, accountId: string, id: string) {
+  const separator = filtersHref.includes("?") ? "&" : "?";
+  return `${filtersHref}${separator}emailAi=${encodeURIComponent(
+    `${accountId}:${id}`,
+  )}#email-ai-form`;
+}
+
 function buildPresetHref(filters: GmailInboxFilters, preset: GmailInboxPreset) {
   return buildInboxHref(
     {
@@ -140,7 +149,7 @@ function buildPresetHref(filters: GmailInboxFilters, preset: GmailInboxPreset) {
 
 export default async function InboxPage({ searchParams }: InboxPageProps) {
   const params = await searchParams;
-  const { emailTask, error: pageError, notice } = params;
+  const { emailAi, emailTask, error: pageError, notice } = params;
   const gmailFilters = normalizeGmailInboxFilters(params);
   const activeFilterSummary = describeGmailFilters(gmailFilters);
   const currentInboxHref = buildInboxHref(gmailFilters);
@@ -202,6 +211,11 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
   const selectedEmail = emailTask
     ? gmailInbox.messages.find(
         (message) => `${message.accountId}:${message.id}` === emailTask,
+      )
+    : null;
+  const selectedEmailAI = emailAi
+    ? gmailInbox.messages.find(
+        (message) => `${message.accountId}:${message.id}` === emailAi,
       )
     : null;
   const emailTaskDraft = selectedEmail
@@ -461,6 +475,16 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
                     >
                       Criar task
                     </Link>
+                    <Link
+                      className="soft-button px-3 py-2 text-sm font-semibold"
+                      href={buildEmailAIHref(
+                        currentInboxHref,
+                        message.accountId,
+                        message.id,
+                      )}
+                    >
+                      Sugerir task com IA
+                    </Link>
                     <form action={sendGmailMessageToCapture} className="sm:contents">
                       <input
                         name="returnTo"
@@ -547,6 +571,39 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
             projects={projectOptions}
             returnTo={currentInboxHref}
             submitLabel="Criar task"
+          />
+        </section>
+      ) : null}
+
+      {emailAi && !selectedEmailAI ? (
+        <section className="section-shell mt-10">
+          <EmptyState
+            description="O email selecionado nao apareceu no filtro atual. Limpe filtros ou amplie o periodo para tentar de novo."
+            title="Email nao encontrado para sugestao"
+          />
+        </section>
+      ) : null}
+
+      {selectedEmailAI ? (
+        <section className="section-shell mt-10" id="email-ai-form">
+          <SectionHeader
+            description="A IA recebe apenas metadados seguros e o snippet curto. Nada e criado sem sua confirmacao."
+            title="Sugerir task com IA"
+          />
+          <div className="app-card-muted p-4 text-sm leading-6 text-zinc-600">
+            <p>
+              Origem: {selectedEmailAI.from} / {selectedEmailAI.accountEmail}
+            </p>
+            <p>Assunto: {selectedEmailAI.subject}</p>
+            {selectedEmailAI.snippet ? <p>{selectedEmailAI.snippet}</p> : null}
+          </div>
+          <EmailAIPreview
+            accountId={selectedEmailAI.accountId}
+            domains={selectableDomains}
+            emailNotes={buildGmailTaskDraft(selectedEmailAI).notes}
+            messageId={selectedEmailAI.id}
+            projects={projectOptions}
+            returnTo={currentInboxHref}
           />
         </section>
       ) : null}
