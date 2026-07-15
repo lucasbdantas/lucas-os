@@ -44,6 +44,8 @@ export type PushSkippedExample = {
 };
 
 export type PushFailedReason =
+  | "vapid_configuration_error"
+  | "vapid_subject_error"
   | "web_push_bad_subscription"
   | "web_push_gone"
   | "web_push_not_found"
@@ -52,6 +54,14 @@ export type PushFailedReason =
   | "web_push_unknown";
 
 export type PushFailedReasons = Record<PushFailedReason, number>;
+
+export type PushSafeErrorDebug = {
+  bodyPreview?: string;
+  code?: string;
+  messagePreview?: string;
+  name?: string;
+  statusCode?: number;
+};
 
 export type PushFailedExample = {
   notification?: string;
@@ -83,6 +93,8 @@ export function createEmptyPushSkippedReasons(): PushSkippedReasons {
 
 export function createEmptyPushFailedReasons(): PushFailedReasons {
   return {
+    vapid_configuration_error: 0,
+    vapid_subject_error: 0,
     web_push_bad_subscription: 0,
     web_push_gone: 0,
     web_push_not_found: 0,
@@ -90,6 +102,56 @@ export function createEmptyPushFailedReasons(): PushFailedReasons {
     web_push_unauthorized: 0,
     web_push_unknown: 0,
   };
+}
+
+function getErrorField(error: unknown, field: string) {
+  if (!error || typeof error !== "object" || !(field in error)) {
+    return undefined;
+  }
+
+  const value = (error as Record<string, unknown>)[field];
+  return typeof value === "string" || typeof value === "number"
+    ? value
+    : undefined;
+}
+
+function sanitizeErrorPreview(value: unknown, maxLength = 240) {
+  if (typeof value !== "string" && typeof value !== "number") {
+    return undefined;
+  }
+
+  const cleaned = String(value)
+    .replace(/https?:\/\/\S+/gi, "[url]")
+    .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [redacted]")
+    .replace(/[A-Za-z0-9_-]{80,}/g, "[redacted]")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleaned) {
+    return undefined;
+  }
+
+  return cleaned.length > maxLength ? `${cleaned.slice(0, maxLength - 1)}…` : cleaned;
+}
+
+export function getPushFailureDebug(error: unknown): PushSafeErrorDebug {
+  const statusCodeValue = getErrorField(error, "statusCode");
+  const statusCode = Number(statusCodeValue);
+  const debug: PushSafeErrorDebug = {};
+  const name = sanitizeErrorPreview(getErrorField(error, "name"), 80);
+  const code = sanitizeErrorPreview(getErrorField(error, "code"), 80);
+  const messagePreview = sanitizeErrorPreview(
+    getErrorField(error, "message"),
+  );
+  const bodyPreview = sanitizeErrorPreview(getErrorField(error, "body"));
+
+  if (name) debug.name = name;
+  if (Number.isFinite(statusCode)) debug.statusCode = statusCode;
+  if (code) debug.code = code;
+  if (messagePreview) debug.messagePreview = messagePreview;
+  if (bodyPreview) debug.bodyPreview = bodyPreview;
+
+  return debug;
 }
 
 function safeIdSuffix(value: string | null | undefined) {
@@ -115,10 +177,36 @@ function addSkippedReason(input: {
 }
 
 export function classifyPushFailure(error: unknown): PushFailedReason {
-  const statusCode =
-    error && typeof error === "object" && "statusCode" in error
-      ? Number((error as { statusCode?: unknown }).statusCode)
-      : null;
+  const debug = getPushFailureDebug(error);
+  const statusCode = debug.statusCode ?? null;
+  const combined = [
+    debug.name,
+    debug.code,
+    debug.messagePreview,
+    debug.bodyPreview,
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  if (
+    combined.includes("subject") &&
+    (combined.includes("vapid") ||
+      combined.includes("mailto") ||
+      combined.includes("audience"))
+  ) {
+    return "vapid_subject_error";
+  }
+
+  if (
+    combined.includes("vapid") ||
+    combined.includes("voluntary application server identification") ||
+    combined.includes("application server key") ||
+    combined.includes("public key") ||
+    combined.includes("private key") ||
+    combined.includes("jwt")
+  ) {
+    return "vapid_configuration_error";
+  }
 
   if (statusCode === 401 || statusCode === 403) {
     return "web_push_unauthorized";
@@ -137,6 +225,16 @@ export function classifyPushFailure(error: unknown): PushFailedReason {
   }
 
   if (statusCode === 413) {
+    return "web_push_payload_error";
+  }
+
+  if (
+    combined.includes("payload") ||
+    combined.includes("encrypt") ||
+    combined.includes("encryption") ||
+    combined.includes("ecdh") ||
+    combined.includes("aesgcm")
+  ) {
     return "web_push_payload_error";
   }
 

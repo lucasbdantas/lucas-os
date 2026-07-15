@@ -29,6 +29,12 @@ describe("push diagnostics messages", () => {
   });
 
   test("explains VAPID and expired subscription failures", () => {
+    expect(getPushTestFailureMessage("vapid_configuration_error")).toContain(
+      "VAPID",
+    );
+    expect(getPushTestFailureMessage("vapid_subject_error")).toContain(
+      "subject VAPID",
+    );
     expect(getPushTestFailureMessage("web_push_unauthorized")).toContain(
       "outra chave VAPID",
     );

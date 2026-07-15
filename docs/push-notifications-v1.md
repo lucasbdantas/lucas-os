@@ -71,6 +71,10 @@ remove-a do navegador e registra uma nova com a chave pública atual.
 
 ```json
 {
+  "debug": {
+    "messagePreview": "Provider error preview",
+    "statusCode": 403
+  },
   "ok": false,
   "error": "Nao foi possivel enviar push de teste.",
   "reason": "missing_subscription"
@@ -83,17 +87,33 @@ payload privado. Motivos esperados:
 - `missing_configuration`: env vars Web Push/VAPID ausentes ou invalidas no ambiente;
 - `missing_subscription`: este navegador nao possui subscription ativa salva para o usuario;
 - `subscription_revoked`: a subscription existe, mas foi revogada localmente;
+- `vapid_configuration_error`: a public/private key VAPID parece invalida, incompatível ou rejeitada pela biblioteca/provedor;
+- `vapid_subject_error`: `WEB_PUSH_SUBJECT` parece invalido. Use formato `mailto:email@example.com`;
 - `web_push_unauthorized`: o provedor recusou a assinatura, geralmente por VAPID diferente;
 - `web_push_gone` ou `web_push_not_found`: a subscription expirou ou nao existe mais no navegador/provedor;
 - `web_push_bad_subscription`: o navegador enviou uma subscription invalida;
 - `web_push_payload_error`: o payload foi rejeitado pelo provedor;
 - `web_push_unknown`: erro nao classificado.
 
+Quando existir, `debug` pode conter apenas campos sanitizados:
+
+- `name`;
+- `statusCode`;
+- `code`;
+- `messagePreview`;
+- `bodyPreview`.
+
+Esses previews removem URLs completas, tokens bearer e strings longas. Eles
+servem para diagnostico operacional e nao devem conter endpoint completo,
+chaves VAPID ou payload sensivel.
+
 Na Vercel, se `/api/push/public-key` retorna `enabled: true` mas `/api/push/test`
-falha, confira primeiro `reason`. Para `web_push_unauthorized`, reative ou resete
-a inscricao no dispositivo depois de confirmar as VAPID keys no ambiente. Para
-`missing_subscription` ou `subscription_revoked`, use `Ativar notificacoes neste
-dispositivo` ou `Resetar inscricao deste dispositivo`.
+falha, confira primeiro `reason` e depois `debug`. Para
+`web_push_unauthorized` ou `vapid_configuration_error`, reative ou resete a
+inscricao no dispositivo depois de confirmar as VAPID keys no ambiente. Para
+`vapid_subject_error`, ajuste `WEB_PUSH_SUBJECT`. Para `missing_subscription` ou
+`subscription_revoked`, use `Ativar notificacoes neste dispositivo` ou `Resetar
+inscricao deste dispositivo`.
 
 ## Como testar na Vercel
 

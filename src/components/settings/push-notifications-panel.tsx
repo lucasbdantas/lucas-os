@@ -21,6 +21,7 @@ import {
 } from "@/lib/push/diagnostics";
 import type {
   PushFailedReasons,
+  PushSafeErrorDebug,
   PushSkippedReasons,
 } from "@/lib/push/reminder-dispatch";
 
@@ -115,6 +116,8 @@ export function PushNotificationsPanel({
   const [isConfirmingReminder, setIsConfirmingReminder] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastTestDebug, setLastTestDebug] =
+    useState<PushSafeErrorDebug | null>(null);
   const [lastProcessResult, setLastProcessResult] =
     useState<PushProcessResult | null>(null);
   const [testTask, setTestTask] = useState<{
@@ -168,6 +171,7 @@ export function PushNotificationsPanel({
   function startOperation() {
     setIsBusy(true);
     setError(null);
+    setLastTestDebug(null);
     setMessage(null);
   }
 
@@ -415,6 +419,7 @@ export function PushNotificationsPanel({
         method: "POST",
       });
       const payload = await readJsonResponse<{
+        debug?: PushSafeErrorDebug;
         error?: string;
         failureReason?: PushTestFailureReason;
         reason?: PushTestFailureReason;
@@ -422,6 +427,7 @@ export function PushNotificationsPanel({
 
       if (!response.ok) {
         const reason = payload.reason ?? payload.failureReason;
+        setLastTestDebug(payload.debug ?? null);
 
         if (reason) {
           throw new Error(getPushTestFailureMessage(reason));
@@ -581,6 +587,20 @@ export function PushNotificationsPanel({
         <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
         </p>
+      ) : null}
+
+      {lastTestDebug && Object.keys(lastTestDebug).length > 0 ? (
+        <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-800">
+          <p className="font-semibold">Diagnostico seguro do teste</p>
+          <dl className="mt-2 grid gap-1">
+            {Object.entries(lastTestDebug).map(([key, value]) => (
+              <div className="grid gap-1 sm:grid-cols-[140px_1fr]" key={key}>
+                <dt className="font-semibold">{key}</dt>
+                <dd className="break-words text-red-700">{String(value)}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       ) : null}
 
       {testTask ? (
