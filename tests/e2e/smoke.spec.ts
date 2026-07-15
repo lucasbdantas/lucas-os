@@ -43,6 +43,25 @@ test.describe("public smoke", () => {
     });
   });
 
+  test("/api/push/test exige login e retorna JSON", async ({ request }) => {
+    const response = await request.post("/api/push/test");
+    const payload = await response.json();
+
+    expect(response.status()).toBe(401);
+    expect(payload).toEqual({
+      error: "Faca login para testar notificacoes.",
+      ok: false,
+    });
+  });
+
+  test("/api/push/test-reminder exige login", async ({ request }) => {
+    const response = await request.post("/api/push/test-reminder");
+    const payload = await response.json();
+
+    expect(response.status()).toBe(401);
+    expect(payload.error).toContain("login");
+  });
+
   test("/share carrega fallback publico", async ({ page }) => {
     await page.goto("/share");
 

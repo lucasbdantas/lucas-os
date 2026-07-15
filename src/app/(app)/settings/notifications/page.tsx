@@ -21,8 +21,8 @@ export default async function NotificationSettingsPage() {
     <main className="app-page mx-auto max-w-6xl">
       <PageHeader
         eyebrow="Settings"
-        title="Notificacoes"
-        description="Configure push notifications para lembretes de tasks com permissao explicita por dispositivo."
+        title="Notificações"
+        description="Ative, teste e diagnostique push notifications para lembretes de tasks neste dispositivo."
       />
 
       <div className="mt-4">
@@ -34,7 +34,7 @@ export default async function NotificationSettingsPage() {
       <section className="section-shell mt-8">
         <SectionHeader
           action={<StatusBadge label="opt-in" tone="blue" />}
-          description="Push depende do navegador, do dispositivo e das VAPID keys do servidor. iOS, Android e desktop podem se comportar de formas diferentes."
+          description="Push depende do navegador, do dispositivo e das VAPID keys do servidor. O painel abaixo permite testar o fluxo sem abrir o console."
           title="Push Notifications V1"
         />
 
@@ -43,17 +43,17 @@ export default async function NotificationSettingsPage() {
 
       <section className="section-shell mt-10">
         <SectionHeader
-          description="O Lucas OS tambem mantem notificacoes internas em /notifications. Push e apenas uma camada extra."
-          title="Regras de seguranca"
+          description="O Lucas OS também mantém notificações internas em /notifications. Push é apenas uma camada extra."
+          title="Regras de segurança"
         />
 
         <div className="app-card-muted p-4">
           <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-zinc-600">
-            <li>Permissao so e solicitada ao clicar em ativar.</li>
-            <li>Lembretes lidos ou dispensados nao sao enviados como push.</li>
-            <li>Cada lembrete so e enviado uma vez por dispositivo registrado.</li>
-            <li>Nenhum segredo ou token de push aparece no client alem da public key VAPID.</li>
-            <li>Nao ha push automatico sem scheduler seguro configurado.</li>
+            <li>Permissão só é solicitada ao clicar em ativar.</li>
+            <li>Lembretes lidos ou dispensados não são enviados como push.</li>
+            <li>Cada lembrete só é enviado uma vez por dispositivo registrado.</li>
+            <li>Nenhum endpoint, segredo ou chave privada aparece no painel.</li>
+            <li>Não há push automático sem scheduler seguro configurado.</li>
           </ul>
         </div>
       </section>
