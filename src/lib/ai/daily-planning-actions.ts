@@ -1,17 +1,28 @@
 "use server";
 
 import { zodTextFormat } from "openai/helpers/zod";
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getOpenAIClient } from "@/lib/ai/openai";
 import {
   aiDailyPlanSchema,
+  buildDailyPlanSourceSnapshot,
   buildDailyPlanningPayload,
+  dailyPlanFeedbackRatings,
+  dailyPlanFeedbackTargetTypes,
   getDailyPlanningErrorMessage,
   parseAIDailyPlan,
   resolveAIDailyPlan,
+  toPersistedDailyPlanValue,
+  type DailyPlanFeedbackRating,
   type DailyPlanningContext,
   type DailyPlanningState,
 } from "@/lib/ai/daily-planning";
+import {
+  getDailyPlanById,
+  getRecentDailyPlanFeedbackSummary,
+  persistDailyPlan,
+} from "@/lib/ai/daily-plan-repository";
 import { addDays, toDateOnlyInTimezone } from "@/lib/app-settings/preferences";
 import { getAppPreferencesForUser } from "@/lib/app-settings/server";
 import { getGoogleCalendarAgendaForUser } from "@/lib/integrations/google/calendar";
@@ -23,6 +34,24 @@ import { requireSession } from "@/lib/supabase/require-session";
 
 const model = process.env.OPENAI_MODEL ?? "gpt-4.1-nano";
 const openTaskStatuses = ["todo", "doing", "waiting"];
+
+const dailyPlanFeedbackInputSchema = z.object({
+  dailyPlanId: z.string().uuid(),
+  planGeneration: z.coerce.number().int().min(1),
+  rating: z.enum(dailyPlanFeedbackRatings),
+  targetIndex: z.coerce.number().int().min(0),
+  targetType: z.enum(dailyPlanFeedbackTargetTypes),
+});
+
+export type DailyPlanFeedbackState = {
+  message?: string;
+  rating?: DailyPlanFeedbackRating;
+  status: "idle" | "saved" | "error";
+};
+
+export const initialDailyPlanFeedbackState: DailyPlanFeedbackState = {
+  status: "idle",
+};
 
 type TaskContextRow = {
   id: string;
@@ -218,6 +247,10 @@ export async function generateDailyPlan(
 
   try {
     const context = await buildDailyPlanningContext(supabase, user.id);
+    const feedbackSummary = await getRecentDailyPlanFeedbackSummary(
+      supabase,
+      user.id,
+    );
     const response = await client.responses.parse({
       model,
       instructions: [
@@ -236,7 +269,10 @@ export async function generateDailyPlan(
           content: [
             {
               type: "input_text",
-              text: JSON.stringify(buildDailyPlanningPayload(context)),
+              text: JSON.stringify({
+                context: buildDailyPlanningPayload(context),
+                feedback_summary: feedbackSummary,
+              }),
             },
           ],
         },
@@ -254,14 +290,100 @@ export async function generateDailyPlan(
       };
     }
 
+    const resolvedPlan = resolveAIDailyPlan(parsed.plan, context);
+    const persistedValue = toPersistedDailyPlanValue(resolvedPlan);
+    const savedPlan = await persistDailyPlan(supabase, user.id, {
+      model,
+      plan: {
+        nextSteps: persistedValue.next_steps,
+        priorities: persistedValue.priorities,
+        rescheduleSuggestions: persistedValue.reschedule_suggestions,
+        risks: persistedValue.risks,
+        summary: persistedValue.summary as string,
+        triageSuggestions: persistedValue.triage_suggestions,
+      },
+      planDate: context.today,
+      sourceSnapshot: buildDailyPlanSourceSnapshot(context),
+      timezone: context.timezone,
+    });
+
     revalidatePath("/today");
+    revalidatePath("/planning");
     return {
-      plan: resolveAIDailyPlan(parsed.plan, context),
+      plan: savedPlan,
       status: "ready",
     };
   } catch {
     return {
       message: getDailyPlanningErrorMessage("unknown"),
+      status: "error",
+    };
+  }
+}
+
+export async function saveDailyPlanFeedback(
+  _previousState: DailyPlanFeedbackState,
+  formData: FormData,
+): Promise<DailyPlanFeedbackState> {
+  const parsedInput = dailyPlanFeedbackInputSchema.safeParse({
+    dailyPlanId: formData.get("dailyPlanId"),
+    planGeneration: formData.get("planGeneration"),
+    rating: formData.get("rating"),
+    targetIndex: formData.get("targetIndex"),
+    targetType: formData.get("targetType"),
+  });
+
+  if (!parsedInput.success) {
+    return { message: "Feedback invalido. Tente novamente.", status: "error" };
+  }
+
+  try {
+    const { supabase, user } = await requireSession();
+    const plan = await getDailyPlanById(supabase, user.id, parsedInput.data.dailyPlanId);
+
+    if (!plan || plan.generation !== parsedInput.data.planGeneration) {
+      return { message: "Este plano nao esta mais disponivel para feedback.", status: "error" };
+    }
+
+    const itemCount = {
+      next_step: plan.plan.nextSteps.length,
+      priority: plan.plan.priorities.length,
+      reschedule: plan.plan.reschedulingSuggestions.length,
+      risk: plan.plan.frictions.length,
+      triage: plan.plan.triageSuggestions.length,
+    }[parsedInput.data.targetType];
+
+    if (parsedInput.data.targetIndex >= itemCount) {
+      return { message: "Este item nao existe mais no plano salvo.", status: "error" };
+    }
+
+    const result = await supabase
+      .from("daily_plan_feedback")
+      .upsert(
+        {
+          daily_plan_id: parsedInput.data.dailyPlanId,
+          plan_generation: parsedInput.data.planGeneration,
+          rating: parsedInput.data.rating,
+          target_index: parsedInput.data.targetIndex,
+          target_type: parsedInput.data.targetType,
+          user_id: user.id,
+        },
+        {
+          onConflict:
+            "user_id,daily_plan_id,plan_generation,target_type,target_index",
+        },
+      );
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+
+    revalidatePath("/today");
+    revalidatePath("/planning");
+    return { rating: parsedInput.data.rating, status: "saved" };
+  } catch {
+    return {
+      message: "Nao foi possivel salvar o feedback agora.",
       status: "error",
     };
   }

@@ -83,6 +83,7 @@ test.describe("authenticated smoke", () => {
 
   const protectedRoutes = [
     "/today",
+    "/planning",
     "/tasks",
     "/projects",
     "/capture",

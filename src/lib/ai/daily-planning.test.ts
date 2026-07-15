@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildDailyPlanFeedbackSummary,
+  buildDailyPlanSourceSnapshot,
   buildDailyPlanningPayload,
   getDailyPlanningErrorMessage,
   parseAIDailyPlan,
+  parseStoredDailyPlan,
   resolveAIDailyPlan,
   type DailyPlanningContext,
 } from "./daily-planning";
@@ -44,6 +47,25 @@ describe("AI daily planning", () => {
     expect(payload.pending_captures).toHaveLength(10);
     expect(payload.pending_captures[0]?.text).toHaveLength(500);
     expect(JSON.stringify(payload)).not.toContain("task-real-id");
+  });
+
+  it("uses the same bounded and sanitized shape for the persisted source snapshot", () => {
+    const snapshot = buildDailyPlanSourceSnapshot({
+      ...context,
+      emails: [
+        {
+          account: "lucas@example.com",
+          from: "prof@example.com",
+          ref: "e1",
+          snippet: "x".repeat(900),
+          subject: "Relatorio\u0000",
+        },
+      ],
+    });
+
+    expect(snapshot.emails[0]?.snippet).toHaveLength(500);
+    expect(snapshot.emails[0]?.subject).toBe("Relatorio");
+    expect(JSON.stringify(snapshot)).not.toContain("task-real-id");
   });
 
   it("parses a valid plan and rejects malformed output", () => {
@@ -89,5 +111,44 @@ describe("AI daily planning", () => {
     expect(getDailyPlanningErrorMessage("missing_openai")).toContain(
       "OpenAI nao esta configurada",
     );
+  });
+
+  it("summarizes recent feedback without including notes or item text", () => {
+    expect(
+      buildDailyPlanFeedbackSummary([
+        { rating: "useful", targetType: "priority" },
+        { rating: "useful", targetType: "priority" },
+        { rating: "wrong", targetType: "triage" },
+        { rating: "ignore", targetType: "priority" },
+      ]),
+    ).toEqual(
+      expect.arrayContaining([
+        { count: 2, rating: "useful", target_type: "priority" },
+        { count: 1, rating: "wrong", target_type: "triage" },
+      ]),
+    );
+  });
+
+  it("accepts a valid saved plan and rejects malformed persisted data", () => {
+    expect(
+      parseStoredDailyPlan({
+        next_steps: ["Abrir a tarefa"],
+        priorities: [{ reason: "Prazo", ref: "t1", title: "Revisar Controle" }],
+        reschedule_suggestions: [],
+        risks: ["Prazo curto"],
+        summary: "Foco em Controle.",
+        triage_suggestions: [],
+      }),
+    ).not.toBeNull();
+    expect(
+      parseStoredDailyPlan({
+        next_steps: [],
+        priorities: "invalido",
+        reschedule_suggestions: [],
+        risks: [],
+        summary: "Resumo",
+        triage_suggestions: [],
+      }),
+    ).toBeNull();
   });
 });

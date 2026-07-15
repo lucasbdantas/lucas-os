@@ -83,13 +83,67 @@ export type ResolvedDailyPlan = {
   nextSteps: string[];
 };
 
+export const dailyPlanFeedbackTargetTypes = [
+  "priority",
+  "risk",
+  "reschedule",
+  "triage",
+  "next_step",
+] as const;
+
+export const dailyPlanFeedbackRatings = [
+  "useful",
+  "not_useful",
+  "wrong",
+  "done",
+  "ignored",
+] as const;
+
+export type DailyPlanFeedbackTargetType =
+  (typeof dailyPlanFeedbackTargetTypes)[number];
+export type DailyPlanFeedbackRating = (typeof dailyPlanFeedbackRatings)[number];
+
+export type StoredDailyPlan = {
+  id: string;
+  planDate: string;
+  timezone: string;
+  generatedAt: string;
+  generation: number;
+  model: string;
+  plan: ResolvedDailyPlan;
+  feedback: Partial<Record<string, DailyPlanFeedbackRating>>;
+};
+
+export type DailyPlanHistoryItem = Pick<
+  StoredDailyPlan,
+  "id" | "planDate" | "timezone" | "generatedAt" | "generation"
+> & {
+  summary: string;
+};
+
 export type DailyPlanningState = {
   status: "idle" | "ready" | "error";
   message?: string;
-  plan?: ResolvedDailyPlan;
+  plan?: StoredDailyPlan;
 };
 
 export const initialDailyPlanningState: DailyPlanningState = { status: "idle" };
+
+type PersistedDailyPlanValue = {
+  summary: unknown;
+  priorities: unknown;
+  risks: unknown;
+  reschedule_suggestions: unknown;
+  triage_suggestions: unknown;
+  next_steps: unknown;
+};
+
+export function getDailyPlanFeedbackKey(
+  targetType: DailyPlanFeedbackTargetType,
+  targetIndex: number,
+) {
+  return `${targetType}:${targetIndex}`;
+}
 
 export function buildDailyPlanningPayload(context: DailyPlanningContext) {
   const compactTask = (task: DailyPlanningContext["overdueTasks"][number]) => ({
@@ -137,6 +191,14 @@ export function buildDailyPlanningPayload(context: DailyPlanningContext) {
         target_date: project.targetDate,
       })),
   };
+}
+
+export function buildDailyPlanSourceSnapshot(context: DailyPlanningContext) {
+  const payload = buildDailyPlanningPayload(context);
+
+  // The snapshot is intentionally the same bounded, sanitized summary sent to AI.
+  // It contains opaque refs rather than database IDs and never includes full emails.
+  return payload;
 }
 
 export function parseAIDailyPlan(value: unknown) {
@@ -199,6 +261,79 @@ export function resolveAIDailyPlan(
       })),
     nextSteps: plan.next_steps,
   };
+}
+
+export function toPersistedDailyPlanValue(plan: ResolvedDailyPlan): PersistedDailyPlanValue {
+  const withoutHref = <T extends { href?: string }>(item: T) => {
+    const copy = { ...item };
+    delete copy.href;
+
+    return copy;
+  };
+
+  return {
+    summary: plan.summary,
+    priorities: plan.priorities.map(withoutHref),
+    risks: plan.frictions,
+    reschedule_suggestions: plan.reschedulingSuggestions.map(withoutHref),
+    triage_suggestions: plan.triageSuggestions.map(withoutHref),
+    next_steps: plan.nextSteps,
+  };
+}
+
+export function parseStoredDailyPlan(value: PersistedDailyPlanValue) {
+  const parsed = parseAIDailyPlan({
+    summary: value.summary,
+    priorities: value.priorities,
+    frictions: value.risks,
+    rescheduling_suggestions: value.reschedule_suggestions,
+    triage_suggestions: value.triage_suggestions,
+    next_steps: value.next_steps,
+  });
+
+  if (!parsed.ok) {
+    return null;
+  }
+
+  return {
+    frictions: parsed.plan.frictions,
+    nextSteps: parsed.plan.next_steps,
+    priorities: parsed.plan.priorities,
+    reschedulingSuggestions: parsed.plan.rescheduling_suggestions,
+    summary: parsed.plan.summary,
+    triageSuggestions: parsed.plan.triage_suggestions,
+  } satisfies ResolvedDailyPlan;
+}
+
+export function buildDailyPlanFeedbackSummary(
+  feedback: Array<{
+    targetType: string;
+    rating: string;
+  }>,
+) {
+  const counts = new Map<string, number>();
+
+  for (const item of feedback.slice(0, 30)) {
+    if (
+      !dailyPlanFeedbackTargetTypes.includes(
+        item.targetType as DailyPlanFeedbackTargetType,
+      ) ||
+      !dailyPlanFeedbackRatings.includes(
+        item.rating as DailyPlanFeedbackRating,
+      )
+    ) {
+      continue;
+    }
+
+    const key = `${item.targetType}:${item.rating}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  return Array.from(counts.entries()).map(([key, count]) => {
+    const [target_type, rating] = key.split(":");
+
+    return { count, rating, target_type };
+  });
 }
 
 export function getDailyPlanningErrorMessage(reason: "missing_openai" | "invalid_plan" | "unknown") {

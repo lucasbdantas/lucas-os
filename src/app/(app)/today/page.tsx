@@ -10,6 +10,10 @@ import {
   toDateOnlyInTimezone,
 } from "@/lib/app-settings/preferences";
 import { getAppPreferencesForUser } from "@/lib/app-settings/server";
+import {
+  getDailyPlanForDate,
+  getRecentDailyPlans,
+} from "@/lib/ai/daily-plan-repository";
 import { formatDate, formatDateTime } from "@/lib/format";
 import {
   getGoogleCalendarAgendaForUser,
@@ -515,6 +519,8 @@ export default async function TodayPage() {
     calendarLanePreferences,
     domainsResult,
     projectsForNamesResult,
+    dailyPlan,
+    dailyPlanHistory,
   ] = await Promise.all([
     getCount(
       supabase
@@ -594,6 +600,8 @@ export default async function TodayPage() {
       .from("projects")
       .select("id,name,status,type,target_date,domain_id")
       .returns<ProjectRow[]>(),
+    getDailyPlanForDate(supabase, user.id, today, preferences.timezone),
+    getRecentDailyPlans(supabase, user.id),
   ]);
 
   if (overdueTasksResult.error) {
@@ -723,7 +731,10 @@ export default async function TodayPage() {
       </section>
 
       <div className={sectionGapClass}>
-        <DailyPlanningPanel />
+        <DailyPlanningPanel
+          history={dailyPlanHistory}
+          initialPlan={dailyPlan}
+        />
 
         <CalendarSection
           agenda={googleCalendarAgenda}

@@ -12,6 +12,7 @@ import {
   text,
   time,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
   varchar,
@@ -115,6 +116,16 @@ export const pushDeliveryStatusEnum = pgEnum("push_delivery_status", [
   "sent",
   "failed",
 ]);
+
+export const dailyPlanFeedbackTargetTypeEnum = pgEnum(
+  "daily_plan_feedback_target_type",
+  ["priority", "risk", "reschedule", "triage", "next_step"],
+);
+
+export const dailyPlanFeedbackRatingEnum = pgEnum(
+  "daily_plan_feedback_rating",
+  ["useful", "not_useful", "wrong", "done", "ignored"],
+);
 
 export const domains = pgTable(
   "domains",
@@ -496,6 +507,106 @@ export const pushNotificationDeliveries = pgTable(
     ),
     index("push_notification_deliveries_notification_idx").on(
       table.notificationId,
+    ),
+  ],
+);
+
+export const dailyPlans = pgTable(
+  "daily_plans",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    planDate: date("plan_date").notNull(),
+    timezone: varchar("timezone", { length: 80 }).notNull(),
+    generatedAt: timestamp("generated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    generation: integer("generation").notNull().default(1),
+    summary: text("summary").notNull(),
+    priorities: jsonb("priorities")
+      .$type<unknown[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    risks: jsonb("risks")
+      .$type<unknown[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    rescheduleSuggestions: jsonb("reschedule_suggestions")
+      .$type<unknown[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    triageSuggestions: jsonb("triage_suggestions")
+      .$type<unknown[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    nextSteps: jsonb("next_steps")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    sourceSnapshot: jsonb("source_snapshot")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    model: varchar("model", { length: 160 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("daily_plans_user_date_timezone_unique").on(
+      table.userId,
+      table.planDate,
+      table.timezone,
+    ),
+    index("daily_plans_user_generated_idx").on(table.userId, table.generatedAt),
+    check("daily_plans_generation_check", sql`${table.generation} >= 1`),
+  ],
+);
+
+export const dailyPlanFeedback = pgTable(
+  "daily_plan_feedback",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    dailyPlanId: uuid("daily_plan_id")
+      .notNull()
+      .references(() => dailyPlans.id, { onDelete: "cascade" }),
+    planGeneration: integer("plan_generation").notNull().default(1),
+    targetType: dailyPlanFeedbackTargetTypeEnum("target_type").notNull(),
+    targetIndex: integer("target_index").notNull(),
+    rating: dailyPlanFeedbackRatingEnum("rating").notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("daily_plan_feedback_target_unique").on(
+      table.userId,
+      table.dailyPlanId,
+      table.planGeneration,
+      table.targetType,
+      table.targetIndex,
+    ),
+    index("daily_plan_feedback_user_created_idx").on(table.userId, table.createdAt),
+    index("daily_plan_feedback_plan_generation_idx").on(
+      table.dailyPlanId,
+      table.planGeneration,
+    ),
+    check(
+      "daily_plan_feedback_generation_check",
+      sql`${table.planGeneration} >= 1`,
+    ),
+    check(
+      "daily_plan_feedback_target_index_check",
+      sql`${table.targetIndex} >= 0`,
     ),
   ],
 );
