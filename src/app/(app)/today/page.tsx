@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DailyPlanningPanel } from "@/components/today/daily-planning-panel";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -722,6 +723,8 @@ export default async function TodayPage() {
       </section>
 
       <div className={sectionGapClass}>
+        <DailyPlanningPanel />
+
         <CalendarSection
           agenda={googleCalendarAgenda}
           contextNextEvents={contextNextCalendarEvents.slice(0, isCompact ? 5 : 15)}
