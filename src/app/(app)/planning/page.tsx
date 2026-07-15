@@ -81,15 +81,13 @@ export default async function PlanningPage({ searchParams }: PlanningPageProps) 
   const { supabase, user } = await requireSession();
   const availability = await getDailyPlanningPersistenceAvailability(
     supabase,
-  ).catch(() => ({ available: false }));
-  const [selectedPlan, history] = availability.available
-    ? await Promise.all([
-        id
-          ? getDailyPlanById(supabase, user.id, id).catch(() => null)
-          : Promise.resolve(null),
-        getRecentDailyPlans(supabase, user.id).catch(() => []),
-      ])
-    : [null, []];
+  ).catch(() => ({ available: true as const, mode: "compatibility" as const }));
+  const [selectedPlan, history] = await Promise.all([
+    id
+      ? getDailyPlanById(supabase, user.id, id).catch(() => null)
+      : Promise.resolve(null),
+    getRecentDailyPlans(supabase, user.id).catch(() => []),
+  ]);
 
   return (
     <main className="app-page mx-auto max-w-5xl">
@@ -99,14 +97,17 @@ export default async function PlanningPage({ searchParams }: PlanningPageProps) 
         description="Planos diarios salvos para consulta. Eles registram sugestoes, nunca acoes executadas pela IA."
       />
 
+      {availability.mode === "compatibility" ? (
+        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+          Persistencia em modo compatibilidade: os planos ficam em app_settings
+          enquanto a Data API ainda nao reconhece as tabelas de planejamento.
+        </div>
+      ) : null}
+
       <div className="mt-8 grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
         <aside className="section-shell h-fit">
           <p className="font-semibold text-zinc-950">Ultimos 14 dias</p>
-          {!availability.available ? (
-            <p className="mt-2 text-sm leading-6 text-zinc-600">
-              Historico indisponivel enquanto o Supabase atualiza as tabelas de planejamento.
-            </p>
-          ) : history.length === 0 ? (
+          {history.length === 0 ? (
             <p className="mt-2 text-sm leading-6 text-zinc-600">
               Gere o primeiro plano no Today.
             </p>
@@ -130,12 +131,7 @@ export default async function PlanningPage({ searchParams }: PlanningPageProps) 
           )}
         </aside>
 
-        {!availability.available ? (
-          <EmptyState
-            description="As tabelas de planejamento ainda não estão disponíveis no Supabase. O restante do Lucas OS continua funcionando."
-            title="Planejamento temporariamente indisponivel"
-          />
-        ) : selectedPlan ? (
+        {selectedPlan ? (
           <StoredPlan plan={selectedPlan} />
         ) : (
           <EmptyState

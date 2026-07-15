@@ -126,10 +126,23 @@ export type DailyPlanningState = {
   message?: string;
   ok?: boolean;
   plan?: StoredDailyPlan;
+  persistenceMode?: "tables" | "compatibility";
   reason?: "daily_planning_tables_unavailable";
 };
 
 export const initialDailyPlanningState: DailyPlanningState = { status: "idle" };
+
+export type DailyPlanFeedbackState = {
+  message?: string;
+  ok?: boolean;
+  rating?: DailyPlanFeedbackRating;
+  reason?: "daily_planning_tables_unavailable";
+  status: "idle" | "saved" | "error";
+};
+
+export const initialDailyPlanFeedbackState: DailyPlanFeedbackState = {
+  status: "idle",
+};
 
 type PersistedDailyPlanValue = {
   summary: unknown;

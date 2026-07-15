@@ -14,18 +14,15 @@ import {
   parseAIDailyPlan,
   resolveAIDailyPlan,
   toPersistedDailyPlanValue,
-  type DailyPlanFeedbackRating,
+  type DailyPlanFeedbackState,
   type DailyPlanningContext,
   type DailyPlanningState,
 } from "@/lib/ai/daily-planning";
 import {
-  dailyPlanningTablesUnavailableMessage,
-  dailyPlanningTablesUnavailableReason,
   getDailyPlanById,
-  getDailyPlanningPersistenceAvailability,
   getRecentDailyPlanFeedbackSummary,
-  isDailyPlanningTablesUnavailable,
   persistDailyPlan,
+  persistDailyPlanFeedback,
 } from "@/lib/ai/daily-plan-repository";
 import { addDays, toDateOnlyInTimezone } from "@/lib/app-settings/preferences";
 import { getAppPreferencesForUser } from "@/lib/app-settings/server";
@@ -46,18 +43,6 @@ const dailyPlanFeedbackInputSchema = z.object({
   targetIndex: z.coerce.number().int().min(0),
   targetType: z.enum(dailyPlanFeedbackTargetTypes),
 });
-
-export type DailyPlanFeedbackState = {
-  message?: string;
-  ok?: boolean;
-  rating?: DailyPlanFeedbackRating;
-  reason?: typeof dailyPlanningTablesUnavailableReason;
-  status: "idle" | "saved" | "error";
-};
-
-export const initialDailyPlanFeedbackState: DailyPlanFeedbackState = {
-  status: "idle",
-};
 
 type TaskContextRow = {
   id: string;
@@ -252,17 +237,6 @@ export async function generateDailyPlan(
   }
 
   try {
-    const availability = await getDailyPlanningPersistenceAvailability(supabase);
-
-    if (!availability.available) {
-      return {
-        message: dailyPlanningTablesUnavailableMessage,
-        ok: false,
-        reason: dailyPlanningTablesUnavailableReason,
-        status: "error",
-      };
-    }
-
     const context = await buildDailyPlanningContext(supabase, user.id);
     const feedbackSummary = await getRecentDailyPlanFeedbackSummary(
       supabase,
@@ -338,6 +312,7 @@ export async function generateDailyPlan(
     return {
       ok: true,
       plan: savedPlan.plan,
+      persistenceMode: savedPlan.mode,
       status: "ready",
     };
   } catch {
@@ -366,17 +341,6 @@ export async function saveDailyPlanFeedback(
 
   try {
     const { supabase, user } = await requireSession();
-    const availability = await getDailyPlanningPersistenceAvailability(supabase);
-
-    if (!availability.available) {
-      return {
-        message: dailyPlanningTablesUnavailableMessage,
-        ok: false,
-        reason: dailyPlanningTablesUnavailableReason,
-        status: "error",
-      };
-    }
-
     const plan = await getDailyPlanById(supabase, user.id, parsedInput.data.dailyPlanId);
 
     if (!plan || plan.generation !== parsedInput.data.planGeneration) {
@@ -395,34 +359,19 @@ export async function saveDailyPlanFeedback(
       return { message: "Este item nao existe mais no plano salvo.", status: "error" };
     }
 
-    const result = await supabase
-      .from("daily_plan_feedback")
-      .upsert(
-        {
-          daily_plan_id: parsedInput.data.dailyPlanId,
-          plan_generation: parsedInput.data.planGeneration,
-          rating: parsedInput.data.rating,
-          target_index: parsedInput.data.targetIndex,
-          target_type: parsedInput.data.targetType,
-          user_id: user.id,
-        },
-        {
-          onConflict:
-            "user_id,daily_plan_id,plan_generation,target_type,target_index",
-        },
-      );
+    const persistedFeedback = await persistDailyPlanFeedback(
+      supabase,
+      user.id,
+      parsedInput.data,
+    );
 
-    if (result.error) {
-      if (isDailyPlanningTablesUnavailable(result.error)) {
-        return {
-          message: dailyPlanningTablesUnavailableMessage,
-          ok: false,
-          reason: dailyPlanningTablesUnavailableReason,
-          status: "error",
-        };
-      }
-
-      throw new Error(result.error.message);
+    if (!persistedFeedback.ok) {
+      return {
+        message: persistedFeedback.message,
+        ok: false,
+        reason: persistedFeedback.reason,
+        status: "error",
+      };
     }
 
     revalidatePath("/today");

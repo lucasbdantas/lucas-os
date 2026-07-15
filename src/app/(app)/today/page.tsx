@@ -607,7 +607,8 @@ export default async function TodayPage() {
     ),
     getRecentDailyPlans(supabase, user.id).catch(() => []),
     getDailyPlanningPersistenceAvailability(supabase).catch(() => ({
-      available: false,
+      available: true as const,
+      mode: "compatibility" as const,
     })),
   ]);
 
@@ -741,7 +742,7 @@ export default async function TodayPage() {
         <DailyPlanningPanel
           history={dailyPlanHistory}
           initialPlan={dailyPlan}
-          persistenceAvailable={dailyPlanningAvailability.available}
+          persistenceMode={dailyPlanningAvailability.mode}
         />
 
         <CalendarSection

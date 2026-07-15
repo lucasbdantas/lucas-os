@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   buildDailyPlanFeedbackSummary,
+  dailyPlanFeedbackRatings,
   getDailyPlanFeedbackKey,
   parseStoredDailyPlan,
   type DailyPlanFeedbackRating,
@@ -12,70 +13,38 @@ import type { requireSession } from "../supabase/require-session";
 
 type SupabaseClient = Awaited<ReturnType<typeof requireSession>>["supabase"];
 
+export const DAILY_PLANNING_COMPATIBILITY_KEY = "daily_planning_v2";
 export const dailyPlanningTablesUnavailableReason =
   "daily_planning_tables_unavailable" as const;
 export const dailyPlanningTablesUnavailableMessage =
   "As tabelas de planejamento ainda não estão disponíveis no Supabase.";
 
+export type DailyPlanningPersistenceMode = "tables" | "compatibility";
+
 export type DailyPlanningPersistenceAvailability = {
-  available: boolean;
+  available: true;
+  mode: DailyPlanningPersistenceMode;
 };
 
 export type DailyPlanPersistenceResult =
-  | { ok: true; plan: StoredDailyPlan }
+  | {
+      mode: DailyPlanningPersistenceMode;
+      ok: true;
+      plan: StoredDailyPlan;
+    }
   | {
       message: typeof dailyPlanningTablesUnavailableMessage;
       ok: false;
       reason: typeof dailyPlanningTablesUnavailableReason;
     };
 
-export function isDailyPlanningTablesUnavailable(error: unknown) {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const record = error as {
-    code?: unknown;
-    details?: unknown;
-    hint?: unknown;
-    message?: unknown;
-  };
-  const code = typeof record.code === "string" ? record.code.toUpperCase() : "";
-  const message = [record.message, record.details, record.hint]
-    .filter((value): value is string => typeof value === "string")
-    .join(" ")
-    .toLowerCase();
-
-  if (["PGRST204", "PGRST205", "42P01"].includes(code)) {
-    return true;
-  }
-
-  const referencesDailyPlanningTable =
-    message.includes("daily_plans") ||
-    message.includes("daily_plan_feedback");
-
-  return referencesDailyPlanningTable;
-}
-
-export async function getDailyPlanningPersistenceAvailability(
-  supabase: SupabaseClient,
-): Promise<DailyPlanningPersistenceAvailability> {
-  const [plansResult, feedbackResult] = await Promise.all([
-    supabase.from("daily_plans").select("id").limit(1),
-    supabase.from("daily_plan_feedback").select("id").limit(1),
-  ]);
-
-  const errors = [plansResult.error, feedbackResult.error].filter(Boolean);
-
-  if (errors.some((error) => isDailyPlanningTablesUnavailable(error))) {
-    return { available: false };
-  }
-  if (errors.length > 0) {
-    throw new Error(errors[0]!.message);
-  }
-
-  return { available: true };
-}
+export type DailyPlanFeedbackPersistenceResult =
+  | { mode: DailyPlanningPersistenceMode; ok: true }
+  | {
+      message: typeof dailyPlanningTablesUnavailableMessage;
+      ok: false;
+      reason: typeof dailyPlanningTablesUnavailableReason;
+    };
 
 type DailyPlanRow = {
   id: string;
@@ -101,6 +70,27 @@ type DailyPlanFeedbackRow = {
   plan_generation: number;
 };
 
+type CompatibilityPlanRecord = {
+  id: string;
+  plan_date: string;
+  timezone: string;
+  generated_at: string;
+  generation: number;
+  revision: number;
+  summary: string;
+  priorities: unknown;
+  risks: unknown;
+  reschedule_suggestions: unknown;
+  triage_suggestions: unknown;
+  next_steps: unknown;
+  model: string;
+  feedback: Record<string, DailyPlanFeedbackRating>;
+};
+
+type AppSettingRow = {
+  value: unknown;
+};
+
 export type DailyPlanPersistenceInput = {
   model: string;
   plan: {
@@ -115,6 +105,49 @@ export type DailyPlanPersistenceInput = {
   sourceSnapshot: Record<string, unknown>;
   timezone: string;
 };
+
+export type DailyPlanFeedbackPersistenceInput = {
+  dailyPlanId: string;
+  planGeneration: number;
+  rating: DailyPlanFeedbackRating;
+  targetIndex: number;
+  targetType: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isDailyPlanFeedbackRating(value: unknown): value is DailyPlanFeedbackRating {
+  return (
+    typeof value === "string" &&
+    dailyPlanFeedbackRatings.includes(value as DailyPlanFeedbackRating)
+  );
+}
+
+export function isDailyPlanningTablesUnavailable(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const record = error as {
+    code?: unknown;
+    details?: unknown;
+    hint?: unknown;
+    message?: unknown;
+  };
+  const code = typeof record.code === "string" ? record.code.toUpperCase() : "";
+  const message = [record.message, record.details, record.hint]
+    .filter((value): value is string => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+
+  return (
+    ["PGRST204", "PGRST205", "42P01"].includes(code) ||
+    message.includes("daily_plans") ||
+    message.includes("daily_plan_feedback")
+  );
+}
 
 function mapStoredDailyPlan(
   row: DailyPlanRow,
@@ -136,6 +169,7 @@ function mapStoredDailyPlan(
   const feedback = Object.fromEntries(
     feedbackRows
       .filter((item) => item.plan_generation === row.generation)
+      .filter((item) => isDailyPlanFeedbackRating(item.rating))
       .map((item) => [
         getDailyPlanFeedbackKey(
           item.target_type as Parameters<typeof getDailyPlanFeedbackKey>[0],
@@ -168,6 +202,147 @@ function mapStoredDailyPlan(
   };
 }
 
+function parseCompatibilityPlan(value: unknown): CompatibilityPlanRecord | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const requiredStrings = [
+    "id",
+    "plan_date",
+    "timezone",
+    "generated_at",
+    "summary",
+    "model",
+  ] as const;
+
+  if (requiredStrings.some((key) => typeof value[key] !== "string")) {
+    return null;
+  }
+  const generation =
+    typeof value.generation === "number" ? value.generation : value.revision;
+
+  if (
+    typeof generation !== "number" ||
+    !Number.isInteger(generation) ||
+    generation < 1
+  ) {
+    return null;
+  }
+
+  const feedback: Record<string, DailyPlanFeedbackRating> = {};
+
+  if (isRecord(value.feedback)) {
+    for (const [key, rating] of Object.entries(value.feedback)) {
+      if (isDailyPlanFeedbackRating(rating)) {
+        feedback[key] = rating;
+      }
+    }
+  }
+
+  return {
+    feedback,
+    generated_at: value.generated_at as string,
+    generation,
+    id: value.id as string,
+    model: value.model as string,
+    next_steps: value.next_steps,
+    plan_date: value.plan_date as string,
+    priorities: value.priorities,
+    revision: typeof value.revision === "number" ? value.revision : generation,
+    reschedule_suggestions: value.reschedule_suggestions,
+    risks: value.risks,
+    summary: value.summary as string,
+    timezone: value.timezone as string,
+    triage_suggestions: value.triage_suggestions,
+  };
+}
+
+function parseCompatibilityPlans(value: unknown) {
+  if (!isRecord(value) || !Array.isArray(value.plans)) {
+    return [];
+  }
+
+  return value.plans
+    .map(parseCompatibilityPlan)
+    .filter((plan): plan is CompatibilityPlanRecord => Boolean(plan))
+    .slice(0, 14);
+}
+
+function compatibilityPlanToStored(plan: CompatibilityPlanRecord) {
+  return mapStoredDailyPlan(
+    {
+      ...plan,
+      source_snapshot: {},
+      user_id: "compatibility",
+    },
+    Object.entries(plan.feedback).map(([key, rating]) => {
+      const [targetType, rawIndex] = key.split(":");
+
+      return {
+        plan_generation: plan.generation,
+        rating,
+        target_index: Number(rawIndex),
+        target_type: targetType ?? "",
+      };
+    }),
+  );
+}
+
+function toHistoryItem(plan: StoredDailyPlan): DailyPlanHistoryItem {
+  return {
+    generatedAt: plan.generatedAt,
+    generation: plan.generation,
+    id: plan.id,
+    planDate: plan.planDate,
+    summary: plan.plan.summary,
+    timezone: plan.timezone,
+  };
+}
+
+function sortAndLimitCompatibilityPlans(plans: CompatibilityPlanRecord[]) {
+  return [...plans]
+    .sort((first, second) => second.generated_at.localeCompare(first.generated_at))
+    .slice(0, 14);
+}
+
+async function getCompatibilityPlans(supabase: SupabaseClient, userId: string) {
+  const result = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("user_id", userId)
+    .eq("key", DAILY_PLANNING_COMPATIBILITY_KEY)
+    .maybeSingle<AppSettingRow>();
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  return parseCompatibilityPlans(result.data?.value);
+}
+
+async function saveCompatibilityPlans(
+  supabase: SupabaseClient,
+  userId: string,
+  plans: CompatibilityPlanRecord[],
+) {
+  const result = await supabase.from("app_settings").upsert(
+    {
+      key: DAILY_PLANNING_COMPATIBILITY_KEY,
+      user_id: userId,
+      value: {
+        plans: sortAndLimitCompatibilityPlans(plans),
+        version: 1,
+      },
+    },
+    { onConflict: "user_id,key" },
+  );
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+}
+
 async function getFeedbackForPlan(
   supabase: SupabaseClient,
   planId: string,
@@ -191,6 +366,35 @@ async function getFeedbackForPlan(
   return result.data ?? [];
 }
 
+async function getDailyPlanFromCompatibility(
+  supabase: SupabaseClient,
+  userId: string,
+  predicate: (plan: CompatibilityPlanRecord) => boolean,
+) {
+  const plan = (await getCompatibilityPlans(supabase, userId)).find(predicate);
+
+  return plan ? compatibilityPlanToStored(plan) : null;
+}
+
+export async function getDailyPlanningPersistenceAvailability(
+  supabase: SupabaseClient,
+): Promise<DailyPlanningPersistenceAvailability> {
+  const [plansResult, feedbackResult] = await Promise.all([
+    supabase.from("daily_plans").select("id").limit(1),
+    supabase.from("daily_plan_feedback").select("id").limit(1),
+  ]);
+  const errors = [plansResult.error, feedbackResult.error].filter(Boolean);
+
+  if (errors.some((error) => isDailyPlanningTablesUnavailable(error))) {
+    return { available: true, mode: "compatibility" };
+  }
+  if (errors.length > 0) {
+    throw new Error(errors[0]!.message);
+  }
+
+  return { available: true, mode: "tables" };
+}
+
 export async function getDailyPlanForDate(
   supabase: SupabaseClient,
   userId: string,
@@ -209,18 +413,26 @@ export async function getDailyPlanForDate(
 
   if (result.error) {
     if (isDailyPlanningTablesUnavailable(result.error)) {
-      return null;
+      return getDailyPlanFromCompatibility(
+        supabase,
+        userId,
+        (plan) => plan.plan_date === planDate && plan.timezone === timezone,
+      );
     }
 
     throw new Error(result.error.message);
   }
-  if (!result.data) {
-    return null;
+  if (result.data) {
+    return mapStoredDailyPlan(
+      result.data,
+      await getFeedbackForPlan(supabase, result.data.id, result.data.generation),
+    );
   }
 
-  return mapStoredDailyPlan(
-    result.data,
-    await getFeedbackForPlan(supabase, result.data.id, result.data.generation),
+  return getDailyPlanFromCompatibility(
+    supabase,
+    userId,
+    (plan) => plan.plan_date === planDate && plan.timezone === timezone,
   );
 }
 
@@ -240,19 +452,23 @@ export async function getDailyPlanById(
 
   if (result.error) {
     if (isDailyPlanningTablesUnavailable(result.error)) {
-      return null;
+      return getDailyPlanFromCompatibility(
+        supabase,
+        userId,
+        (plan) => plan.id === planId,
+      );
     }
 
     throw new Error(result.error.message);
   }
-  if (!result.data) {
-    return null;
+  if (result.data) {
+    return mapStoredDailyPlan(
+      result.data,
+      await getFeedbackForPlan(supabase, result.data.id, result.data.generation),
+    );
   }
 
-  return mapStoredDailyPlan(
-    result.data,
-    await getFeedbackForPlan(supabase, result.data.id, result.data.generation),
-  );
+  return getDailyPlanFromCompatibility(supabase, userId, (plan) => plan.id === planId);
 }
 
 export async function getRecentDailyPlans(
@@ -266,7 +482,7 @@ export async function getRecentDailyPlans(
     .eq("user_id", userId)
     .order("plan_date", { ascending: false })
     .order("generated_at", { ascending: false })
-    .limit(Math.min(Math.max(limit, 1), 14))
+    .limit(14)
     .returns<
       Array<{
         id: string;
@@ -280,13 +496,17 @@ export async function getRecentDailyPlans(
 
   if (result.error) {
     if (isDailyPlanningTablesUnavailable(result.error)) {
-      return [];
+      return (await getCompatibilityPlans(supabase, userId))
+        .map(compatibilityPlanToStored)
+        .filter((plan): plan is StoredDailyPlan => Boolean(plan))
+        .map(toHistoryItem)
+        .slice(0, Math.min(Math.max(limit, 1), 14));
     }
 
     throw new Error(result.error.message);
   }
 
-  return (result.data ?? []).map((row) => ({
+  const tableHistory = (result.data ?? []).map((row) => ({
     generatedAt: row.generated_at,
     generation: row.generation,
     id: row.id,
@@ -294,6 +514,17 @@ export async function getRecentDailyPlans(
     summary: row.summary,
     timezone: row.timezone,
   }));
+  const compatibilityHistory = (await getCompatibilityPlans(supabase, userId))
+    .map(compatibilityPlanToStored)
+    .filter((plan): plan is StoredDailyPlan => Boolean(plan))
+    .map(toHistoryItem);
+  const seenDates = new Set(
+    tableHistory.map((plan) => `${plan.planDate}:${plan.timezone}`),
+  );
+
+  return [...tableHistory, ...compatibilityHistory.filter((plan) => !seenDates.has(`${plan.planDate}:${plan.timezone}`))]
+    .sort((first, second) => second.generatedAt.localeCompare(first.generatedAt))
+    .slice(0, Math.min(Math.max(limit, 1), 14));
 }
 
 export async function getRecentDailyPlanFeedbackSummary(
@@ -307,28 +538,70 @@ export async function getRecentDailyPlanFeedbackSummary(
     .order("created_at", { ascending: false })
     .limit(30)
     .returns<Array<{ target_type: string; rating: string }>>();
+  const compatibilityFeedback = (await getCompatibilityPlans(supabase, userId))
+    .flatMap((plan) =>
+      Object.entries(plan.feedback).map(([key, rating]) => ({
+        rating,
+        targetType: key.split(":")[0] ?? "",
+      })),
+    )
+    .slice(0, 30);
 
-  if (result.error) {
-    if (isDailyPlanningTablesUnavailable(result.error)) {
-      return [];
-    }
-
+  if (result.error && !isDailyPlanningTablesUnavailable(result.error)) {
     throw new Error(result.error.message);
   }
 
-  return buildDailyPlanFeedbackSummary(
-    (result.data ?? []).map((item) => ({
+  return buildDailyPlanFeedbackSummary([
+    ...(result.data ?? []).map((item) => ({
       rating: item.rating,
       targetType: item.target_type,
     })),
+    ...compatibilityFeedback,
+  ]);
+}
+
+async function persistCompatibilityPlan(
+  supabase: SupabaseClient,
+  userId: string,
+  input: DailyPlanPersistenceInput,
+): Promise<DailyPlanPersistenceResult> {
+  const plans = await getCompatibilityPlans(supabase, userId);
+  const existing = plans.find(
+    (plan) => plan.plan_date === input.planDate && plan.timezone === input.timezone,
   );
+  const record: CompatibilityPlanRecord = {
+    feedback: {},
+    generated_at: new Date().toISOString(),
+    generation: (existing?.generation ?? 0) + 1,
+    id: existing?.id ?? crypto.randomUUID(),
+    model: input.model,
+    next_steps: input.plan.nextSteps,
+    plan_date: input.planDate,
+    priorities: input.plan.priorities,
+    reschedule_suggestions: input.plan.rescheduleSuggestions,
+    risks: input.plan.risks,
+    revision: (existing?.revision ?? existing?.generation ?? 0) + 1,
+    summary: input.plan.summary,
+    timezone: input.timezone,
+    triage_suggestions: input.plan.triageSuggestions,
+  };
+  const savedPlans = [...plans.filter((plan) => plan !== existing), record];
+
+  await saveCompatibilityPlans(supabase, userId, savedPlans);
+  const plan = compatibilityPlanToStored(record);
+
+  if (!plan) {
+    throw new Error("Compatibility daily plan did not match the expected structure.");
+  }
+
+  return { mode: "compatibility", ok: true, plan };
 }
 
 export async function persistDailyPlan(
   supabase: SupabaseClient,
   userId: string,
   input: DailyPlanPersistenceInput,
-) {
+): Promise<DailyPlanPersistenceResult> {
   const existing = await supabase
     .from("daily_plans")
     .select("id,generation")
@@ -339,11 +612,7 @@ export async function persistDailyPlan(
 
   if (existing.error) {
     if (isDailyPlanningTablesUnavailable(existing.error)) {
-      return {
-        message: dailyPlanningTablesUnavailableMessage,
-        ok: false,
-        reason: dailyPlanningTablesUnavailableReason,
-      } satisfies DailyPlanPersistenceResult;
+      return persistCompatibilityPlan(supabase, userId, input);
     }
 
     throw new Error(existing.error.message);
@@ -363,7 +632,6 @@ export async function persistDailyPlan(
     triage_suggestions: input.plan.triageSuggestions,
     user_id: userId,
   };
-
   const result = existing.data
     ? await supabase
         .from("daily_plans")
@@ -384,20 +652,68 @@ export async function persistDailyPlan(
 
   if (result.error) {
     if (isDailyPlanningTablesUnavailable(result.error)) {
-      return {
-        message: dailyPlanningTablesUnavailableMessage,
-        ok: false,
-        reason: dailyPlanningTablesUnavailableReason,
-      } satisfies DailyPlanPersistenceResult;
+      return persistCompatibilityPlan(supabase, userId, input);
     }
 
     throw new Error(result.error.message);
   }
 
-  const savedPlan = mapStoredDailyPlan(result.data);
-  if (!savedPlan) {
+  const plan = mapStoredDailyPlan(result.data);
+  if (!plan) {
     throw new Error("Saved daily plan did not match the expected structure.");
   }
 
-  return { ok: true, plan: savedPlan } satisfies DailyPlanPersistenceResult;
+  return { mode: "tables", ok: true, plan };
+}
+
+export async function persistDailyPlanFeedback(
+  supabase: SupabaseClient,
+  userId: string,
+  input: DailyPlanFeedbackPersistenceInput,
+): Promise<DailyPlanFeedbackPersistenceResult> {
+  const compatibilityPlans = await getCompatibilityPlans(supabase, userId);
+  const compatibilityPlan = compatibilityPlans.find(
+    (plan) => plan.id === input.dailyPlanId,
+  );
+
+  if (compatibilityPlan) {
+    compatibilityPlan.feedback[
+      getDailyPlanFeedbackKey(
+        input.targetType as Parameters<typeof getDailyPlanFeedbackKey>[0],
+        input.targetIndex,
+      )
+    ] = input.rating;
+    await saveCompatibilityPlans(supabase, userId, compatibilityPlans);
+    return { mode: "compatibility", ok: true };
+  }
+
+  const result = await supabase
+    .from("daily_plan_feedback")
+    .upsert(
+      {
+        daily_plan_id: input.dailyPlanId,
+        plan_generation: input.planGeneration,
+        rating: input.rating,
+        target_index: input.targetIndex,
+        target_type: input.targetType,
+        user_id: userId,
+      },
+      {
+        onConflict: "user_id,daily_plan_id,plan_generation,target_type,target_index",
+      },
+    );
+
+  if (result.error) {
+    if (isDailyPlanningTablesUnavailable(result.error)) {
+      return {
+        message: dailyPlanningTablesUnavailableMessage,
+        ok: false,
+        reason: dailyPlanningTablesUnavailableReason,
+      };
+    }
+
+    throw new Error(result.error.message);
+  }
+
+  return { mode: "tables", ok: true };
 }

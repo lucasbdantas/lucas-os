@@ -60,15 +60,31 @@ anteriores. Ela nao altera dados existentes.
 ## Troubleshooting: schema cache do Supabase
 
 Se o PostgREST retornar uma mensagem como `Could not find the table
-public.daily_plans in the schema cache`, o Lucas OS entra em modo degradado:
-Today continua abrindo, mas o plano persistido, historico e feedback ficam
-temporariamente indisponiveis. A pagina `/planning` mostra um estado amigavel
-em vez de quebrar.
+public.daily_plans in the schema cache`, o Lucas OS continua funcionando pelo
+modo de compatibilidade abaixo. Ainda assim, confirme que a migration foi
+executada integralmente no projeto Supabase certo e aguarde a atualizacao do
+schema cache do PostgREST. Quando as duas tabelas forem visiveis
+(`daily_plans` e `daily_plan_feedback`), os planos novos voltam a usar as
+tabelas dedicadas sem nova configuracao.
 
-Confirme que a migration foi executada integralmente no projeto Supabase certo.
-Depois, aguarde a atualizacao do schema cache do PostgREST e recarregue o app.
-Quando as duas tabelas forem visiveis (`daily_plans` e
-`daily_plan_feedback`), o recurso volta a funcionar sem nova configuracao.
+## Modo de compatibilidade com app_settings
+
+Se a Data API do Supabase ainda nao expuser `daily_plans` ou
+`daily_plan_feedback` e retornar `PGRST205`, o Lucas OS usa a chave
+`daily_planning_v2` em `app_settings` para manter o recurso operacional.
+
+- O fallback guarda o plano atual por data e fuso, sua revisao, data de
+  geracao e feedbacks.
+- O historico fica limitado aos 14 planos mais recentes.
+- O Today e `/planning` mostram o selo **modo compatibilidade** enquanto ele
+  estiver ativo.
+- Quando as tabelas voltarem a ficar disponiveis, planos novos voltam a usar
+  as tabelas reais; o historico de compatibilidade permanece apenas como apoio
+  temporario.
+
+O fallback nao guarda o snapshot completo do contexto e nao substitui a
+correcao da Data API. Ele existe para que uma indisponibilidade de schema cache
+nao interrompa o planejamento pessoal.
 
 ## Teste local e na Vercel
 

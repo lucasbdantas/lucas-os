@@ -5,11 +5,11 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   generateDailyPlan,
-  initialDailyPlanFeedbackState,
   saveDailyPlanFeedback,
 } from "@/lib/ai/daily-planning-actions";
 import {
   getDailyPlanFeedbackKey,
+  initialDailyPlanFeedbackState,
   initialDailyPlanningState,
   type DailyPlanFeedbackRating,
   type DailyPlanFeedbackTargetType,
@@ -282,35 +282,43 @@ function PlanHistory({
 export function DailyPlanningPanel({
   history,
   initialPlan,
-  persistenceAvailable,
+  persistenceMode,
 }: {
   history: DailyPlanHistoryItem[];
   initialPlan: StoredDailyPlan | null;
-  persistenceAvailable: boolean;
+  persistenceMode: "tables" | "compatibility";
 }) {
   const initialState: DailyPlanningState = initialPlan
-    ? { plan: initialPlan, status: "ready" }
+    ? { plan: initialPlan, persistenceMode, status: "ready" }
     : initialDailyPlanningState;
   const [state, action] = useActionState(generateDailyPlan, initialState);
   const plan = state.plan ?? initialPlan;
+  const activePersistenceMode = state.persistenceMode ?? persistenceMode;
 
   return (
     <section className="section-shell">
       <SectionHeader
-        action={<StatusBadge label="approval-first" tone="blue" />}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            {activePersistenceMode === "compatibility" ? (
+              <StatusBadge label="modo compatibilidade" tone="amber" />
+            ) : null}
+            <StatusBadge label="approval-first" tone="blue" />
+          </div>
+        }
         description="Um briefing salvo, baseado nos dados atuais. A IA apenas sugere e nunca executa acoes."
         title="Plano sugerido"
       />
-      {persistenceAvailable ? (
-        <form action={action} className="mt-4">
-          <SubmitButton hasPlan={Boolean(plan)} />
-        </form>
-      ) : (
+      {activePersistenceMode === "compatibility" ? (
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-          As tabelas de planejamento ainda não estão disponíveis no Supabase.
-          O restante do Today continua normal.
+          Persistencia em modo compatibilidade. O plano e o feedback ficam em
+          app_settings enquanto a Data API ainda nao reconhece as tabelas de
+          planejamento.
         </div>
-      )}
+      ) : null}
+      <form action={action} className="mt-4">
+        <SubmitButton hasPlan={Boolean(plan)} />
+      </form>
       {state.status === "error" ? (
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
           {state.message}
@@ -325,9 +333,7 @@ export function DailyPlanningPanel({
           />
         </div>
       ) : null}
-      {persistenceAvailable ? (
-        <PlanHistory currentPlanId={plan?.id} history={history} />
-      ) : null}
+      <PlanHistory currentPlanId={plan?.id} history={history} />
     </section>
   );
 }
