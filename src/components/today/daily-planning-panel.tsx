@@ -282,9 +282,11 @@ function PlanHistory({
 export function DailyPlanningPanel({
   history,
   initialPlan,
+  persistenceAvailable,
 }: {
   history: DailyPlanHistoryItem[];
   initialPlan: StoredDailyPlan | null;
+  persistenceAvailable: boolean;
 }) {
   const initialState: DailyPlanningState = initialPlan
     ? { plan: initialPlan, status: "ready" }
@@ -299,9 +301,16 @@ export function DailyPlanningPanel({
         description="Um briefing salvo, baseado nos dados atuais. A IA apenas sugere e nunca executa acoes."
         title="Plano sugerido"
       />
-      <form action={action} className="mt-4">
-        <SubmitButton hasPlan={Boolean(plan)} />
-      </form>
+      {persistenceAvailable ? (
+        <form action={action} className="mt-4">
+          <SubmitButton hasPlan={Boolean(plan)} />
+        </form>
+      ) : (
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+          As tabelas de planejamento ainda não estão disponíveis no Supabase.
+          O restante do Today continua normal.
+        </div>
+      )}
       {state.status === "error" ? (
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
           {state.message}
@@ -316,7 +325,9 @@ export function DailyPlanningPanel({
           />
         </div>
       ) : null}
-      <PlanHistory currentPlanId={plan?.id} history={history} />
+      {persistenceAvailable ? (
+        <PlanHistory currentPlanId={plan?.id} history={history} />
+      ) : null}
     </section>
   );
 }

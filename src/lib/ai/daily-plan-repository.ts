@@ -7,10 +7,75 @@ import {
   type DailyPlanFeedbackRating,
   type DailyPlanHistoryItem,
   type StoredDailyPlan,
-} from "@/lib/ai/daily-planning";
-import type { requireSession } from "@/lib/supabase/require-session";
+} from "./daily-planning";
+import type { requireSession } from "../supabase/require-session";
 
 type SupabaseClient = Awaited<ReturnType<typeof requireSession>>["supabase"];
+
+export const dailyPlanningTablesUnavailableReason =
+  "daily_planning_tables_unavailable" as const;
+export const dailyPlanningTablesUnavailableMessage =
+  "As tabelas de planejamento ainda não estão disponíveis no Supabase.";
+
+export type DailyPlanningPersistenceAvailability = {
+  available: boolean;
+};
+
+export type DailyPlanPersistenceResult =
+  | { ok: true; plan: StoredDailyPlan }
+  | {
+      message: typeof dailyPlanningTablesUnavailableMessage;
+      ok: false;
+      reason: typeof dailyPlanningTablesUnavailableReason;
+    };
+
+export function isDailyPlanningTablesUnavailable(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const record = error as {
+    code?: unknown;
+    details?: unknown;
+    hint?: unknown;
+    message?: unknown;
+  };
+  const code = typeof record.code === "string" ? record.code.toUpperCase() : "";
+  const message = [record.message, record.details, record.hint]
+    .filter((value): value is string => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+
+  if (["PGRST204", "PGRST205", "42P01"].includes(code)) {
+    return true;
+  }
+
+  const referencesDailyPlanningTable =
+    message.includes("daily_plans") ||
+    message.includes("daily_plan_feedback");
+
+  return referencesDailyPlanningTable;
+}
+
+export async function getDailyPlanningPersistenceAvailability(
+  supabase: SupabaseClient,
+): Promise<DailyPlanningPersistenceAvailability> {
+  const [plansResult, feedbackResult] = await Promise.all([
+    supabase.from("daily_plans").select("id").limit(1),
+    supabase.from("daily_plan_feedback").select("id").limit(1),
+  ]);
+
+  const errors = [plansResult.error, feedbackResult.error].filter(Boolean);
+
+  if (errors.some((error) => isDailyPlanningTablesUnavailable(error))) {
+    return { available: false };
+  }
+  if (errors.length > 0) {
+    throw new Error(errors[0]!.message);
+  }
+
+  return { available: true };
+}
 
 type DailyPlanRow = {
   id: string;
@@ -116,6 +181,10 @@ async function getFeedbackForPlan(
     .returns<DailyPlanFeedbackRow[]>();
 
   if (result.error) {
+    if (isDailyPlanningTablesUnavailable(result.error)) {
+      return [];
+    }
+
     throw new Error(result.error.message);
   }
 
@@ -139,6 +208,10 @@ export async function getDailyPlanForDate(
     .maybeSingle<DailyPlanRow>();
 
   if (result.error) {
+    if (isDailyPlanningTablesUnavailable(result.error)) {
+      return null;
+    }
+
     throw new Error(result.error.message);
   }
   if (!result.data) {
@@ -166,6 +239,10 @@ export async function getDailyPlanById(
     .maybeSingle<DailyPlanRow>();
 
   if (result.error) {
+    if (isDailyPlanningTablesUnavailable(result.error)) {
+      return null;
+    }
+
     throw new Error(result.error.message);
   }
   if (!result.data) {
@@ -202,6 +279,10 @@ export async function getRecentDailyPlans(
     >();
 
   if (result.error) {
+    if (isDailyPlanningTablesUnavailable(result.error)) {
+      return [];
+    }
+
     throw new Error(result.error.message);
   }
 
@@ -228,6 +309,10 @@ export async function getRecentDailyPlanFeedbackSummary(
     .returns<Array<{ target_type: string; rating: string }>>();
 
   if (result.error) {
+    if (isDailyPlanningTablesUnavailable(result.error)) {
+      return [];
+    }
+
     throw new Error(result.error.message);
   }
 
@@ -253,6 +338,14 @@ export async function persistDailyPlan(
     .maybeSingle<{ id: string; generation: number }>();
 
   if (existing.error) {
+    if (isDailyPlanningTablesUnavailable(existing.error)) {
+      return {
+        message: dailyPlanningTablesUnavailableMessage,
+        ok: false,
+        reason: dailyPlanningTablesUnavailableReason,
+      } satisfies DailyPlanPersistenceResult;
+    }
+
     throw new Error(existing.error.message);
   }
 
@@ -290,6 +383,14 @@ export async function persistDailyPlan(
         .single<DailyPlanRow>();
 
   if (result.error) {
+    if (isDailyPlanningTablesUnavailable(result.error)) {
+      return {
+        message: dailyPlanningTablesUnavailableMessage,
+        ok: false,
+        reason: dailyPlanningTablesUnavailableReason,
+      } satisfies DailyPlanPersistenceResult;
+    }
+
     throw new Error(result.error.message);
   }
 
@@ -298,5 +399,5 @@ export async function persistDailyPlan(
     throw new Error("Saved daily plan did not match the expected structure.");
   }
 
-  return savedPlan;
+  return { ok: true, plan: savedPlan } satisfies DailyPlanPersistenceResult;
 }

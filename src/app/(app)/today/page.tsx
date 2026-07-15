@@ -12,6 +12,7 @@ import {
 import { getAppPreferencesForUser } from "@/lib/app-settings/server";
 import {
   getDailyPlanForDate,
+  getDailyPlanningPersistenceAvailability,
   getRecentDailyPlans,
 } from "@/lib/ai/daily-plan-repository";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -521,6 +522,7 @@ export default async function TodayPage() {
     projectsForNamesResult,
     dailyPlan,
     dailyPlanHistory,
+    dailyPlanningAvailability,
   ] = await Promise.all([
     getCount(
       supabase
@@ -600,8 +602,13 @@ export default async function TodayPage() {
       .from("projects")
       .select("id,name,status,type,target_date,domain_id")
       .returns<ProjectRow[]>(),
-    getDailyPlanForDate(supabase, user.id, today, preferences.timezone),
-    getRecentDailyPlans(supabase, user.id),
+    getDailyPlanForDate(supabase, user.id, today, preferences.timezone).catch(
+      () => null,
+    ),
+    getRecentDailyPlans(supabase, user.id).catch(() => []),
+    getDailyPlanningPersistenceAvailability(supabase).catch(() => ({
+      available: false,
+    })),
   ]);
 
   if (overdueTasksResult.error) {
@@ -734,6 +741,7 @@ export default async function TodayPage() {
         <DailyPlanningPanel
           history={dailyPlanHistory}
           initialPlan={dailyPlan}
+          persistenceAvailable={dailyPlanningAvailability.available}
         />
 
         <CalendarSection

@@ -19,8 +19,12 @@ import {
   type DailyPlanningState,
 } from "@/lib/ai/daily-planning";
 import {
+  dailyPlanningTablesUnavailableMessage,
+  dailyPlanningTablesUnavailableReason,
   getDailyPlanById,
+  getDailyPlanningPersistenceAvailability,
   getRecentDailyPlanFeedbackSummary,
+  isDailyPlanningTablesUnavailable,
   persistDailyPlan,
 } from "@/lib/ai/daily-plan-repository";
 import { addDays, toDateOnlyInTimezone } from "@/lib/app-settings/preferences";
@@ -45,7 +49,9 @@ const dailyPlanFeedbackInputSchema = z.object({
 
 export type DailyPlanFeedbackState = {
   message?: string;
+  ok?: boolean;
   rating?: DailyPlanFeedbackRating;
+  reason?: typeof dailyPlanningTablesUnavailableReason;
   status: "idle" | "saved" | "error";
 };
 
@@ -246,6 +252,17 @@ export async function generateDailyPlan(
   }
 
   try {
+    const availability = await getDailyPlanningPersistenceAvailability(supabase);
+
+    if (!availability.available) {
+      return {
+        message: dailyPlanningTablesUnavailableMessage,
+        ok: false,
+        reason: dailyPlanningTablesUnavailableReason,
+        status: "error",
+      };
+    }
+
     const context = await buildDailyPlanningContext(supabase, user.id);
     const feedbackSummary = await getRecentDailyPlanFeedbackSummary(
       supabase,
@@ -307,10 +324,20 @@ export async function generateDailyPlan(
       timezone: context.timezone,
     });
 
+    if (!savedPlan.ok) {
+      return {
+        message: savedPlan.message,
+        ok: false,
+        reason: savedPlan.reason,
+        status: "error",
+      };
+    }
+
     revalidatePath("/today");
     revalidatePath("/planning");
     return {
-      plan: savedPlan,
+      ok: true,
+      plan: savedPlan.plan,
       status: "ready",
     };
   } catch {
@@ -339,6 +366,17 @@ export async function saveDailyPlanFeedback(
 
   try {
     const { supabase, user } = await requireSession();
+    const availability = await getDailyPlanningPersistenceAvailability(supabase);
+
+    if (!availability.available) {
+      return {
+        message: dailyPlanningTablesUnavailableMessage,
+        ok: false,
+        reason: dailyPlanningTablesUnavailableReason,
+        status: "error",
+      };
+    }
+
     const plan = await getDailyPlanById(supabase, user.id, parsedInput.data.dailyPlanId);
 
     if (!plan || plan.generation !== parsedInput.data.planGeneration) {
@@ -375,12 +413,21 @@ export async function saveDailyPlanFeedback(
       );
 
     if (result.error) {
+      if (isDailyPlanningTablesUnavailable(result.error)) {
+        return {
+          message: dailyPlanningTablesUnavailableMessage,
+          ok: false,
+          reason: dailyPlanningTablesUnavailableReason,
+          status: "error",
+        };
+      }
+
       throw new Error(result.error.message);
     }
 
     revalidatePath("/today");
     revalidatePath("/planning");
-    return { rating: parsedInput.data.rating, status: "saved" };
+    return { ok: true, rating: parsedInput.data.rating, status: "saved" };
   } catch {
     return {
       message: "Nao foi possivel salvar o feedback agora.",

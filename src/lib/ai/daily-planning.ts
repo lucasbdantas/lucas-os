@@ -124,7 +124,9 @@ export type DailyPlanHistoryItem = Pick<
 export type DailyPlanningState = {
   status: "idle" | "ready" | "error";
   message?: string;
+  ok?: boolean;
   plan?: StoredDailyPlan;
+  reason?: "daily_planning_tables_unavailable";
 };
 
 export const initialDailyPlanningState: DailyPlanningState = { status: "idle" };

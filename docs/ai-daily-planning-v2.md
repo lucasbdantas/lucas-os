@@ -57,6 +57,19 @@ No Supabase SQL Editor, aplique integralmente
 `supabase/migrations/20260714000008_daily_plans.sql` depois das migrations
 anteriores. Ela nao altera dados existentes.
 
+## Troubleshooting: schema cache do Supabase
+
+Se o PostgREST retornar uma mensagem como `Could not find the table
+public.daily_plans in the schema cache`, o Lucas OS entra em modo degradado:
+Today continua abrindo, mas o plano persistido, historico e feedback ficam
+temporariamente indisponiveis. A pagina `/planning` mostra um estado amigavel
+em vez de quebrar.
+
+Confirme que a migration foi executada integralmente no projeto Supabase certo.
+Depois, aguarde a atualizacao do schema cache do PostgREST e recarregue o app.
+Quando as duas tabelas forem visiveis (`daily_plans` e
+`daily_plan_feedback`), o recurso volta a funcionar sem nova configuracao.
+
 ## Teste local e na Vercel
 
 Com uma sessao autenticada e `OPENAI_API_KEY` configurada apenas no ambiente

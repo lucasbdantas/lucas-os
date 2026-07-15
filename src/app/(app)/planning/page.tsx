@@ -5,6 +5,7 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   getDailyPlanById,
+  getDailyPlanningPersistenceAvailability,
   getRecentDailyPlans,
 } from "@/lib/ai/daily-plan-repository";
 import type { StoredDailyPlan } from "@/lib/ai/daily-planning";
@@ -78,10 +79,17 @@ function PlanItems({ items, title }: { items: string[]; title: string }) {
 export default async function PlanningPage({ searchParams }: PlanningPageProps) {
   const { id } = await searchParams;
   const { supabase, user } = await requireSession();
-  const [selectedPlan, history] = await Promise.all([
-    id ? getDailyPlanById(supabase, user.id, id) : Promise.resolve(null),
-    getRecentDailyPlans(supabase, user.id),
-  ]);
+  const availability = await getDailyPlanningPersistenceAvailability(
+    supabase,
+  ).catch(() => ({ available: false }));
+  const [selectedPlan, history] = availability.available
+    ? await Promise.all([
+        id
+          ? getDailyPlanById(supabase, user.id, id).catch(() => null)
+          : Promise.resolve(null),
+        getRecentDailyPlans(supabase, user.id).catch(() => []),
+      ])
+    : [null, []];
 
   return (
     <main className="app-page mx-auto max-w-5xl">
@@ -94,7 +102,11 @@ export default async function PlanningPage({ searchParams }: PlanningPageProps) 
       <div className="mt-8 grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
         <aside className="section-shell h-fit">
           <p className="font-semibold text-zinc-950">Ultimos 14 dias</p>
-          {history.length === 0 ? (
+          {!availability.available ? (
+            <p className="mt-2 text-sm leading-6 text-zinc-600">
+              Historico indisponivel enquanto o Supabase atualiza as tabelas de planejamento.
+            </p>
+          ) : history.length === 0 ? (
             <p className="mt-2 text-sm leading-6 text-zinc-600">
               Gere o primeiro plano no Today.
             </p>
@@ -118,7 +130,12 @@ export default async function PlanningPage({ searchParams }: PlanningPageProps) 
           )}
         </aside>
 
-        {selectedPlan ? (
+        {!availability.available ? (
+          <EmptyState
+            description="As tabelas de planejamento ainda não estão disponíveis no Supabase. O restante do Lucas OS continua funcionando."
+            title="Planejamento temporariamente indisponivel"
+          />
+        ) : selectedPlan ? (
           <StoredPlan plan={selectedPlan} />
         ) : (
           <EmptyState
