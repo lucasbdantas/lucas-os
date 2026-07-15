@@ -1,4 +1,8 @@
 import { AppNav } from "@/components/layout/app-nav";
+import {
+  CommandPaletteProvider,
+  CommandPaletteTrigger,
+} from "@/components/navigation/command-palette";
 import type { AppAppearance } from "@/lib/app-settings/preferences";
 import { logout } from "@/lib/auth/actions";
 
@@ -29,6 +33,7 @@ export function AppShell({
   userEmail,
 }: AppShellProps) {
   return (
+    <CommandPaletteProvider>
     <div className="app-shell-surface min-h-screen" data-theme={appearance}>
       <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-zinc-200 bg-white px-5 py-6 md:flex md:flex-col">
         <div className="app-card-soft p-4">
@@ -38,6 +43,8 @@ export function AppShell({
           </p>
           <p className="mt-2 truncate text-sm text-zinc-600">{userEmail}</p>
         </div>
+
+        <CommandPaletteTrigger variant="desktop" />
 
         <AppNav
           items={navItems}
@@ -57,11 +64,14 @@ export function AppShell({
           <p className="section-kicker">Lucas OS</p>
           <p className="max-w-48 truncate text-xs text-zinc-600">{userEmail}</p>
         </div>
-        <form action={logout}>
-          <button className="soft-button px-3 py-2 text-sm font-medium">
-            Sair
-          </button>
-        </form>
+        <div className="flex items-center gap-1">
+          <CommandPaletteTrigger variant="mobile" />
+          <form action={logout}>
+            <button className="soft-button px-3 py-2 text-sm font-medium">
+              Sair
+            </button>
+          </form>
+        </div>
       </header>
 
       <div className="min-h-screen pb-32 md:pl-72 md:pb-0">{children}</div>
@@ -72,5 +82,6 @@ export function AppShell({
         variant="mobile"
       />
     </div>
+    </CommandPaletteProvider>
   );
 }
