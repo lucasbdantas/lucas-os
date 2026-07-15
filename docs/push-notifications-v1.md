@@ -47,17 +47,23 @@ Copie os valores para o ambiente local/Vercel:
 
 Nao commitar esses valores.
 
-## Como testar localmente
+## Como ativar e testar pelo app
 
 1. Aplique a migration `20260701000007_push_notifications.sql`.
 2. Configure `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY` e `WEB_PUSH_SUBJECT`.
 3. Rode o app.
 4. Abra `/settings/notifications`.
-5. Clique em `Ativar notificacoes`.
-6. Crie uma task com `due_date`, `due_time` e lembrete.
-7. Quando o lembrete estiver vencido, clique em `Verificar lembretes vencidos agora`.
-8. Confirme que o navegador recebe a notificacao.
-9. Clique na notificacao e confirme que abre a task ou `/notifications`.
+5. Clique em `Ativar notificações neste dispositivo`.
+6. Confira no painel se permissão, service worker e inscrição estão ativos.
+7. Use `Enviar push de teste para este dispositivo` para validar a inscrição sem criar task.
+8. Use `Criar lembrete de teste` e confirme explicitamente. O app cria uma task na Inbox para dois minutos no futuro, com lembrete na hora.
+9. Depois do horário indicado, clique em `Processar lembretes agora`.
+10. Leia os contadores e mensagens humanas no bloco `Último processamento`.
+11. Clique na notificação recebida e confirme que ela abre a task ou `/notifications`.
+
+Se a inscrição foi criada com VAPID antiga, expirou ou ficou inconsistente, use
+`Resetar inscrição deste dispositivo`. O app revoga a inscrição local anterior,
+remove-a do navegador e registra uma nova com a chave pública atual.
 
 ## Como testar na Vercel
 
@@ -69,8 +75,9 @@ Nao commitar esses valores.
 3. Redeploy.
 4. Abra `/settings/notifications` no navegador/dispositivo desejado.
 5. Ative notificacoes.
-6. Crie um lembrete vencido.
-7. Use `Verificar lembretes vencidos agora` para validar envio real.
+6. Envie primeiro um push de teste direto.
+7. Crie o lembrete de teste pelo painel e aguarde o horário exibido.
+8. Use `Processar lembretes agora` para validar o envio real.
 
 ## Scheduler/Cron
 
@@ -112,6 +119,19 @@ Motivos possiveis em `skippedReasons`:
 O diagnostico nao retorna titulo de task, corpo da notificacao, endpoint de push,
 chaves de subscription ou secrets.
 
+O painel traduz os principais motivos para linguagem humana:
+
+- `already_delivered`: este lembrete já foi processado para aquele dispositivo e não será reenviado;
+- `web_push_unauthorized`: a inscrição pode ter sido criada com outra chave VAPID; resete ou reative o dispositivo;
+- `web_push_gone` e `web_push_not_found`: a inscrição antiga expirou e precisa ser reativada;
+- `notification_not_due`: o horário do lembrete ainda não chegou;
+- `missing_subscription` ou `subscription_revoked`: não há dispositivo ativo para o envio.
+
+`pendingReminders` conta lembretes vencidos e elegíveis. `subscriptions` conta
+dispositivos ativos considerados. `delivered`, `failed` e `skipped` descrevem o
+resultado desta execução; itens `skipped` não são necessariamente erros, pois
+`already_delivered` confirma que a idempotência impediu reenvio.
+
 Motivos possiveis em `failedReasons`:
 
 - `web_push_unauthorized`: geralmente VAPID keys incorretas, subject invalido ou configuracao Web Push rejeitada pelo provedor;
@@ -146,6 +166,9 @@ Quando `failed > 0`, olhe primeiro `failedReasons`. Se aparecer
 - sem cron automatico nesta versao;
 - sem push para emails, Calendar ou IA;
 - sem preferencias avancadas por horario silencioso.
+
+O painel permite processamento manual e teste real sem DevTools. Scheduler/cron
+automático continua fora da V1 e fica reservado para Push Notifications V2.
 
 ## Proximos passos
 

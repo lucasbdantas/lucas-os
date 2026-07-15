@@ -15,6 +15,7 @@ import {
   mergePushSkippedReasons,
   type PushDeliveryRecord,
   type PushFailedExample,
+  type PushFailedReason,
   type PushFailedReasons,
   type PushReminderNotification,
   type PushSkippedExample,
@@ -43,6 +44,13 @@ type PushSubscriptionRow = PushSubscriptionTarget & {
   revoked_at: string | null;
 };
 
+export type SendPushTestResult = {
+  failureReason: PushFailedReason | null;
+  missingConfiguration: boolean;
+  ok: boolean;
+  subscriptionFound: boolean;
+};
+
 function configureWebPush() {
   const env = getWebPushEnv();
 
@@ -65,6 +73,86 @@ function getPushError(error: unknown) {
 function shouldRevokeSubscriptionAfterError(error: unknown) {
   const statusCode = getPushError(error).statusCode;
   return statusCode === 404 || statusCode === 410;
+}
+
+export async function sendPushTestToSubscription(input: {
+  endpoint: string;
+  supabase: SupabaseClient;
+  userId: string;
+}): Promise<SendPushTestResult> {
+  const env = configureWebPush();
+
+  if (!env) {
+    return {
+      failureReason: null,
+      missingConfiguration: true,
+      ok: false,
+      subscriptionFound: false,
+    };
+  }
+
+  const { data: subscription, error } = await input.supabase
+    .from("push_subscriptions")
+    .select("id,endpoint,p256dh,auth,revoked_at")
+    .eq("user_id", input.userId)
+    .eq("endpoint", input.endpoint)
+    .is("revoked_at", null)
+    .maybeSingle<PushSubscriptionRow>();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!subscription) {
+    return {
+      failureReason: null,
+      missingConfiguration: false,
+      ok: false,
+      subscriptionFound: false,
+    };
+  }
+
+  try {
+    await webpush.sendNotification(
+      {
+        endpoint: subscription.endpoint,
+        keys: {
+          auth: subscription.auth,
+          p256dh: subscription.p256dh,
+        },
+      },
+      JSON.stringify({
+        body: "Se você recebeu isto, este dispositivo está pronto para os lembretes.",
+        tag: `lucas-os-push-test-${Date.now()}`,
+        title: "Teste de push do Lucas OS",
+        url: "/settings/notifications",
+      }),
+    );
+
+    return {
+      failureReason: null,
+      missingConfiguration: false,
+      ok: true,
+      subscriptionFound: true,
+    };
+  } catch (sendError) {
+    const failureReason = classifyPushFailure(sendError);
+
+    if (shouldRevokeSubscriptionAfterError(sendError)) {
+      await input.supabase
+        .from("push_subscriptions")
+        .update({ revoked_at: new Date().toISOString() })
+        .eq("id", subscription.id)
+        .eq("user_id", input.userId);
+    }
+
+    return {
+      failureReason,
+      missingConfiguration: false,
+      ok: false,
+      subscriptionFound: true,
+    };
+  }
 }
 
 export async function processDuePushRemindersForUser(input: {
