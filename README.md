@@ -1,8 +1,12 @@
 # Lucas OS
 
-Personal Operations Dashboard self-hosted para Lucas Batista Dantas.
+Personal Operations Dashboard self-hosted para Lucas Batista Dantas. Versão
+atual do aplicativo: `1.0.0`.
 
-O projeto segue `SCOPE.md` e esta sendo construido por fases. O estado atual ja inclui auth, domains, projects, milestones, tasks, capture, AI preview opcional, mobile capture, quick capture, PWA, review, recurring tasks, app settings, reminders e notifications internas.
+O projeto segue `SCOPE.md`. O candidato v1 inclui Auth/RLS, Today, Planning,
+Review, Domains, Projects, Tasks, Capture, PWA/mobile, Gmail e Calendar
+read-only, Content Library, notificações internas/push, backup export, restore
+preview e Workspace Reset seguro.
 
 ## Stack
 
@@ -87,6 +91,10 @@ O seed e idempotente para domains e projects.
 - `docs/supabase-production-setup-v1.md`
 - `docs/backup-recovery-v1.md`
 - `docs/e2e-smoke-tests-v1.md`
+- `docs/content-library-v1.md`
+- `docs/workspace-reset-v1.md`
+- `docs/system-health-setup-v1.md`
+- `docs/v1-readiness-checkpoint.md`
 
 ## Health check
 

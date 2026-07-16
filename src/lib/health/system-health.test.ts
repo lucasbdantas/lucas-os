@@ -45,4 +45,23 @@ describe("system health", () => {
     expect(items).toHaveLength(8);
     expect(items.every((item) => item.href.startsWith("/"))).toBe(true);
   });
+
+  it("mostra tabelas reais quando Daily Planning está disponível", () => {
+    const checks = buildSystemHealthChecks({
+      activeGoogleAccounts: [],
+      authReady: true,
+      backupReady: true,
+      dailyPlanningTablesReady: true,
+      openAIConfigured: false,
+      pushConfigured: false,
+      schedulerConfigured: false,
+      supabaseReady: true,
+    });
+
+    expect(checks.find((item) => item.label === "Daily Planning")).toMatchObject({
+      detail: "Tabelas dedicadas disponíveis",
+      status: "tabelas",
+      tone: "good",
+    });
+  });
 });

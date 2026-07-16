@@ -119,8 +119,8 @@ export default async function SettingsPage({
           <div>
             <h2 className="font-semibold text-zinc-950">Integracoes</h2>
             <p className="mt-1 text-sm text-zinc-600">
-              Conecte contas Google com OAuth seguro. Gmail e Calendar ainda nao
-              sao lidos nesta etapa.
+              Conecte contas Google com OAuth seguro para Gmail e Calendar em
+              modo somente leitura.
             </p>
           </div>
           <Link
@@ -256,8 +256,8 @@ export default async function SettingsPage({
                 </li>
                 <li>Em produção futura, use o domínio real do Lucas OS.</li>
                 <li>
-                  Esta versão não promete modo offline e não usa notificações
-                  push.
+                  Esta versão não promete modo offline. Notificações push são
+                  opcionais e configuradas separadamente por dispositivo.
                 </li>
               </ul>
             </div>
