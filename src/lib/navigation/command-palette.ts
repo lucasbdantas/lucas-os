@@ -19,6 +19,11 @@ export type CommandPaletteEntityInput = {
   type: Exclude<CommandPaletteResultType, "command">;
 };
 
+export type CommandPaletteSearchResponse = {
+  hasPartialFailure: boolean;
+  results: CommandPaletteResult[];
+};
+
 export const commandPaletteCommands: CommandPaletteResult[] = [
   { description: "Painel operacional do dia", href: "/today", title: "Today", type: "command" },
   { description: "Capturar texto em um toque", href: "/quick-capture", title: "Quick Capture", type: "command" },
@@ -45,7 +50,29 @@ export const commandPaletteSuggestions = [
 ];
 
 export function normalizeCommandPaletteQuery(value: string) {
-  return value.trim().toLocaleLowerCase("pt-BR");
+  return value
+    .trim()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLocaleLowerCase("pt-BR");
+}
+
+export function shouldOpenCommandPaletteShortcut({
+  ctrlKey,
+  isEditable,
+  key,
+  metaKey,
+}: {
+  ctrlKey: boolean;
+  isEditable: boolean;
+  key: string;
+  metaKey: boolean;
+}) {
+  return (
+    !isEditable &&
+    (ctrlKey || metaKey) &&
+    key.toLocaleLowerCase("pt-BR") === "k"
+  );
 }
 
 function getResultScore(result: CommandPaletteResult, query: string) {
@@ -85,4 +112,17 @@ export function buildCommandPaletteEntityResults(
   entities: CommandPaletteEntityInput[],
 ) {
   return entities.map((entity) => ({ ...entity }));
+}
+
+export function collectCommandPaletteSearchResults(
+  settledResults: Array<PromiseSettledResult<CommandPaletteEntityInput[]>>,
+) {
+  const entities = settledResults.flatMap((result) =>
+    result.status === "fulfilled" ? result.value : [],
+  );
+
+  return {
+    hasPartialFailure: settledResults.some((result) => result.status === "rejected"),
+    results: buildCommandPaletteEntityResults(entities),
+  } satisfies CommandPaletteSearchResponse;
 }

@@ -4,6 +4,7 @@ vi.mock("server-only", () => ({}));
 
 import {
   DAILY_PLANNING_COMPATIBILITY_KEY,
+  dailyPlanningPersistenceUnavailableReason,
   getDailyPlanForDate,
   getDailyPlanningPersistenceAvailability,
   getRecentDailyPlans,
@@ -152,6 +153,81 @@ describe("daily plan app settings compatibility fallback", () => {
     ]);
   });
 
+  it("keeps Today and Planning readable when compatibility storage is unavailable", async () => {
+    const storageError = { message: "Could not read app settings" };
+    const planSupabase = createSupabase({
+      app_settings: { maybeSingle: [{ data: null, error: storageError }] },
+      daily_plans: { maybeSingle: [{ data: null, error: schemaCacheError }] },
+    });
+    const historySupabase = createSupabase({
+      app_settings: { maybeSingle: [{ data: null, error: storageError }] },
+      daily_plans: { returns: [{ data: null, error: schemaCacheError }] },
+    });
+
+    await expect(
+      getDailyPlanForDate(
+        planSupabase as never,
+        "user-id",
+        "2026-07-15",
+        "America/Sao_Paulo",
+      ),
+    ).resolves.toBeNull();
+    await expect(
+      getRecentDailyPlans(historySupabase as never, "user-id"),
+    ).resolves.toEqual([]);
+  });
+
+  it("returns a recoverable message when fallback persistence cannot save", async () => {
+    const supabase = createSupabase({
+      app_settings: {
+        maybeSingle: [{ data: null, error: { message: "Write unavailable" } }],
+      },
+      daily_plans: { maybeSingle: [{ data: null, error: schemaCacheError }] },
+    });
+
+    await expect(
+      persistDailyPlan(supabase as never, "user-id", {
+        model: "gpt-4.1-nano",
+        plan: {
+          nextSteps: [],
+          priorities: [],
+          rescheduleSuggestions: [],
+          risks: [],
+          summary: "Plano",
+          triageSuggestions: [],
+        },
+        planDate: "2026-07-15",
+        sourceSnapshot: {},
+        timezone: "America/Sao_Paulo",
+      }),
+    ).resolves.toMatchObject({
+      ok: false,
+      reason: dailyPlanningPersistenceUnavailableReason,
+    });
+  });
+
+  it("normalizes and limits compatibility history to the newest 14 plans", async () => {
+    const plans = Array.from({ length: 15 }, (_, index) =>
+      compatibilityRecord({
+        generated_at: `2026-07-${String(index + 1).padStart(2, "0")}T12:00:00.000Z`,
+        id: `compatibility-${index + 1}`,
+        plan_date: `2026-07-${String(index + 1).padStart(2, "0")}`,
+      }),
+    ).reverse();
+    const supabase = createSupabase({
+      app_settings: {
+        maybeSingle: [{ data: { value: { plans } }, error: null }],
+      },
+      daily_plans: { returns: [{ data: null, error: schemaCacheError }] },
+    });
+
+    const history = await getRecentDailyPlans(supabase as never, "user-id");
+
+    expect(history).toHaveLength(14);
+    expect(history[0]).toMatchObject({ id: "compatibility-15" });
+    expect(history.find((plan) => plan.id === "compatibility-1")).toBeUndefined();
+  });
+
   it("saves feedback into the matching compatibility plan", async () => {
     const supabase = createSupabase({
       app_settings: {
@@ -180,6 +256,57 @@ describe("daily plan app settings compatibility fallback", () => {
     );
     expect(write?.payload).toMatchObject({
       value: { plans: [expect.objectContaining({ feedback: { "priority:0": "useful" } })] },
+    });
+  });
+
+  it("replaces a compatibility feedback rating instead of duplicating it", async () => {
+    const supabase = createSupabase({
+      app_settings: {
+        maybeSingle: [
+          { data: { value: { plans: [compatibilityRecord()] } }, error: null },
+          {
+            data: {
+              value: {
+                plans: [
+                  compatibilityRecord({ feedback: { "priority:0": "useful" } }),
+                ],
+              },
+            },
+            error: null,
+          },
+        ],
+        upsert: [
+          { data: null, error: null },
+          { data: null, error: null },
+        ],
+      },
+    });
+    const input = {
+      dailyPlanId: "compatibility-plan",
+      planGeneration: 1,
+      targetIndex: 0,
+      targetType: "priority" as const,
+    };
+
+    await persistDailyPlanFeedback(supabase as never, "user-id", {
+      ...input,
+      rating: "useful",
+    });
+    await persistDailyPlanFeedback(supabase as never, "user-id", {
+      ...input,
+      rating: "ignored",
+    });
+
+    const writes = supabase.calls.filter(
+      (call) => call.operation === "upsert" && call.table === "app_settings",
+    );
+    expect(writes).toHaveLength(2);
+    expect(writes[1]?.payload).toMatchObject({
+      value: {
+        plans: [
+          expect.objectContaining({ feedback: { "priority:0": "ignored" } }),
+        ],
+      },
     });
   });
 

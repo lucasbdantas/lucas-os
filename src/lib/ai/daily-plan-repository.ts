@@ -19,6 +19,11 @@ export const dailyPlanningTablesUnavailableReason =
 export const dailyPlanningTablesUnavailableMessage =
   "As tabelas de planejamento ainda não estão disponíveis no Supabase.";
 
+export const dailyPlanningPersistenceUnavailableReason =
+  "daily_planning_persistence_unavailable" as const;
+export const dailyPlanningPersistenceUnavailableMessage =
+  "O plano foi gerado, mas não pode ser salvo agora. Tente novamente em instantes.";
+
 export type DailyPlanningPersistenceMode = "tables" | "compatibility";
 
 export type DailyPlanningPersistenceAvailability = {
@@ -33,17 +38,25 @@ export type DailyPlanPersistenceResult =
       plan: StoredDailyPlan;
     }
   | {
-      message: typeof dailyPlanningTablesUnavailableMessage;
+      message:
+        | typeof dailyPlanningTablesUnavailableMessage
+        | typeof dailyPlanningPersistenceUnavailableMessage;
       ok: false;
-      reason: typeof dailyPlanningTablesUnavailableReason;
+      reason:
+        | typeof dailyPlanningTablesUnavailableReason
+        | typeof dailyPlanningPersistenceUnavailableReason;
     };
 
 export type DailyPlanFeedbackPersistenceResult =
   | { mode: DailyPlanningPersistenceMode; ok: true }
   | {
-      message: typeof dailyPlanningTablesUnavailableMessage;
+      message:
+        | typeof dailyPlanningTablesUnavailableMessage
+        | typeof dailyPlanningPersistenceUnavailableMessage;
       ok: false;
-      reason: typeof dailyPlanningTablesUnavailableReason;
+      reason:
+        | typeof dailyPlanningTablesUnavailableReason
+        | typeof dailyPlanningPersistenceUnavailableReason;
     };
 
 type DailyPlanRow = {
@@ -263,10 +276,11 @@ function parseCompatibilityPlans(value: unknown) {
     return [];
   }
 
-  return value.plans
-    .map(parseCompatibilityPlan)
-    .filter((plan): plan is CompatibilityPlanRecord => Boolean(plan))
-    .slice(0, 14);
+  return sortAndLimitCompatibilityPlans(
+    value.plans
+      .map(parseCompatibilityPlan)
+      .filter((plan): plan is CompatibilityPlanRecord => Boolean(plan)),
+  );
 }
 
 function compatibilityPlanToStored(plan: CompatibilityPlanRecord) {
@@ -321,6 +335,19 @@ async function getCompatibilityPlans(supabase: SupabaseClient, userId: string) {
   return parseCompatibilityPlans(result.data?.value);
 }
 
+async function getCompatibilityPlansSafely(
+  supabase: SupabaseClient,
+  userId: string,
+) {
+  try {
+    return await getCompatibilityPlans(supabase, userId);
+  } catch {
+    // Read paths must not make Today or Planning unavailable when the fallback
+    // storage has a temporary Data API or RLS problem.
+    return [];
+  }
+}
+
 async function saveCompatibilityPlans(
   supabase: SupabaseClient,
   userId: string,
@@ -371,7 +398,9 @@ async function getDailyPlanFromCompatibility(
   userId: string,
   predicate: (plan: CompatibilityPlanRecord) => boolean,
 ) {
-  const plan = (await getCompatibilityPlans(supabase, userId)).find(predicate);
+  const plan = (await getCompatibilityPlansSafely(supabase, userId)).find(
+    predicate,
+  );
 
   return plan ? compatibilityPlanToStored(plan) : null;
 }
@@ -496,7 +525,7 @@ export async function getRecentDailyPlans(
 
   if (result.error) {
     if (isDailyPlanningTablesUnavailable(result.error)) {
-      return (await getCompatibilityPlans(supabase, userId))
+      return (await getCompatibilityPlansSafely(supabase, userId))
         .map(compatibilityPlanToStored)
         .filter((plan): plan is StoredDailyPlan => Boolean(plan))
         .map(toHistoryItem)
@@ -514,7 +543,7 @@ export async function getRecentDailyPlans(
     summary: row.summary,
     timezone: row.timezone,
   }));
-  const compatibilityHistory = (await getCompatibilityPlans(supabase, userId))
+  const compatibilityHistory = (await getCompatibilityPlansSafely(supabase, userId))
     .map(compatibilityPlanToStored)
     .filter((plan): plan is StoredDailyPlan => Boolean(plan))
     .map(toHistoryItem);
@@ -538,7 +567,7 @@ export async function getRecentDailyPlanFeedbackSummary(
     .order("created_at", { ascending: false })
     .limit(30)
     .returns<Array<{ target_type: string; rating: string }>>();
-  const compatibilityFeedback = (await getCompatibilityPlans(supabase, userId))
+  const compatibilityFeedback = (await getCompatibilityPlansSafely(supabase, userId))
     .flatMap((plan) =>
       Object.entries(plan.feedback).map(([key, rating]) => ({
         rating,
@@ -565,36 +594,44 @@ async function persistCompatibilityPlan(
   userId: string,
   input: DailyPlanPersistenceInput,
 ): Promise<DailyPlanPersistenceResult> {
-  const plans = await getCompatibilityPlans(supabase, userId);
-  const existing = plans.find(
-    (plan) => plan.plan_date === input.planDate && plan.timezone === input.timezone,
-  );
-  const record: CompatibilityPlanRecord = {
-    feedback: {},
-    generated_at: new Date().toISOString(),
-    generation: (existing?.generation ?? 0) + 1,
-    id: existing?.id ?? crypto.randomUUID(),
-    model: input.model,
-    next_steps: input.plan.nextSteps,
-    plan_date: input.planDate,
-    priorities: input.plan.priorities,
-    reschedule_suggestions: input.plan.rescheduleSuggestions,
-    risks: input.plan.risks,
-    revision: (existing?.revision ?? existing?.generation ?? 0) + 1,
-    summary: input.plan.summary,
-    timezone: input.timezone,
-    triage_suggestions: input.plan.triageSuggestions,
-  };
-  const savedPlans = [...plans.filter((plan) => plan !== existing), record];
+  try {
+    const plans = await getCompatibilityPlans(supabase, userId);
+    const existing = plans.find(
+      (plan) => plan.plan_date === input.planDate && plan.timezone === input.timezone,
+    );
+    const record: CompatibilityPlanRecord = {
+      feedback: {},
+      generated_at: new Date().toISOString(),
+      generation: (existing?.generation ?? 0) + 1,
+      id: existing?.id ?? crypto.randomUUID(),
+      model: input.model,
+      next_steps: input.plan.nextSteps,
+      plan_date: input.planDate,
+      priorities: input.plan.priorities,
+      reschedule_suggestions: input.plan.rescheduleSuggestions,
+      risks: input.plan.risks,
+      revision: (existing?.revision ?? existing?.generation ?? 0) + 1,
+      summary: input.plan.summary,
+      timezone: input.timezone,
+      triage_suggestions: input.plan.triageSuggestions,
+    };
+    const savedPlans = [...plans.filter((plan) => plan !== existing), record];
 
-  await saveCompatibilityPlans(supabase, userId, savedPlans);
-  const plan = compatibilityPlanToStored(record);
+    await saveCompatibilityPlans(supabase, userId, savedPlans);
+    const plan = compatibilityPlanToStored(record);
 
-  if (!plan) {
-    throw new Error("Compatibility daily plan did not match the expected structure.");
+    if (!plan) {
+      throw new Error("Compatibility daily plan did not match the expected structure.");
+    }
+
+    return { mode: "compatibility", ok: true, plan };
+  } catch {
+    return {
+      message: dailyPlanningPersistenceUnavailableMessage,
+      ok: false,
+      reason: dailyPlanningPersistenceUnavailableReason,
+    };
   }
-
-  return { mode: "compatibility", ok: true, plan };
 }
 
 export async function persistDailyPlan(
@@ -671,12 +708,20 @@ export async function persistDailyPlanFeedback(
   userId: string,
   input: DailyPlanFeedbackPersistenceInput,
 ): Promise<DailyPlanFeedbackPersistenceResult> {
-  const compatibilityPlans = await getCompatibilityPlans(supabase, userId);
-  const compatibilityPlan = compatibilityPlans.find(
+  let compatibilityPlans: CompatibilityPlanRecord[] | null = null;
+
+  try {
+    compatibilityPlans = await getCompatibilityPlans(supabase, userId);
+  } catch {
+    // Dedicated tables can still accept feedback when the compatibility
+    // setting has a temporary availability problem.
+  }
+
+  const compatibilityPlan = compatibilityPlans?.find(
     (plan) => plan.id === input.dailyPlanId,
   );
 
-  if (compatibilityPlan) {
+  if (compatibilityPlan && compatibilityPlans) {
     compatibilityPlan.feedback[
       getDailyPlanFeedbackKey(
         input.targetType as Parameters<typeof getDailyPlanFeedbackKey>[0],
@@ -706,9 +751,13 @@ export async function persistDailyPlanFeedback(
   if (result.error) {
     if (isDailyPlanningTablesUnavailable(result.error)) {
       return {
-        message: dailyPlanningTablesUnavailableMessage,
+        message: compatibilityPlans
+          ? dailyPlanningTablesUnavailableMessage
+          : dailyPlanningPersistenceUnavailableMessage,
         ok: false,
-        reason: dailyPlanningTablesUnavailableReason,
+        reason: compatibilityPlans
+          ? dailyPlanningTablesUnavailableReason
+          : dailyPlanningPersistenceUnavailableReason,
       };
     }
 

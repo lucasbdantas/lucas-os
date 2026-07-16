@@ -127,7 +127,9 @@ export type DailyPlanningState = {
   ok?: boolean;
   plan?: StoredDailyPlan;
   persistenceMode?: "tables" | "compatibility";
-  reason?: "daily_planning_tables_unavailable";
+  reason?:
+    | "daily_planning_tables_unavailable"
+    | "daily_planning_persistence_unavailable";
 };
 
 export const initialDailyPlanningState: DailyPlanningState = { status: "idle" };
@@ -136,7 +138,9 @@ export type DailyPlanFeedbackState = {
   message?: string;
   ok?: boolean;
   rating?: DailyPlanFeedbackRating;
-  reason?: "daily_planning_tables_unavailable";
+  reason?:
+    | "daily_planning_tables_unavailable"
+    | "daily_planning_persistence_unavailable";
   status: "idle" | "saved" | "error";
 };
 

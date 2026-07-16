@@ -2,7 +2,6 @@
 
 import {
   createContext,
-  startTransition,
   useCallback,
   useContext,
   useEffect,
@@ -20,6 +19,7 @@ import {
   commandPaletteCommands,
   commandPaletteSuggestions,
   filterCommandPaletteResults,
+  shouldOpenCommandPaletteShortcut,
   type CommandPaletteResult,
 } from "@/lib/navigation/command-palette";
 
@@ -46,9 +46,9 @@ function getResultTypeLabel(type: CommandPaletteResult["type"]) {
   return {
     capture: "Capture",
     command: "Comando",
-    domain: "Domain",
-    project: "Project",
-    task: "Task",
+    domain: "Domínio",
+    project: "Projeto",
+    task: "Tarefa",
   }[type];
 }
 
@@ -65,6 +65,7 @@ function CommandPaletteDialog({
   const [query, setQuery] = useState("");
   const [entityResults, setEntityResults] = useState<CommandPaletteResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchNotice, setSearchNotice] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const commandResults = useMemo(
     () =>
@@ -85,10 +86,12 @@ function CommandPaletteDialog({
   );
 
   const close = useCallback(() => {
+    requestIdRef.current += 1;
     setQuery("");
     setEntityResults([]);
     setSelectedIndex(0);
     setIsSearching(false);
+    setSearchNotice(null);
     onClose();
   }, [onClose]);
 
@@ -103,8 +106,10 @@ function CommandPaletteDialog({
   );
 
   const updateQuery = useCallback((value: string) => {
+    requestIdRef.current += 1;
     setQuery(value);
     setSelectedIndex(0);
+    setSearchNotice(null);
 
     if (value.trim().length < 2) {
       setEntityResults([]);
@@ -128,15 +133,29 @@ function CommandPaletteDialog({
     const requestId = ++requestIdRef.current;
     const timeout = window.setTimeout(() => {
       setIsSearching(true);
-      startTransition(async () => {
-        const nextResults = await searchCommandPalette(query);
+      void searchCommandPalette(query)
+        .then((response) => {
+          if (requestId !== requestIdRef.current) return;
 
-        if (requestId === requestIdRef.current) {
-          setEntityResults(nextResults);
-          setIsSearching(false);
-          setSelectedIndex(0);
-        }
-      });
+          setEntityResults(response.results);
+          setSearchNotice(
+            response.hasPartialFailure
+              ? "Alguns resultados podem estar indisponíveis agora."
+              : null,
+          );
+        })
+        .catch(() => {
+          if (requestId !== requestIdRef.current) return;
+
+          setEntityResults([]);
+          setSearchNotice("Não foi possível atualizar a busca agora.");
+        })
+        .finally(() => {
+          if (requestId === requestIdRef.current) {
+            setIsSearching(false);
+            setSelectedIndex(0);
+          }
+        });
     }, 160);
 
     return () => window.clearTimeout(timeout);
@@ -223,6 +242,9 @@ function CommandPaletteDialog({
           {isSearching ? (
             <p className="px-3 py-4 text-sm text-zinc-600">Buscando no seu caderno...</p>
           ) : null}
+          {!isSearching && searchNotice ? (
+            <p className="px-3 py-3 text-sm text-amber-800">{searchNotice}</p>
+          ) : null}
           {!isSearching && results.length === 0 ? (
             <p className="px-3 py-8 text-center text-sm text-zinc-600">Nada encontrado</p>
           ) : (
@@ -276,9 +298,12 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (
-        (event.ctrlKey || event.metaKey) &&
-        event.key.toLocaleLowerCase("pt-BR") === "k" &&
-        !isEditableTarget(event.target)
+        shouldOpenCommandPaletteShortcut({
+          ctrlKey: event.ctrlKey,
+          isEditable: isEditableTarget(event.target),
+          key: event.key,
+          metaKey: event.metaKey,
+        })
       ) {
         event.preventDefault();
         open();

@@ -86,6 +86,10 @@ O fallback nao guarda o snapshot completo do contexto e nao substitui a
 correcao da Data API. Ele existe para que uma indisponibilidade de schema cache
 nao interrompa o planejamento pessoal.
 
+Se `app_settings` tambem estiver indisponivel, Today e `/planning` continuam
+abrindo sem plano salvo ou historico. Ao gerar ou avaliar um plano, o app mostra
+uma mensagem recuperavel e nao trata a indisponibilidade como erro fatal.
+
 ## Teste local e na Vercel
 
 Com uma sessao autenticada e `OPENAI_API_KEY` configurada apenas no ambiente
