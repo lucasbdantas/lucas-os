@@ -39,6 +39,8 @@ export const commandPaletteCommands: CommandPaletteResult[] = [
   { description: "Contas Google conectadas", href: "/settings/integrations", title: "Integrations", type: "command" },
   { description: "Exportacao e recuperacao", href: "/settings/backup", title: "Backup", type: "command" },
   { description: "Notificacoes push por dispositivo", href: "/settings/notifications", title: "Push Notifications", type: "command" },
+  { description: "Status seguro das configuracoes", href: "/settings/health", title: "System Health", type: "command" },
+  { description: "Checklist para concluir o setup", href: "/settings/health#setup", title: "Setup Checklist", type: "command" },
 ];
 
 export const commandPaletteSuggestions = [
