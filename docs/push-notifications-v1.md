@@ -29,7 +29,8 @@ WEB_PUSH_SUBJECT=mailto:you@example.com
 
 `WEB_PUSH_PUBLIC_KEY` pode ser exposta ao browser, mas continua vindo por rota server-side. `WEB_PUSH_PRIVATE_KEY` nunca deve aparecer no client ou no Git.
 
-`CRON_SECRET` fica reservado para um scheduler futuro. A V1 nao usa cron automatico.
+`CRON_SECRET` protege o scheduler automatico documentado em
+`docs/automatic-reminder-scheduler-v1.md`. Ele nunca vai para o client ou Git.
 
 ## Como gerar VAPID keys
 
@@ -131,16 +132,16 @@ inscricao deste dispositivo`.
 
 ## Scheduler/Cron
 
-A V1 nao promete envio automatico em segundo plano sem scheduler.
+O scheduler automatico esta disponivel em
+`/api/cron/process-reminders` e usa `CRON_SECRET`. A configuracao completa,
+incluindo o hash no Supabase Vault e `vercel.json`, esta em
+`docs/automatic-reminder-scheduler-v1.md`.
 
-O endpoint `/api/push/process` exige usuario autenticado e processa apenas os lembretes desse usuario, respeitando RLS. Isso evita service role e evita expor uma rota publica que varre dados de todos os usuarios.
+O endpoint manual `/api/push/process` continua exigindo usuario autenticado e
+processa apenas os lembretes desse usuario, respeitando RLS.
 
-Para envio automatico real no futuro, existem duas opcoes seguras:
-
-1. criar um job/cron com um mecanismo server-side confiavel e segredo `CRON_SECRET`;
-2. criar uma funcao SQL/RPC de claim cuidadosamente protegida, sem expor subscriptions para anon.
-
-Essa etapa ficou documentada para Push Notifications V2.
+O scheduler usa a segunda opcao: RPCs de claim protegidas por hash e sem
+service role. A rota de cron continua sem expor subscriptions ao client.
 
 ## Diagnostico de `/api/push/process`
 
@@ -213,16 +214,16 @@ Quando `failed > 0`, olhe primeiro `failedReasons`. Se aparecer
 - navegadores podem bloquear permissao;
 - push depende de HTTPS em producao;
 - local HTTP funciona apenas em `localhost` e casos permitidos pelo navegador;
-- sem cron automatico nesta versao;
 - sem push para emails, Calendar ou IA;
 - sem preferencias avancadas por horario silencioso.
 
-O painel permite processamento manual e teste real sem DevTools. Scheduler/cron
-automático continua fora da V1 e fica reservado para Push Notifications V2.
+O painel permite processamento manual e teste real sem DevTools. O scheduler
+automático já está disponível em Automatic Reminder Scheduler V1; a
+configuração de `CRON_SECRET`, Supabase Vault e Vercel Cron está em
+`docs/automatic-reminder-scheduler-v1.md`.
 
 ## Proximos passos
 
-- Push scheduler/cron V2;
 - quiet hours;
 - teste E2E autenticado de subscription quando viavel;
 - preferencias por tipo de notificacao;

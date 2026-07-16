@@ -347,7 +347,9 @@ export function getPushReminderEligibilityDiagnostics(
   };
 }
 
-export function buildPushPayload(notification: DuePushReminder) {
+export function buildPushPayload(
+  notification: Pick<PushReminderNotification, "body" | "id" | "source_url" | "title">,
+) {
   const title = truncate(
     sanitizeSingleLine(notification.title, "Lembrete do Lucas OS"),
     90,

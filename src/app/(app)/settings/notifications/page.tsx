@@ -7,14 +7,26 @@ import { requireSession } from "@/lib/supabase/require-session";
 
 export default async function NotificationSettingsPage() {
   const { supabase, user } = await requireSession();
-  const { count, error } = await supabase
-    .from("push_subscriptions")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .is("revoked_at", null);
+  const [subscriptionResult, deliveryResult] = await Promise.all([
+    supabase
+      .from("push_subscriptions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .is("revoked_at", null),
+    supabase
+      .from("push_notification_deliveries")
+      .select("created_at,sent_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ created_at: string; sent_at: string | null }>(),
+  ]);
 
-  if (error) {
-    throw new Error(error.message);
+  if (subscriptionResult.error) {
+    throw new Error(subscriptionResult.error.message);
+  }
+  if (deliveryResult.error) {
+    throw new Error(deliveryResult.error.message);
   }
 
   return (
@@ -38,7 +50,11 @@ export default async function NotificationSettingsPage() {
           title="Push Notifications V1"
         />
 
-        <PushNotificationsPanel activeSubscriptionCount={count ?? 0} />
+        <PushNotificationsPanel
+          activeSubscriptionCount={subscriptionResult.count ?? 0}
+          lastDeliveryAt={deliveryResult.data?.sent_at ?? deliveryResult.data?.created_at ?? null}
+          schedulerConfigured={Boolean(process.env.CRON_SECRET?.trim())}
+        />
       </section>
 
       <section className="section-shell mt-10">

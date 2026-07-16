@@ -62,6 +62,19 @@ test.describe("public smoke", () => {
     expect(payload.error).toContain("login");
   });
 
+  test("/api/cron/process-reminders exige credencial e retorna JSON", async ({
+    request,
+  }) => {
+    const response = await request.get("/api/cron/process-reminders");
+    const payload = await response.json();
+
+    expect([401, 503]).toContain(response.status());
+    expect(payload).toMatchObject({
+      error: expect.any(String),
+      ok: false,
+    });
+  });
+
   test("/share carrega fallback publico", async ({ page }) => {
     await page.goto("/share");
 

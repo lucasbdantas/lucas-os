@@ -27,7 +27,23 @@ import type {
 
 type PushNotificationsPanelProps = {
   activeSubscriptionCount: number;
+  lastDeliveryAt: string | null;
+  schedulerConfigured: boolean;
 };
+
+function formatLastDelivery(value: string | null) {
+  if (!value) return "Nenhum envio registrado";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "Data indisponivel";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "America/Sao_Paulo",
+  }).format(date);
+}
 
 type PublicKeyResponse = {
   enabled: boolean;
@@ -103,6 +119,8 @@ async function readJsonResponse<T>(response: Response) {
 
 export function PushNotificationsPanel({
   activeSubscriptionCount,
+  lastDeliveryAt,
+  schedulerConfigured,
 }: PushNotificationsPanelProps) {
   const router = useRouter();
   const [permission, setPermission] = useState<
@@ -492,6 +510,14 @@ export function PushNotificationsPanel({
           label="Seus dispositivos ativos"
           value={String(activeSubscriptionCount)}
         />
+        <StatusItem
+          label="Scheduler"
+          value={schedulerConfigured ? "Configurado" : "Ainda nao configurado"}
+        />
+        <StatusItem
+          label="Ultimo processamento conhecido"
+          value={formatLastDelivery(lastDeliveryAt)}
+        />
       </div>
 
       <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -666,9 +692,10 @@ export function PushNotificationsPanel({
       <div className="mt-5 app-card-muted flex items-start gap-3 p-4 text-sm leading-6 text-zinc-600">
         <Smartphone aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-green-700" />
         <p>
-          Nesta V1, o processamento é manual. O scheduler automático fica para
-          a V2; até lá, use esta tela para criar o teste, enviar um push direto
-          ou processar lembretes vencidos sem abrir o console.
+          O botao manual continua disponivel para diagnostico. Com CRON_SECRET,
+          hash configurado no Supabase Vault e cron da Vercel ativo, os
+          lembretes vencidos tambem sao processados automaticamente a cada 30
+          minutos.
         </p>
       </div>
     </div>
