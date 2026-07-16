@@ -2,6 +2,7 @@ import { ExternalLink, LibraryBig, Pencil, Plus } from "lucide-react";
 import Link from "next/link";
 import { ContentItemForm, type ContentItemFormValue } from "@/components/library/content-item-form";
 import { ContentNotesPanel, type ContentNoteRow } from "@/components/library/content-notes-panel";
+import { ContentTypeBadge } from "@/components/library/content-type-badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -154,7 +155,7 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
                 {filteredItems.map((item) => (
                   <Link className="library-card app-card app-card-interactive min-w-0 p-4 no-underline" href={`/library?item=${encodeURIComponent(item.id)}#library-detail`} key={item.id}>
                     <div className="flex flex-wrap gap-2">
-                      <StatusBadge label={contentTypeLabels[item.type as ContentItemType]} />
+                      <ContentTypeBadge type={item.type as ContentItemType} />
                       <StatusBadge label={contentStatusLabels[item.status as ContentItemStatus]} tone={statusTone(item.status as ContentItemStatus)} />
                     </div>
                     <h3 className="mt-3 text-lg font-semibold text-zinc-950">{item.title}</h3>
@@ -193,7 +194,7 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
                 </div>
 
                 <div className="mt-5 flex flex-wrap gap-2">
-                  <StatusBadge label={contentTypeLabels[selectedItem.type as ContentItemType]} />
+                  <ContentTypeBadge type={selectedItem.type as ContentItemType} />
                   <StatusBadge label={contentStatusLabels[selectedItem.status as ContentItemStatus]} tone={statusTone(selectedItem.status as ContentItemStatus)} />
                   <StatusBadge label={`Prioridade ${contentPriorityLabels[selectedItem.priority as ContentItemPriority].toLowerCase()}`} />
                 </div>

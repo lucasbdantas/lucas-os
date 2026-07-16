@@ -652,6 +652,102 @@ textarea::placeholder {
   color: var(--blue);
 }
 
+.content-type-badge {
+  --content-type-accent: #65736a;
+  --content-type-background: #edf0ec;
+  --content-type-border: #d3dad4;
+  --content-type-foreground: #3e4a42;
+  border: 1px solid var(--content-type-border);
+  border-radius: 999px;
+  background: var(--content-type-background);
+  color: var(--content-type-foreground);
+}
+
+.content-type-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--content-type-accent);
+}
+
+.content-type-badge[data-content-type="book"] {
+  --content-type-accent: #4f8068;
+  --content-type-background: #dfeee4;
+  --content-type-border: #bdd8c6;
+  --content-type-foreground: #315b48;
+}
+
+.content-type-badge[data-content-type="movie_tv"] {
+  --content-type-accent: #746aa0;
+  --content-type-background: #e9e4f4;
+  --content-type-border: #d2c8e8;
+  --content-type-foreground: #554b7d;
+}
+
+.content-type-badge[data-content-type="youtube_video"] {
+  --content-type-accent: #a65f61;
+  --content-type-background: #f3dfde;
+  --content-type-border: #e4c1bf;
+  --content-type-foreground: #7d4144;
+}
+
+.content-type-badge[data-content-type="podcast"] {
+  --content-type-accent: #a56f48;
+  --content-type-background: #f3e4d5;
+  --content-type-border: #e3c9ae;
+  --content-type-foreground: #765036;
+}
+
+.content-type-badge[data-content-type="tiktok_reel"] {
+  --content-type-accent: #9d617f;
+  --content-type-background: #f2dfe9;
+  --content-type-border: #dfc2d1;
+  --content-type-foreground: #76455f;
+}
+
+.content-type-badge[data-content-type="article"] {
+  --content-type-accent: #52798c;
+  --content-type-background: #deebf0;
+  --content-type-border: #bfd5de;
+  --content-type-foreground: #385d6e;
+}
+
+.content-type-badge[data-content-type="class_course"] {
+  --content-type-accent: #927a3f;
+  --content-type-background: #f1e9cb;
+  --content-type-border: #dfd1a4;
+  --content-type-foreground: #695827;
+}
+
+.content-type-badge[data-content-type="theater_live"] {
+  --content-type-accent: #866479;
+  --content-type-background: #ece1e8;
+  --content-type-border: #d8c4d1;
+  --content-type-foreground: #624758;
+}
+
+.content-type-badge[data-content-type="other"] {
+  --content-type-accent: #6e746c;
+  --content-type-background: #e7e9e4;
+  --content-type-border: #cdd2ca;
+  --content-type-foreground: #4c534b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .content-type-badge {
+    border-color: color-mix(in srgb, var(--content-type-accent) 52%, var(--border));
+    background: color-mix(in srgb, var(--content-type-accent) 24%, var(--surface));
+    color: color-mix(in srgb, var(--content-type-accent) 34%, var(--foreground));
+  }
+}
+
+[data-theme="dark"] .content-type-badge {
+  border-color: color-mix(in srgb, var(--content-type-accent) 52%, var(--border));
+  background: color-mix(in srgb, var(--content-type-accent) 24%, var(--surface));
+  color: color-mix(in srgb, var(--content-type-accent) 34%, var(--foreground));
+}
+
 .premium-divider {
   height: 1px;
   background: var(--border);
