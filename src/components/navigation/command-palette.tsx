@@ -347,7 +347,7 @@ export function CommandPaletteTrigger({ variant }: { variant: "desktop" | "mobil
 
   return (
     <button
-      className="soft-button mt-5 w-full justify-between px-3 py-2.5 text-sm font-medium"
+      className="sidebar-search-button soft-button mt-5 w-full justify-between px-3 py-2.5 text-sm font-medium"
       onClick={context.open}
       type="button"
     >

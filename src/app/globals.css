@@ -34,6 +34,11 @@
   --blue: #5d7784;
   --blue-soft: #dfe9ec;
   --ring: rgb(47 107 88 / 0.24);
+  --sidebar: #e4eee1;
+  --sidebar-border: #c7d8c6;
+  --sidebar-item: rgb(255 253 247 / 0.38);
+  --sidebar-item-hover: rgb(255 253 247 / 0.7);
+  --sidebar-item-active: #f9fbf4;
 }
 
 @theme inline {
@@ -76,6 +81,11 @@
     --blue: #9db8c1;
     --blue-soft: #293941;
     --ring: rgb(154 200 173 / 0.28);
+    --sidebar: #1c2920;
+    --sidebar-border: #34473a;
+    --sidebar-item: rgb(238 233 220 / 0.035);
+    --sidebar-item-hover: rgb(154 200 173 / 0.09);
+    --sidebar-item-active: #2a3c30;
   }
 }
 
@@ -112,6 +122,11 @@
   --blue: #9db8c1;
   --blue-soft: #293941;
   --ring: rgb(154 200 173 / 0.28);
+  --sidebar: #1c2920;
+  --sidebar-border: #34473a;
+  --sidebar-item: rgb(238 233 220 / 0.035);
+  --sidebar-item-hover: rgb(154 200 173 / 0.09);
+  --sidebar-item-active: #2a3c30;
 }
 
 * {
@@ -514,19 +529,106 @@ textarea::placeholder {
   color: var(--foreground);
 }
 
+.app-sidebar {
+  border-color: var(--sidebar-border);
+  background: var(--sidebar);
+  box-shadow: 12px 0 32px rgb(var(--shadow-color) / 0.045);
+}
+
+.app-sidebar-brand {
+  border-color: color-mix(in srgb, var(--sidebar-border) 84%, transparent);
+  background: color-mix(in srgb, var(--surface) 72%, var(--sidebar));
+}
+
+.desktop-app-nav {
+  scrollbar-color: color-mix(in srgb, var(--emerald) 28%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+.desktop-nav-item {
+  display: flex;
+  min-height: 2.8rem;
+  align-items: center;
+  gap: 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: var(--sidebar-item);
+  padding: 0.58rem 0.7rem;
+  color: var(--foreground-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.desktop-nav-item:hover {
+  border-color: color-mix(in srgb, var(--sidebar-border) 72%, transparent);
+  background: var(--sidebar-item-hover);
+  color: var(--foreground);
+}
+
+.desktop-nav-item-active {
+  border-color: color-mix(in srgb, var(--emerald) 32%, var(--sidebar-border));
+  background: var(--sidebar-item-active);
+  color: var(--emerald-strong);
+  box-shadow: 0 7px 18px rgb(var(--shadow-color) / 0.075);
+}
+
+.desktop-nav-icon,
+.mobile-menu-card-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--sidebar-border) 70%, transparent);
+  background: color-mix(in srgb, var(--surface) 58%, transparent);
+  color: var(--emerald);
+}
+
+.desktop-nav-icon {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 9px;
+}
+
+.desktop-nav-item-active .desktop-nav-icon {
+  border-color: color-mix(in srgb, var(--emerald) 28%, transparent);
+  background: var(--emerald-soft);
+  color: var(--emerald-strong);
+}
+
+.sidebar-search-button,
+.app-sidebar-logout {
+  border-color: color-mix(in srgb, var(--sidebar-border) 82%, transparent);
+  background: color-mix(in srgb, var(--surface) 68%, var(--sidebar));
+}
+
+.app-sidebar-footer {
+  border-top: 1px solid color-mix(in srgb, var(--sidebar-border) 78%, transparent);
+}
+
 .app-mobile-header {
   padding-top: max(0.75rem, env(safe-area-inset-top));
 }
 
 .mobile-bottom-nav {
+  border-color: var(--sidebar-border) !important;
+  background: color-mix(in srgb, var(--sidebar) 90%, var(--surface));
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }
 
 .mobile-nav-link {
   min-height: 3.35rem;
   display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
   align-items: center;
   justify-content: center;
+  border-radius: 12px;
+}
+
+.mobile-nav-link[aria-current="page"] {
+  background: var(--sidebar-item-active);
+  color: var(--emerald-strong) !important;
 }
 
 .mobile-menu-overlay {
@@ -535,6 +637,8 @@ textarea::placeholder {
 }
 
 .mobile-menu-panel {
+  border-color: var(--sidebar-border);
+  background: var(--sidebar);
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
@@ -542,14 +646,21 @@ textarea::placeholder {
   min-height: 5.5rem;
   border: 1px solid var(--border);
   border-radius: 18px;
-  background: var(--surface);
+  background: var(--sidebar-item-hover);
   box-shadow: var(--shadow-hairline);
   text-decoration: none;
 }
 
 .mobile-menu-card-active {
   border-color: color-mix(in srgb, var(--emerald) 38%, var(--border));
-  background: var(--emerald-soft);
+  background: var(--sidebar-item-active);
+  box-shadow: 0 8px 20px rgb(var(--shadow-color) / 0.08);
+}
+
+.mobile-menu-card-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 10px;
 }
 
 @media (max-width: 767px) {

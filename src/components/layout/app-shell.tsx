@@ -36,8 +36,8 @@ export function AppShell({
   return (
     <CommandPaletteProvider>
     <div className="app-shell-surface min-h-screen" data-theme={appearance}>
-      <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-zinc-200 bg-white px-5 py-6 md:flex md:flex-col">
-        <div className="app-card-soft p-4">
+      <aside className="app-sidebar fixed inset-y-0 left-0 hidden w-72 border-r px-5 py-6 md:flex md:flex-col">
+        <div className="app-sidebar-brand app-card-soft p-4">
           <p className="section-kicker">Lucas OS</p>
           <p className="mt-2 text-lg font-semibold text-zinc-950">
             Caderno operacional
@@ -53,8 +53,8 @@ export function AppShell({
           variant="desktop"
         />
 
-        <form action={logout}>
-          <button className="soft-button w-full px-3 py-2.5 text-left text-sm font-medium">
+        <form action={logout} className="app-sidebar-footer pt-3">
+          <button className="app-sidebar-logout soft-button w-full px-3 py-2.5 text-left text-sm font-medium">
             Sair
           </button>
         </form>

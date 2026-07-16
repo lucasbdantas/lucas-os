@@ -1,5 +1,24 @@
 "use client";
 
+import {
+  Bell,
+  BookOpen,
+  CalendarDays,
+  CheckSquare2,
+  Cloud,
+  Download,
+  FolderKanban,
+  HeartPulse,
+  Inbox,
+  Layers3,
+  Menu,
+  SearchCheck,
+  Settings,
+  SlidersHorizontal,
+  Sparkles,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -21,6 +40,25 @@ const mobilePrimaryHrefs = new Set([
   "/capture",
   "/inbox",
 ]);
+
+const navIcons: Record<string, LucideIcon> = {
+  "/capture": Download,
+  "/domains": Layers3,
+  "/inbox": Inbox,
+  "/library": BookOpen,
+  "/notifications": Bell,
+  "/planning": Sparkles,
+  "/projects": FolderKanban,
+  "/quick-capture": Zap,
+  "/review": SearchCheck,
+  "/settings": Settings,
+  "/settings/backup": Cloud,
+  "/settings/health": HeartPulse,
+  "/settings/integrations": SlidersHorizontal,
+  "/settings/notifications": Bell,
+  "/tasks": CheckSquare2,
+  "/today": CalendarDays,
+};
 
 const mobileMenuCards = [
   {
@@ -149,7 +187,11 @@ export function AppNav({
 
               <div className="mt-4 grid grid-cols-2 gap-3">
                 {mobileMenuCards.map((item) => {
-                  const active = isActivePath(pathname, item.href);
+                  const active =
+                    item.href === "/settings"
+                      ? pathname === "/settings"
+                      : isActivePath(pathname, item.href);
+                  const Icon = navIcons[item.href] ?? Layers3;
                   const label =
                     item.href === "/notifications" && notificationCount > 0
                       ? `${item.label} (${notificationCount})`
@@ -165,11 +207,18 @@ export function AppNav({
                       key={item.href}
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      <span className="block text-sm font-semibold text-zinc-950">
-                        {label}
-                      </span>
-                      <span className="mt-1 block text-xs leading-5 text-zinc-600">
-                        {item.description}
+                      <span className="flex items-start gap-2.5">
+                        <span className="mobile-menu-card-icon" aria-hidden="true">
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold text-zinc-950">
+                            {label}
+                          </span>
+                          <span className="mt-1 block text-xs leading-5 text-zinc-600">
+                            {item.description}
+                          </span>
+                        </span>
                       </span>
                     </Link>
                   );
@@ -182,6 +231,7 @@ export function AppNav({
         <nav className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-zinc-200 bg-white shadow-[0_-10px_26px_rgb(44_45_38/0.08)] backdrop-blur md:hidden">
           {mobileItems.map((item) => {
             const active = isActivePath(pathname, item.href);
+            const Icon = navIcons[item.href] ?? Layers3;
             const label =
               item.href === "/quick-capture" ? "Quick" : item.label;
 
@@ -195,7 +245,8 @@ export function AppNav({
                 key={item.href}
                 onClick={() => setIsMenuOpen(false)}
               >
-                {label}
+                <Icon aria-hidden="true" className="h-4 w-4" />
+                <span>{label}</span>
               </Link>
             );
           })}
@@ -207,7 +258,8 @@ export function AppNav({
             onClick={() => setIsMenuOpen((current) => !current)}
             type="button"
           >
-            Menu
+            <Menu aria-hidden="true" className="h-4 w-4" />
+            <span>Menu</span>
           </button>
         </nav>
       </>
@@ -215,9 +267,10 @@ export function AppNav({
   }
 
   return (
-    <nav className="mt-7 flex flex-1 flex-col gap-1">
+    <nav className="desktop-app-nav mt-6 flex flex-1 flex-col gap-1.5 overflow-y-auto pr-1">
       {items.map((item) => {
         const active = isActivePath(pathname, item.href);
+        const Icon = navIcons[item.href] ?? Layers3;
         const label =
           item.href === "/notifications" && notificationCount > 0
             ? `${item.label} (${notificationCount})`
@@ -226,15 +279,16 @@ export function AppNav({
         return (
           <Link
             aria-current={active ? "page" : undefined}
-            className={`rounded-2xl px-3 py-2.5 text-sm font-medium ${
-              active
-                ? "bg-zinc-100 text-zinc-950 shadow-sm"
-                : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950"
+            className={`desktop-nav-item ${
+              active ? "desktop-nav-item-active" : ""
             }`}
             href={item.href}
             key={item.href}
           >
-            {label}
+            <span className="desktop-nav-icon" aria-hidden="true">
+              <Icon className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 truncate">{label}</span>
           </Link>
         );
       })}
