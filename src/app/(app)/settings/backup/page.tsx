@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
+import { BackupRestorePanel } from "@/components/settings/backup-restore-panel";
 import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireSession } from "@/lib/supabase/require-session";
@@ -87,6 +88,14 @@ export default async function BackupSettingsPage() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="section-shell mt-10">
+        <SectionHeader
+          description="Analise um backup antes de qualquer restauração. O preview compara identidades com sua conta atual e bloqueia campos sensíveis."
+          title="Importar com segurança"
+        />
+        <BackupRestorePanel />
       </section>
 
       <section className="section-shell mt-10" id="recovery-plan">

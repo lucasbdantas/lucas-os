@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
+import { WeeklyAIReviewPanel } from "@/components/review/weekly-ai-review-panel";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionHeader } from "@/components/ui/section-header";
 import { StatCard } from "@/components/ui/stat-card";
@@ -404,6 +405,10 @@ export default async function WeeklyReviewPage() {
           value={projectsWithoutNextAction.length}
         />
       </section>
+
+      <div className="mt-8">
+        <WeeklyAIReviewPanel />
+      </div>
 
       <div className="mt-8 grid gap-8">
         <section>
