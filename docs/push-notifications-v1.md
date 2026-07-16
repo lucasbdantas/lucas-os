@@ -208,6 +208,14 @@ Quando `failed > 0`, olhe primeiro `failedReasons`. Se aparecer
 - subscriptions revogadas deixam de receber push;
 - erros 404/410 do provedor de push revogam a subscription local.
 
+## Preferencias, quiet hours e dispositivos
+
+`/settings/notifications` armazena em `app_settings` a chave `notification_preferences_v1`, com canal push, fins de semana, timezone, lembrete padrao e janela de silencio. O calculo cobre janelas normais e aquelas que atravessam meia-noite.
+
+O cron automatico atual reivindica entregas por uma funcao SQL `SECURITY DEFINER`. Por seguranca, quiet hours ainda nao alteram essa reivindicacao: aplicar o filtro somente depois do claim poderia consumir uma entrega sem envia-la. Uma versao futura deve atualizar atomicamente a funcao SQL para adiar o claim. A interface deixa essa limitacao explicita.
+
+A pagina lista dispositivos ativos usando somente navegador/plataforma e timestamps. Endpoint, `p256dh` e `auth` nunca sao enviados ao client. Qualquer dispositivo pode ser revogado por uma action autenticada e limitada por `user_id`.
+
 ## Limitacoes
 
 - iOS, Android e desktop têm suporte diferente a PWA push;

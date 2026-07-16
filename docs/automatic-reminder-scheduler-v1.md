@@ -122,6 +122,8 @@ Teste tambem uma segunda chamada: deliveries ja reivindicadas aparecem como
 
 ## Limitacoes
 
+- Quiet hours e bloqueio de fim de semana ja possuem preferencias e calculo testado, mas ainda nao sao aplicados pelo cron SQL. Isso exige uma migration atomica que adie o claim; filtrar depois do claim poderia perder o envio.
+
 - A execucao tem granularidade de 30 minutos, entao push nao e garantido no
   minuto exato do reminder.
 - O scheduler processa no maximo 200 pares reminder/dispositivo por execucao.
