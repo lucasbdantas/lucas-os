@@ -15,6 +15,8 @@ const initialState: BackupRestorePreviewState = {
 
 const entityLabels = {
   app_settings: "Preferências seguras",
+  content_items: "Biblioteca",
+  content_notes: "Notas da Biblioteca",
   domains: "Domínios",
   milestones: "Milestones",
   projects: "Projetos",
@@ -107,7 +109,7 @@ export function BackupRestorePanel() {
 
       {state.preview ? (
         <div className="mt-5 space-y-4">
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {Object.entries(state.preview.entities).map(([entity, counts]) => (
               <div className="app-card-muted min-w-0 p-3" key={entity}>
                 <h3 className="text-sm font-semibold text-zinc-950">

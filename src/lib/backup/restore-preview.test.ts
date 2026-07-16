@@ -16,6 +16,8 @@ function makeBackup() {
       app_settings: [{ key: "app_preferences", value: {} }],
       capture_tokens: [{ name: "Phone", token_prefix: "abc123" }],
       connected_accounts: [{ provider: "google" }],
+      content_items: [{ id: "content-1", title: "Livro" }],
+      content_notes: [{ id: "note-1", content_item_id: "content-1" }],
       domains: [{ id: "domain-1", name: "Inbox" }],
       milestones: [{ id: "milestone-1", title: "M1" }],
       notifications: [],
@@ -39,6 +41,8 @@ describe("backup restore preview", () => {
     expect(preview.entities.domains.update).toBe(1);
     expect(preview.entities.projects.create).toBe(1);
     expect(preview.entities.tasks.create).toBe(1);
+    expect(preview.entities.content_items.create).toBe(1);
+    expect(preview.entities.content_notes.create).toBe(1);
     expect(preview.excludedEntities).toContain("connected_accounts");
   });
 

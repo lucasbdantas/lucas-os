@@ -10,6 +10,8 @@ export const restorableEntityNames = [
   "projects",
   "tasks",
   "milestones",
+  "content_items",
+  "content_notes",
   "app_settings",
 ] as const;
 
@@ -24,11 +26,13 @@ const backupRestoreSchema = z
     user_id: z.string().min(1),
     data: z
       .object({
-        app_settings: recordArray,
-        domains: recordArray,
-        milestones: recordArray,
-        projects: recordArray,
-        tasks: recordArray,
+        app_settings: recordArray.default([]),
+        content_items: recordArray.default([]),
+        content_notes: recordArray.default([]),
+        domains: recordArray.default([]),
+        milestones: recordArray.default([]),
+        projects: recordArray.default([]),
+        tasks: recordArray.default([]),
       })
       .passthrough(),
   })

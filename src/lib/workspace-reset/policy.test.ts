@@ -14,6 +14,8 @@ import {
 describe("workspace reset policy", () => {
   it("mantém uma seleção explícita e ordenada do que apagar", () => {
     expect(workspaceResetDeletionSteps.map((step) => step.table)).toEqual([
+      "content_notes",
+      "content_items",
       "daily_plan_feedback",
       "daily_plans",
       "push_notification_deliveries",

@@ -17,6 +17,8 @@ const initialState: WorkspaceResetState = { message: "", status: "idle" };
 
 const countLabels: Record<keyof WorkspaceResetCounts, string> = {
   compatibilityDailyPlans: "Planos no modo compatibilidade",
+  contentItems: "Conteúdos da Biblioteca",
+  contentNotes: "Notas da Biblioteca",
   dailyPlanFeedback: "Feedback de planos",
   dailyPlans: "Planos diários",
   milestones: "Milestones",

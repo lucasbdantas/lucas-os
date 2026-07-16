@@ -46,6 +46,7 @@ function getResultTypeLabel(type: CommandPaletteResult["type"]) {
   return {
     capture: "Capture",
     command: "Comando",
+    content: "Biblioteca",
     domain: "Domínio",
     project: "Projeto",
     task: "Tarefa",
@@ -218,7 +219,7 @@ function CommandPaletteDialog({
             aria-label="Buscar no Lucas OS"
             className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-zinc-500"
             onChange={(event) => updateQuery(event.target.value)}
-            placeholder="Buscar comandos, tasks, projetos ou captures"
+            placeholder="Buscar comandos, tasks, projetos, conteúdos ou captures"
             ref={inputRef}
             value={query}
           />

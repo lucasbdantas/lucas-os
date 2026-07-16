@@ -27,7 +27,7 @@ export async function searchCommandPalette(
   }
 
   const { supabase } = await requireSession();
-  const [tasks, projects, domains, captures] = await Promise.allSettled([
+  const [tasks, projects, domains, captures, contents] = await Promise.allSettled([
     supabase
       .from("tasks")
       .select("id,title,status,due_date")
@@ -131,12 +131,39 @@ export async function searchCommandPalette(
           type: "capture" as const,
         }));
       }),
+    supabase
+      .from("content_items")
+      .select("id,title,type,status,creator")
+      .order("updated_at", { ascending: false })
+      .limit(12)
+      .returns<
+        Array<{
+          creator: string | null;
+          id: string;
+          status: string;
+          title: string;
+          type: string;
+        }>
+      >()
+      .then((result) => {
+        if (result.error) throw new Error("Content search unavailable");
+
+        return result.data.map((item) => ({
+          description: item.creator
+            ? `${item.type} · ${item.creator}`
+            : `${item.type} · ${item.status}`,
+          href: `/library?item=${encodeURIComponent(item.id)}#library-detail`,
+          title: item.title,
+          type: "content" as const,
+        }));
+      }),
   ]);
   const searchResults = collectCommandPaletteSearchResults([
     tasks,
     projects,
     domains,
     captures,
+    contents,
   ]);
 
   return {

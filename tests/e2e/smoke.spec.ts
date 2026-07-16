@@ -99,6 +99,7 @@ test.describe("authenticated smoke", () => {
     "/planning",
     "/tasks",
     "/projects",
+    "/library",
     "/capture",
     "/inbox",
     "/quick-capture",

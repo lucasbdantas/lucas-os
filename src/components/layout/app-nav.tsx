@@ -54,6 +54,11 @@ const mobileMenuCards = [
     description: "Projetos e milestones",
   },
   {
+    href: "/library",
+    label: "Biblioteca",
+    description: "Conteúdos e notas pessoais",
+  },
+  {
     href: "/domains",
     label: "Domains",
     description: "Areas da vida",

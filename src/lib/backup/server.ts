@@ -10,6 +10,8 @@ import {
 
 type BackupTableName =
   | "app_settings"
+  | "content_items"
+  | "content_notes"
   | "domains"
   | "milestones"
   | "notifications"
@@ -51,6 +53,8 @@ export async function getBackupExportForUser(input: {
     pendingCaptures,
     notifications,
     appSettings,
+    contentItems,
+    contentNotes,
     captureTokensResult,
     connectedAccountsResult,
   ] = await Promise.all([
@@ -61,6 +65,8 @@ export async function getBackupExportForUser(input: {
     selectUserRows(input.supabase, "pending_captures", input.userId),
     selectUserRows(input.supabase, "notifications", input.userId),
     selectUserRows(input.supabase, "app_settings", input.userId),
+    selectUserRows(input.supabase, "content_items", input.userId),
+    selectUserRows(input.supabase, "content_notes", input.userId),
     input.supabase
       .from("capture_tokens")
       .select("name,token_prefix,created_at,last_used_at,revoked_at")
@@ -91,6 +97,8 @@ export async function getBackupExportForUser(input: {
       app_settings: appSettings,
       capture_tokens: captureTokensResult.data,
       connected_accounts: connectedAccountsResult.data,
+      content_items: contentItems,
+      content_notes: contentNotes,
       domains,
       milestones,
       notifications,

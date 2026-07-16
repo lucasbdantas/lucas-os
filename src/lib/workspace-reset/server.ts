@@ -41,6 +41,8 @@ export async function getWorkspaceResetPreviewForUser(
 ): Promise<WorkspaceResetPreview> {
   const [
     tasks,
+    contentItems,
+    contentNotes,
     projects,
     milestones,
     pendingCaptures,
@@ -51,6 +53,8 @@ export async function getWorkspaceResetPreviewForUser(
     compatibility,
   ] = await Promise.all([
     supabase.from("tasks").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("content_items").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("content_notes").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("projects").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("milestones").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("pending_captures").select("id", { count: "exact", head: true }).eq("user_id", userId),
@@ -80,6 +84,8 @@ export async function getWorkspaceResetPreviewForUser(
       ),
       dailyPlanFeedback: dailyFeedbackCount.count,
       dailyPlans: dailyPlansCount.count,
+      contentItems: readRequiredCount(contentItems, "conteúdos da Biblioteca"),
+      contentNotes: readRequiredCount(contentNotes, "notas da Biblioteca"),
       milestones: readRequiredCount(milestones, "milestones"),
       notifications: readRequiredCount(notifications, "notificações"),
       pendingCaptures: readRequiredCount(pendingCaptures, "capturas pendentes"),

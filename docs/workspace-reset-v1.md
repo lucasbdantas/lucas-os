@@ -18,15 +18,17 @@ Nada é executado ao abrir a página, atualizar o preview ou digitar parcialment
 
 Nesta ordem:
 
-1. `daily_plan_feedback`;
-2. `daily_plans`;
-3. `push_notification_deliveries`;
-4. `milestones`;
-5. `tasks`;
-6. `projects`;
-7. `pending_captures`;
-8. `notifications`;
-9. somente a linha `daily_planning_v2` de `app_settings`.
+1. `content_notes`;
+2. `content_items`;
+3. `daily_plan_feedback`;
+4. `daily_plans`;
+5. `push_notification_deliveries`;
+6. `milestones`;
+7. `tasks`;
+8. `projects`;
+9. `pending_captures`;
+10. `notifications`;
+11. somente a linha `daily_planning_v2` de `app_settings`.
 
 A ordem remove dependências antes dos registros pais. Se as tabelas dedicadas de Daily Planning estiverem indisponíveis na Data API, o reset continua e remove o fallback em `app_settings`.
 
@@ -54,7 +56,7 @@ Uma versão futura poderá usar uma RPC transacional cuidadosamente revisada. El
 2. Registre as contagens atuais em `/settings/data`.
 3. Tente confirmação vazia, em minúsculas e com espaços: o botão permanece bloqueado e o servidor também rejeita.
 4. Digite a frase exata e confirme conscientemente.
-5. Confira que tasks, projects, captures, notifications e Planning ficaram vazios.
+5. Confira que Biblioteca, tasks, projects, captures, notifications e Planning ficaram vazios.
 6. Confira que login, domains, preferências, Google, dispositivos push e capture tokens permanecem.
 7. Abra os links de recomeço mostrados após o sucesso.
 

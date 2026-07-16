@@ -3,7 +3,8 @@ export type CommandPaletteResultType =
   | "task"
   | "project"
   | "domain"
-  | "capture";
+  | "capture"
+  | "content";
 
 export type CommandPaletteResult = {
   description: string;
@@ -31,6 +32,7 @@ export const commandPaletteCommands: CommandPaletteResult[] = [
   { description: "Email e entrada operacional", href: "/inbox", title: "Inbox", type: "command" },
   { description: "Criar e organizar tarefas", href: "/tasks", title: "Tasks", type: "command" },
   { description: "Projetos e milestones", href: "/projects", title: "Projects", type: "command" },
+  { description: "Conteúdos, referências e notas", href: "/library", title: "Biblioteca", type: "command" },
   { description: "Areas e dominios", href: "/domains", title: "Domains", type: "command" },
   { description: "Revisao semanal", href: "/review", title: "Review", type: "command" },
   { description: "Historico de planos diarios", href: "/planning", title: "Planning", type: "command" },

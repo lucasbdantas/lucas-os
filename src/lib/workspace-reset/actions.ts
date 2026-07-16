@@ -75,6 +75,7 @@ export async function resetWorkspace(
     "/tasks",
     "/projects",
     "/notifications",
+    "/library",
     "/settings/data",
   ]) {
     revalidatePath(path);

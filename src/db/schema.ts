@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   date,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -126,6 +127,32 @@ export const dailyPlanFeedbackRatingEnum = pgEnum(
   "daily_plan_feedback_rating",
   ["useful", "not_useful", "wrong", "done", "ignored"],
 );
+
+export const contentItemTypeEnum = pgEnum("content_item_type", [
+  "book",
+  "movie_tv",
+  "youtube_video",
+  "podcast",
+  "tiktok_reel",
+  "article",
+  "class_course",
+  "theater_live",
+  "other",
+]);
+
+export const contentItemStatusEnum = pgEnum("content_item_status", [
+  "want_to_consume",
+  "consuming",
+  "consumed",
+  "paused",
+  "abandoned",
+]);
+
+export const contentItemPriorityEnum = pgEnum("content_item_priority", [
+  "low",
+  "medium",
+  "high",
+]);
 
 export const domains = pgTable(
   "domains",
@@ -380,6 +407,94 @@ export const pendingCaptures = pgTable(
     index("pending_captures_user_captured_idx").on(
       table.userId,
       table.capturedAt,
+    ),
+  ],
+);
+
+export const contentItems = pgTable(
+  "content_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    type: contentItemTypeEnum("type").notNull().default("other"),
+    status: contentItemStatusEnum("status")
+      .notNull()
+      .default("want_to_consume"),
+    priority: contentItemPriorityEnum("priority")
+      .notNull()
+      .default("medium"),
+    title: varchar("title", { length: 240 }).notNull(),
+    creator: varchar("creator", { length: 180 }),
+    url: text("url"),
+    sourceLabel: varchar("source_label", { length: 120 }),
+    sourceUrl: text("source_url"),
+    description: text("description"),
+    tags: jsonb("tags").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    startedAt: date("started_at"),
+    finishedAt: date("finished_at"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("content_items_user_identity_unique").on(table.id, table.userId),
+    index("content_items_user_status_updated_idx").on(
+      table.userId,
+      table.status,
+      table.updatedAt,
+    ),
+    index("content_items_user_type_idx").on(table.userId, table.type),
+    index("content_items_user_priority_idx").on(
+      table.userId,
+      table.priority,
+    ),
+    check(
+      "content_items_title_not_blank",
+      sql`length(btrim(${table.title})) > 0`,
+    ),
+    check("content_items_tags_array", sql`jsonb_typeof(${table.tags}) = 'array'`),
+  ],
+);
+
+export const contentNotes = pgTable(
+  "content_notes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    contentItemId: uuid("content_item_id").notNull(),
+    rawNote: text("raw_note").notNull(),
+    context: text("context"),
+    aiRewrite: text("ai_rewrite"),
+    noteContext: varchar("note_context", { length: 160 }),
+    positionLabel: varchar("position_label", { length: 160 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.contentItemId, table.userId],
+      foreignColumns: [contentItems.id, contentItems.userId],
+      name: "content_notes_item_user_fk",
+    }).onDelete("cascade"),
+    index("content_notes_item_created_idx").on(
+      table.contentItemId,
+      table.createdAt,
+    ),
+    index("content_notes_user_created_idx").on(table.userId, table.createdAt),
+    check(
+      "content_notes_raw_note_not_blank",
+      sql`length(btrim(${table.rawNote})) > 0`,
     ),
   ],
 );

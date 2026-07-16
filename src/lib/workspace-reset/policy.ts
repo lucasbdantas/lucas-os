@@ -2,6 +2,8 @@ export const WORKSPACE_RESET_CONFIRMATION = "LIMPAR MEU WORKSPACE";
 export const DAILY_PLANNING_APP_SETTING_KEY = "daily_planning_v2";
 
 export const workspaceResetDeletionSteps = [
+  { key: "contentNotes", label: "Notas da Biblioteca", table: "content_notes" },
+  { key: "contentItems", label: "Conteúdos da Biblioteca", table: "content_items" },
   { key: "dailyPlanFeedback", label: "Feedback de planos", table: "daily_plan_feedback" },
   { key: "dailyPlans", label: "Planos diários", table: "daily_plans" },
   { key: "pushDeliveries", label: "Histórico de entregas push", table: "push_notification_deliveries" },

@@ -67,6 +67,7 @@ export default async function BackupSettingsPage() {
               </h3>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-zinc-600">
                 <li>domains, projects, milestones e tasks;</li>
+                <li>conteúdos e notas da Biblioteca;</li>
                 <li>pending captures e notifications;</li>
                 <li>app settings/preferences;</li>
                 <li>metadados seguros de capture tokens;</li>

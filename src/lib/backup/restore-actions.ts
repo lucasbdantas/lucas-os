@@ -21,7 +21,7 @@ export async function previewBackupRestore(
   try {
     const backup = parseBackupRestoreJson(rawJson);
     const { supabase, user } = await requireSession();
-    const [domains, projects, tasks, milestones, appSettings] =
+    const [domains, projects, tasks, milestones, contentItems, contentNotes, appSettings] =
       await Promise.all([
         supabase.from("domains").select("id,name").eq("user_id", user.id),
         supabase
@@ -30,9 +30,11 @@ export async function previewBackupRestore(
           .eq("user_id", user.id),
         supabase.from("tasks").select("id").eq("user_id", user.id),
         supabase.from("milestones").select("id").eq("user_id", user.id),
+        supabase.from("content_items").select("id").eq("user_id", user.id),
+        supabase.from("content_notes").select("id").eq("user_id", user.id),
         supabase.from("app_settings").select("key").eq("user_id", user.id),
       ]);
-    const firstError = [domains, projects, tasks, milestones, appSettings].find(
+    const firstError = [domains, projects, tasks, milestones, contentItems, contentNotes, appSettings].find(
       (result) => result.error,
     )?.error;
 
@@ -48,6 +50,16 @@ export async function previewBackupRestore(
       app_settings: new Set(
         (appSettings.data ?? [])
           .map((row) => getRestoreIdentity("app_settings", row))
+          .filter((value): value is string => Boolean(value)),
+      ),
+      content_items: new Set(
+        (contentItems.data ?? [])
+          .map((row) => getRestoreIdentity("content_items", row))
+          .filter((value): value is string => Boolean(value)),
+      ),
+      content_notes: new Set(
+        (contentNotes.data ?? [])
+          .map((row) => getRestoreIdentity("content_notes", row))
           .filter((value): value is string => Boolean(value)),
       ),
       domains: new Set(
