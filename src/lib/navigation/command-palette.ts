@@ -41,6 +41,7 @@ export const commandPaletteCommands: CommandPaletteResult[] = [
   { description: "Notificacoes push por dispositivo", href: "/settings/notifications", title: "Push Notifications", type: "command" },
   { description: "Status seguro das configuracoes", href: "/settings/health", title: "System Health", type: "command" },
   { description: "Checklist para concluir o setup", href: "/settings/health#setup", title: "Setup Checklist", type: "command" },
+  { description: "Preview e limpeza segura do workspace", href: "/settings/data", title: "Workspace Data", type: "command" },
 ];
 
 export const commandPaletteSuggestions = [
