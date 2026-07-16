@@ -693,9 +693,9 @@ export function PushNotificationsPanel({
         <Smartphone aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-green-700" />
         <p>
           O botao manual continua disponivel para diagnostico. Com CRON_SECRET,
-          hash configurado no Supabase Vault e cron da Vercel ativo, os
-          lembretes vencidos tambem sao processados automaticamente a cada 30
-          minutos.
+          hash configurado no Supabase Vault e um scheduler externo (ou cron
+          diario compativel com Vercel Hobby), os lembretes vencidos tambem
+          podem ser processados automaticamente.
         </p>
       </div>
     </div>

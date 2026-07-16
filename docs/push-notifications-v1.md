@@ -134,7 +134,8 @@ inscricao deste dispositivo`.
 
 O scheduler automatico esta disponivel em
 `/api/cron/process-reminders` e usa `CRON_SECRET`. A configuracao completa,
-incluindo o hash no Supabase Vault e `vercel.json`, esta em
+incluindo o hash no Supabase Vault e um scheduler externo para frequencia
+subdiaria no Vercel Hobby, esta em
 `docs/automatic-reminder-scheduler-v1.md`.
 
 O endpoint manual `/api/push/process` continua exigindo usuario autenticado e
@@ -227,7 +228,7 @@ A pagina lista dispositivos ativos usando somente navegador/plataforma e timesta
 
 O painel permite processamento manual e teste real sem DevTools. O scheduler
 automático já está disponível em Automatic Reminder Scheduler V1; a
-configuração de `CRON_SECRET`, Supabase Vault e Vercel Cron está em
+configuração de `CRON_SECRET`, Supabase Vault e scheduler externo/cron diário está em
 `docs/automatic-reminder-scheduler-v1.md`.
 
 ## Proximos passos

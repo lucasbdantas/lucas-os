@@ -63,8 +63,8 @@ nenhum push, email, evento de Calendar ou acao de IA foi disparado pelo sprint.
 
 - o fallback de Daily Planning e operacional, mas a causa da indisponibilidade
   de `daily_plans` na Data API deve continuar monitorada no Supabase;
-- o scheduler exige `CRON_SECRET`, hash no Vault, Web Push e cron da Vercel;
-- push continua com granularidade de 30 minutos, sem quiet hours ou retry;
+- o scheduler exige `CRON_SECRET`, hash no Vault, Web Push e acionamento manual, scheduler externo ou cron diario;
+- no Vercel Hobby, frequencia subdiaria exige scheduler externo; a granularidade depende da configuracao escolhida;
 - os E2E autenticados dependem de credenciais locais e devem permanecer fora
   do Git;
 - o proximo passo recomendado e uma rodada manual curta em producao preview:

@@ -44,7 +44,7 @@ Nenhuma migration foi criada ou aplicada nesta sprint. Antes da tag, confirmar n
 ## Setup por serviço
 
 - Supabase: aplicar migrations, confirmar RLS e criar usuário Auth.
-- Vercel: configurar apenas envs server/public necessárias e manter `vercel.json` com cron de 30 minutos.
+- Vercel: configurar apenas envs server/public necessárias. No plano Hobby, usar scheduler externo para frequencia subdiaria ou cron diario compativel; `vercel.json` nao registra cron de 30 minutos.
 - Google: configurar OAuth callback e scopes read-only para Gmail/Calendar.
 - OpenAI: opcional; default `gpt-4.1-nano`; recursos manuais funcionam sem chave.
 - Push: gerar VAPID, ativar por dispositivo e testar pelo painel.

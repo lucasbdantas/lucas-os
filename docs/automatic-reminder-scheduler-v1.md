@@ -8,7 +8,7 @@ Calendar e nao chama IA.
 
 ## Rota e seguranca
 
-A Vercel chama `GET /api/cron/process-reminders` a cada 30 minutos. A rota
+Um scheduler autorizado pode chamar `GET /api/cron/process-reminders`. A rota
 exige `Authorization: Bearer <CRON_SECRET>` e nunca registra o header, payload
 de push, endpoint de subscription ou texto de task.
 
@@ -59,25 +59,28 @@ select vault.create_secret(
 Se for rotacionar o segredo, atualize a variavel na Vercel e recrie o segredo
 com o mesmo nome no Vault. Mantenha os dois valores sincronizados.
 
-## Vercel Cron
+## Vercel Hobby e scheduler externo
 
-O arquivo `vercel.json` agenda a rota a cada 30 minutos:
+O plano Vercel Hobby nao aceita cron subdiario. Por isso, `vercel.json` nao
+registra um cron de 30 minutos; a rota continua publicada e protegida para uso
+manual ou por um scheduler externo.
 
-```json
-{
-  "crons": [
-    {
-      "path": "/api/cron/process-reminders",
-      "schedule": "*/30 * * * *"
-    }
-  ]
-}
+Para manter a frequencia de 30 minutos, configure um servico como
+`cron-job.org` (ou outro scheduler que aceite headers) para chamar:
+
+```text
+GET https://<SEU_DEPLOY>/api/cron/process-reminders
+Authorization: Bearer <CRON_SECRET>
 ```
 
-Configure `CRON_SECRET` no ambiente de producao da Vercel e faca um deploy.
-A Vercel envia esse valor no header `Authorization` para cron jobs. Confirme
-se o plano da Vercel escolhido suporta essa frequencia; planos podem limitar
-cron jobs em producao.
+Use no scheduler exatamente o mesmo `CRON_SECRET` configurado na Vercel e cujo
+hash esta no Supabase Vault. Nunca coloque o segredo na URL, query string,
+documentacao ou Git. Se o provedor nao permitir guardar o header de forma
+segura, escolha outro scheduler.
+
+Alternativamente, o Hobby permite um cron diario. Para esse modo, adicione
+manualmente um schedule diario compativel, por exemplo `0 9 * * *`, sabendo que
+lembretes serao processados apenas uma vez por dia e poderao chegar atrasados.
 
 ## Teste local
 
@@ -102,7 +105,7 @@ Teste tambem uma segunda chamada: deliveries ja reivindicadas aparecem como
 1. Crie um lembrete de teste em `/settings/notifications`.
 2. Aguarde ate ele vencer.
 3. Dispare uma chamada autenticada para a rota de cron ou aguarde a proxima
-   execucao da Vercel.
+   execucao do scheduler externo/cron diario configurado.
 4. Confira o push e o registro em `push_notification_deliveries`.
 5. Abra `/settings/notifications`: o painel informa a presenca do scheduler no
    servidor e a ultima entrega registrada para o usuario.
@@ -124,8 +127,9 @@ Teste tambem uma segunda chamada: deliveries ja reivindicadas aparecem como
 
 - Quiet hours e bloqueio de fim de semana ja possuem preferencias e calculo testado, mas ainda nao sao aplicados pelo cron SQL. Isso exige uma migration atomica que adie o claim; filtrar depois do claim poderia perder o envio.
 
-- A execucao tem granularidade de 30 minutos, entao push nao e garantido no
-  minuto exato do reminder.
+- A granularidade depende do scheduler escolhido. Com intervalo de 30 minutos,
+  push nao e garantido no minuto exato do reminder; com cron diario, o atraso
+  pode chegar a um dia.
 - O scheduler processa no maximo 200 pares reminder/dispositivo por execucao.
 - Nao ha janela silenciosa, retry automatico de entrega falha ou metricas de
   execucao dedicadas nesta versao.
