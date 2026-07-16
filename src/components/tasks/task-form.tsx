@@ -129,7 +129,7 @@ export function TaskForm({
           <input name="domainId" type="hidden" value={defaultDomainId} />
         ) : (
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700">Dominio</span>
+            <span className="text-sm font-medium text-zinc-700">Domínio</span>
             <select
               className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
               defaultValue={domainSelectDefaultValue}
@@ -138,7 +138,7 @@ export function TaskForm({
             >
               {!isEditing ? <option value="">Inbox automatica</option> : null}
               {isEditing && !selectedDomainIsAvailable ? (
-                <option value="">Escolha um dominio ativo</option>
+                <option value="">Escolha um domínio ativo</option>
               ) : null}
               {domains.map((domain) => (
                 <option key={domain.id} value={domain.id}>
@@ -176,7 +176,7 @@ export function TaskForm({
               </select>
               {isEditing ? (
                 <span className="mt-1 block text-xs text-zinc-500">
-                  Se trocar o dominio, escolha um projeto do mesmo dominio ou
+                  Se trocar o domínio, escolha um projeto do mesmo domínio ou
                   deixe sem projeto.
                 </span>
               ) : null}
@@ -194,7 +194,7 @@ export function TaskForm({
               </label>
               <label className="block">
                 <span className="text-sm font-medium text-zinc-700">
-                  Horario
+                  Horário
                 </span>
                 <input
                   className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
@@ -404,7 +404,7 @@ export function TaskForm({
 
         <div className="flex flex-wrap gap-2">
           <button className="primary-button px-4 py-2.5 text-sm font-semibold">
-            {submitLabel ?? (isEditing ? "Salvar alteracoes" : "Criar tarefa")}
+            {submitLabel ?? (isEditing ? "Salvar alterações" : "Criar tarefa")}
           </button>
           {isEditing ? (
             <a

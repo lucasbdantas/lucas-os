@@ -40,7 +40,7 @@ export function WeeklyAIReviewPanel() {
         </div>
 
         {state.status === "error" ? (
-          <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <p className="feedback-panel mt-4" data-tone="warning">
             {state.message}
           </p>
         ) : null}

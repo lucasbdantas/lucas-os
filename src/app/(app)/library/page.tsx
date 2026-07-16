@@ -110,13 +110,13 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
         </Link>
       </div>
 
-      {params.error ? <p className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{params.error}</p> : null}
-      {params.saved ? <p className="mt-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700" role="status">{params.saved}</p> : null}
+      {params.error ? <p className="feedback-panel mt-6" data-tone="danger" role="alert">{params.error}</p> : null}
+      {params.saved ? <p className="feedback-panel mt-6" data-tone="success" role="status">{params.saved}</p> : null}
 
       <div className="page-grid mt-8">
         <div className="grid min-w-0 gap-8">
           <section className="section-shell">
-            <form className="app-card-soft grid gap-3 p-4 sm:grid-cols-4" method="get">
+            <form className="filter-bar grid gap-3 p-4 sm:grid-cols-4" method="get">
               <label className="grid gap-2 text-xs font-semibold text-zinc-600">
                 Tipo
                 <select className="field-control min-h-11 px-3 py-2 text-sm" defaultValue={filters.type ?? ""} name="type">
@@ -152,7 +152,7 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
             {filteredItems.length ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 {filteredItems.map((item) => (
-                  <Link className="app-card app-card-interactive min-w-0 p-4 no-underline" href={`/library?item=${encodeURIComponent(item.id)}#library-detail`} key={item.id}>
+                  <Link className="library-card app-card app-card-interactive min-w-0 p-4 no-underline" href={`/library?item=${encodeURIComponent(item.id)}#library-detail`} key={item.id}>
                     <div className="flex flex-wrap gap-2">
                       <StatusBadge label={contentTypeLabels[item.type as ContentItemType]} />
                       <StatusBadge label={contentStatusLabels[item.status as ContentItemStatus]} tone={statusTone(item.status as ContentItemStatus)} />
@@ -210,7 +210,7 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
 
                 {selectedItem.source_url ? <a className="muted-link mt-4 inline-flex text-sm" href={selectedItem.source_url} rel="noreferrer" target="_blank">Abrir origem da indicação</a> : null}
 
-                <details className="mt-6 border-t border-zinc-200 pt-4">
+                <details className="danger-zone mt-6 p-4">
                   <summary className="cursor-pointer text-sm font-semibold text-red-700">Excluir conteúdo</summary>
                   <form action={deleteContentItem} className="mt-3 flex flex-wrap items-end gap-2">
                     <input name="itemId" type="hidden" value={selectedItem.id} />

@@ -1,4 +1,5 @@
 import { AppNav } from "@/components/layout/app-nav";
+import { LogOut } from "lucide-react";
 import {
   CommandPaletteProvider,
   CommandPaletteTrigger,
@@ -7,17 +8,18 @@ import type { AppAppearance } from "@/lib/app-settings/preferences";
 import { logout } from "@/lib/auth/actions";
 
 const navItems = [
-  { href: "/today", label: "Today" },
-  { href: "/quick-capture", label: "Quick" },
-  { href: "/review", label: "Review" },
+  { href: "/today", label: "Hoje" },
+  { href: "/quick-capture", label: "Captura rápida" },
+  { href: "/planning", label: "Planejamento" },
+  { href: "/review", label: "Revisão" },
   { href: "/notifications", label: "Notificações" },
-  { href: "/capture", label: "Capture" },
+  { href: "/capture", label: "Capturas" },
   { href: "/inbox", label: "Inbox" },
-  { href: "/domains", label: "Domains" },
-  { href: "/projects", label: "Projects" },
-  { href: "/tasks", label: "Tasks" },
+  { href: "/domains", label: "Domínios" },
+  { href: "/projects", label: "Projetos" },
+  { href: "/tasks", label: "Tarefas" },
   { href: "/library", label: "Biblioteca" },
-  { href: "/settings", label: "Settings" },
+  { href: "/settings", label: "Configurações" },
 ];
 
 type AppShellProps = {
@@ -54,8 +56,8 @@ export function AppShell({
         />
 
         <form action={logout} className="app-sidebar-footer pt-3">
-          <button className="app-sidebar-logout soft-button w-full px-3 py-2.5 text-left text-sm font-medium">
-            Sair
+          <button className="app-sidebar-logout soft-button w-full gap-2 px-3 py-2.5 text-left text-sm font-medium">
+            <LogOut aria-hidden="true" className="h-4 w-4" /> Sair
           </button>
         </form>
       </aside>
@@ -68,8 +70,8 @@ export function AppShell({
         <div className="flex items-center gap-1">
           <CommandPaletteTrigger variant="mobile" />
           <form action={logout}>
-            <button className="soft-button px-3 py-2 text-sm font-medium">
-              Sair
+            <button aria-label="Sair" className="soft-button min-h-11 min-w-11 p-2" title="Sair">
+              <LogOut aria-hidden="true" className="h-4 w-4" />
             </button>
           </form>
         </div>

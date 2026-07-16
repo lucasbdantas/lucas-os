@@ -10,7 +10,17 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { CornerDownLeft, Search, X } from "lucide-react";
+import {
+  BookOpen,
+  CheckSquare2,
+  CornerDownLeft,
+  FolderKanban,
+  Inbox,
+  Layers3,
+  Navigation,
+  Search,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   searchCommandPalette,
@@ -44,12 +54,23 @@ function isEditableTarget(target: EventTarget | null) {
 
 function getResultTypeLabel(type: CommandPaletteResult["type"]) {
   return {
-    capture: "Capture",
+    capture: "Captura",
     command: "Comando",
     content: "Biblioteca",
     domain: "Domínio",
     project: "Projeto",
     task: "Tarefa",
+  }[type];
+}
+
+function getResultIcon(type: CommandPaletteResult["type"]) {
+  return {
+    capture: Inbox,
+    command: Navigation,
+    content: BookOpen,
+    domain: Layers3,
+    project: FolderKanban,
+    task: CheckSquare2,
   }[type];
 }
 
@@ -216,11 +237,17 @@ function CommandPaletteDialog({
         <div className="flex items-center gap-3 border-b border-zinc-200 px-4 py-3">
           <Search aria-hidden="true" className="size-5 shrink-0 text-zinc-600" />
           <input
+            aria-activedescendant={
+              results[selectedIndex] ? `command-result-${selectedIndex}` : undefined
+            }
+            aria-controls="command-palette-results"
+            aria-expanded="true"
             aria-label="Buscar no Lucas OS"
             className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-zinc-500"
             onChange={(event) => updateQuery(event.target.value)}
-            placeholder="Buscar comandos, tasks, projetos, conteúdos ou captures"
+            placeholder="Buscar comandos, tarefas, projetos, conteúdos ou capturas"
             ref={inputRef}
+            role="combobox"
             value={query}
           />
           <button
@@ -234,7 +261,12 @@ function CommandPaletteDialog({
           </button>
         </div>
 
-        <div className="min-h-0 overflow-y-auto p-2">
+        <div
+          aria-busy={isSearching}
+          className="min-h-0 overflow-y-auto p-2"
+          id="command-palette-results"
+          role="listbox"
+        >
           {!query ? (
             <p className="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
               Atalhos sugeridos
@@ -247,34 +279,52 @@ function CommandPaletteDialog({
             <p className="px-3 py-3 text-sm text-amber-800">{searchNotice}</p>
           ) : null}
           {!isSearching && results.length === 0 ? (
-            <p className="px-3 py-8 text-center text-sm text-zinc-600">Nada encontrado</p>
+            <div className="empty-state m-2 px-4 py-6 text-center">
+              <Search aria-hidden="true" className="mx-auto h-5 w-5 text-zinc-500" />
+              <p className="mt-3 text-sm font-semibold text-zinc-950">Nada encontrado</p>
+              <p className="mt-1 text-xs leading-5 text-zinc-600">
+                Tente outro termo ou abra um dos atalhos sugeridos.
+              </p>
+            </div>
           ) : (
             <div className="grid gap-1">
-              {results.map((result, index) => (
+              {results.map((result, index) => {
+                const ResultIcon = getResultIcon(result.type);
+
+                return (
                 <button
+                  aria-selected={index === selectedIndex}
                   className={`flex min-h-14 w-full items-center justify-between gap-4 rounded-xl px-3 py-2.5 text-left ${
                     index === selectedIndex
                       ? "bg-zinc-100 text-zinc-950"
                       : "text-zinc-700 hover:bg-zinc-100"
                   }`}
+                  id={`command-result-${index}`}
                   key={`${result.type}:${result.href}:${result.title}`}
                   onClick={() => openResult(result)}
                   onMouseEnter={() => setSelectedIndex(index)}
+                  role="option"
                   type="button"
                 >
-                  <span className="min-w-0">
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span className="desktop-nav-icon" aria-hidden="true">
+                      <ResultIcon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold text-zinc-950">
                       {result.title}
                     </span>
                     <span className="mt-0.5 block truncate text-xs text-zinc-600">
                       {result.description}
                     </span>
+                    </span>
                   </span>
-                  <span className="shrink-0 text-xs font-medium text-zinc-500">
+                  <span className="status-badge shrink-0 px-2 py-1 text-xs font-medium">
                     {getResultTypeLabel(result.type)}
                   </span>
                 </button>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

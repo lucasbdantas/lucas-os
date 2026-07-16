@@ -46,8 +46,8 @@ export function ProjectForm({
       <div className="grid gap-4">
         {isEditing ? (
           <div className="app-card-muted px-3 py-2 text-sm leading-6 text-amber-900">
-            Modo edição. Se este projeto já tiver tasks associadas, o domínio
-            não poderá ser alterado para evitar inconsistência. As tasks
+            Modo edição. Se este projeto já tiver tarefas associadas, o domínio
+            não poderá ser alterado para evitar inconsistência. As tarefas
             existentes não são movidas automaticamente.
           </div>
         ) : null}

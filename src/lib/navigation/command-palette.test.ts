@@ -15,9 +15,9 @@ describe("command palette helpers", () => {
   });
 
   it("ranks exact command matches before partial matches", () => {
-    const results = filterCommandPaletteResults(commandPaletteCommands, "tasks");
+    const results = filterCommandPaletteResults(commandPaletteCommands, "tarefas");
 
-    expect(results[0]).toMatchObject({ title: "Tasks", type: "command" });
+    expect(results[0]).toMatchObject({ title: "Tarefas", type: "command" });
   });
 
   it("filters entities by title, type, or description", () => {

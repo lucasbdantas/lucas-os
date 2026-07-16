@@ -88,7 +88,7 @@ export function CaptureTaskForm({
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700">Dominio</span>
+            <span className="text-sm font-medium text-zinc-700">Domínio</span>
             <select
               className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
               defaultValue={defaultValues?.domainId ?? ""}
@@ -135,7 +135,7 @@ export function CaptureTaskForm({
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700">Horario</span>
+            <span className="text-sm font-medium text-zinc-700">Horário</span>
             <input
               className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
               defaultValue={defaultValues?.dueTime ?? ""}
@@ -209,12 +209,12 @@ export function CaptureTaskForm({
             ))}
           </div>
           <p className="text-xs text-zinc-500">
-            Lembretes so funcionam quando a task tem data e horario.
+            Lembretes só funcionam quando a tarefa tem data e horário.
           </p>
         </fieldset>
 
         {defaultValues?.reason ? (
-          <p className="rounded-2xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+          <p className="feedback-panel" data-tone="info">
             Motivo da IA: {defaultValues.reason}
           </p>
         ) : null}

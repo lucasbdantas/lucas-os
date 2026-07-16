@@ -512,7 +512,7 @@ export function PushNotificationsPanel({
         />
         <StatusItem
           label="Scheduler"
-          value={schedulerConfigured ? "Configurado" : "Ainda nao configurado"}
+          value={schedulerConfigured ? "Configurado" : "Ainda não configurado"}
         />
         <StatusItem
           label="Ultimo processamento conhecido"
@@ -597,26 +597,26 @@ export function PushNotificationsPanel({
       ) : null}
 
       {permission === "denied" ? (
-        <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <p className="feedback-panel mt-4" data-tone="warning">
           O navegador bloqueou notificações. Reative nas configurações do site
           e volte para resetar a inscrição deste dispositivo.
         </p>
       ) : null}
 
       {message ? (
-        <p className="mt-4 rounded-2xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+        <p className="feedback-panel mt-4" data-tone="success" role="status">
           {message}
         </p>
       ) : null}
 
       {error ? (
-        <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="feedback-panel mt-4" data-tone="danger" role="alert">
           {error}
         </p>
       ) : null}
 
       {lastTestDebug && Object.keys(lastTestDebug).length > 0 ? (
-        <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-800">
+        <div className="feedback-panel mt-4" data-tone="danger" role="alert">
           <p className="font-semibold">Diagnostico seguro do teste</p>
           <dl className="mt-2 grid gap-1">
             {Object.entries(lastTestDebug).map(([key, value]) => (
@@ -630,15 +630,15 @@ export function PushNotificationsPanel({
       ) : null}
 
       {testTask ? (
-        <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 sm:flex-row sm:items-center sm:justify-between">
+        <div className="feedback-panel mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" data-tone="success">
           <span>
-            Task de teste preparada para {testTask.dueDate} às {testTask.dueTime}.
+            Tarefa de teste preparada para {testTask.dueDate} às {testTask.dueTime}.
           </span>
           <Link
             className="font-semibold underline underline-offset-4"
             href={`/tasks?edit=${testTask.taskId}#edit-task`}
           >
-            Abrir task
+            Abrir tarefa
           </Link>
         </div>
       ) : null}

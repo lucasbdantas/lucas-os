@@ -21,12 +21,12 @@ const countLabels: Record<keyof WorkspaceResetCounts, string> = {
   contentNotes: "Notas da Biblioteca",
   dailyPlanFeedback: "Feedback de planos",
   dailyPlans: "Planos diários",
-  milestones: "Milestones",
+  milestones: "Marcos",
   notifications: "Notificações",
   pendingCaptures: "Capturas pendentes",
   projects: "Projetos",
   pushDeliveries: "Histórico de entregas push",
-  tasks: "Tasks",
+  tasks: "Tarefas",
 };
 
 export function WorkspaceResetPanel({
@@ -51,9 +51,9 @@ export function WorkspaceResetPanel({
           </div>
         </div>
         <div className="mt-5 grid gap-2 sm:grid-cols-2">
-          <ResetLink href="/tasks#task-form" icon={ListPlus} label="Criar primeira task" />
+          <ResetLink href="/tasks#task-form" icon={ListPlus} label="Criar primeira tarefa" />
           <ResetLink href="/projects" icon={FolderPlus} label="Criar primeiro projeto" />
-          <ResetLink href="/quick-capture" icon={Eraser} label="Abrir Quick Capture" />
+          <ResetLink href="/quick-capture" icon={Eraser} label="Abrir Captura rápida" />
           <ResetLink href="/today" icon={RotateCcw} label="Gerar plano do dia" />
         </div>
       </div>
@@ -61,7 +61,7 @@ export function WorkspaceResetPanel({
   }
 
   return (
-    <div className="app-card p-5">
+    <div className="danger-zone p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-zinc-950">Limpar workspace</h2>
@@ -71,7 +71,7 @@ export function WorkspaceResetPanel({
           </p>
         </div>
         <span className="status-badge" data-tone="amber">
-          {getWorkspaceResetTotal(counts)} registros no preview
+          {getWorkspaceResetTotal(counts)} registros na prévia
         </span>
       </div>
 
@@ -109,7 +109,7 @@ export function WorkspaceResetPanel({
         </p>
 
         {state.status === "error" ? (
-          <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
+          <p className="feedback-panel mt-4" data-tone="danger" role="alert">
             {state.message}
           </p>
         ) : null}

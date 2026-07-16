@@ -214,7 +214,7 @@ function TaskReviewSection({
                   className="soft-button px-3 py-2 text-sm font-semibold"
                   href={getTaskEditHref(task.id)}
                 >
-                  Editar task
+                  Editar tarefa
                 </Link>
               </div>
             </article>
@@ -392,8 +392,8 @@ export default async function WeeklyReviewPage() {
     <main className="app-page mx-auto max-w-7xl">
       <PageHeader
         eyebrow="Lucas OS"
-        title="Weekly Review"
-        description="Revisão semanal simples com capturas, tasks, prazos e projetos que precisam de decisão."
+        title="Revisão semanal"
+        description="Um panorama calmo de capturas, tarefas, prazos e projetos que pedem sua atenção."
       />
 
       <section className="mt-8 grid gap-3 sm:grid-cols-4">
@@ -425,7 +425,7 @@ export default async function WeeklyReviewPage() {
               className="soft-button px-3 py-2 text-sm font-semibold"
               href="/capture"
             >
-              Abrir Capture
+              Abrir Capturas
             </Link>
           </div>
 
@@ -458,7 +458,7 @@ export default async function WeeklyReviewPage() {
         </section>
 
         <TaskReviewSection
-          description="Tasks abertas com data anterior a hoje."
+          description="Tarefas abertas com data anterior a hoje."
           domainNameById={domainNameById}
           emptyDescription="Nada vencido no momento."
           emptyTitle="Nenhuma tarefa vencida"
@@ -468,9 +468,9 @@ export default async function WeeklyReviewPage() {
         />
 
         <TaskReviewSection
-          description="Tasks concluídas nos últimos 7 dias. Quando completed_at não existe, updated_at é usado como aproximação."
+          description="Tarefas concluídas nos últimos 7 dias."
           domainNameById={domainNameById}
-          emptyDescription="Nenhuma task concluída apareceu na janela dos últimos 7 dias."
+          emptyDescription="Nenhuma tarefa concluída apareceu nos últimos 7 dias."
           emptyTitle="Nenhuma conclusão recente"
           projectNameById={projectNameById}
           tasks={completedTasks}
@@ -478,7 +478,7 @@ export default async function WeeklyReviewPage() {
         />
 
         <TaskReviewSection
-          description="Tasks abertas com prazo entre hoje e os próximos 7 dias."
+          description="Tarefas abertas com prazo entre hoje e os próximos 7 dias."
           domainNameById={domainNameById}
           emptyDescription="Nenhum prazo aberto nos próximos 7 dias."
           emptyTitle="Semana livre de prazos"
@@ -494,8 +494,7 @@ export default async function WeeklyReviewPage() {
                 Projetos ativos sem próxima ação
               </h2>
               <p className="mt-1 text-sm text-zinc-600">
-                Mesma lógica do Today: projetos ativos sem nenhuma task aberta
-                associada.
+                Projetos ativos que ainda não têm uma próxima tarefa aberta.
               </p>
             </div>
             <StatusBadge label={`${projectsWithoutNextAction.length}`} />
@@ -504,7 +503,7 @@ export default async function WeeklyReviewPage() {
           {projectsWithoutNextAction.length === 0 ? (
             <EmptyState
               title="Nenhum projeto parado"
-              description="Todos os projetos ativos encontrados têm pelo menos uma task aberta."
+              description="Todos os projetos ativos têm pelo menos uma tarefa aberta."
             />
           ) : (
             <div className="grid gap-3">
@@ -547,7 +546,7 @@ export default async function WeeklyReviewPage() {
         </section>
 
         <ProjectReviewSection
-          description="Projetos active/waiting com target_date nos próximos 30 dias."
+          description="Projetos ativos ou aguardando, com data-alvo nos próximos 30 dias."
           domainNameById={domainNameById}
           emptyDescription="Nenhum projeto com data alvo nessa janela."
           emptyTitle="Sem prazos de projeto nos próximos 30 dias"
@@ -556,12 +555,12 @@ export default async function WeeklyReviewPage() {
         />
 
         <ProjectReviewSection
-          description="Projetos pausados ou waiting que talvez precisem de decisão."
+          description="Projetos pausados ou aguardando que talvez precisem de uma decisão."
           domainNameById={domainNameById}
           emptyDescription="Nenhum projeto pausado ou waiting para revisar agora."
           emptyTitle="Nenhuma decisão pendente"
           projects={decisionProjectsResult.data}
-          title="Projetos pausados ou waiting"
+          title="Projetos pausados ou aguardando"
         />
       </div>
     </main>

@@ -73,14 +73,14 @@ export default async function SystemHealthPage() {
   return (
     <main className="app-page mx-auto max-w-6xl">
       <PageHeader
-        eyebrow="Settings"
+        eyebrow="Configurações"
         title="Saúde do sistema"
         description="Checks seguros de configuração e um roteiro curto para terminar o setup. Nenhum secret ou token é exibido."
       />
 
       <div className="mt-4">
         <Link className="muted-link text-sm font-medium" href="/settings">
-          Voltar para Settings
+          Voltar para Configurações
         </Link>
       </div>
 

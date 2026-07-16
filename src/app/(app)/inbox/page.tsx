@@ -237,21 +237,21 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
       <PageHeader
         eyebrow="Operacional"
         title="Inbox"
-        description="Emails recentes para acao e captura rapida para itens ainda nao classificados."
+        description="Emails recentes que podem pedir uma ação, além das tarefas que ainda vivem na Inbox operacional."
       />
 
       {pageError ? (
-        <p className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="feedback-panel mt-6" data-tone="danger" role="alert">
           {pageError}
         </p>
       ) : null}
 
       {notice ? (
-        <p className="mt-6 rounded-2xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+        <p className="feedback-panel mt-6" data-tone="success" role="status">
           {notice}{" "}
           {notice.toLowerCase().includes("task criada") ? (
             <Link className="underline underline-offset-4" href="/tasks">
-              Abrir Tasks
+              Abrir Tarefas
             </Link>
           ) : null}
         </p>
@@ -267,8 +267,8 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
               Configurar Google
             </Link>
           }
-          description="Emails recentes em modo somente leitura, filtrados para reduzir ruido sem modificar sua conta."
-          title="Gmail Action Inbox"
+          description="Emails recentes em modo somente leitura, filtrados para reduzir ruído sem modificar sua conta."
+          title="Ações do Gmail"
         />
 
         <div className="app-card-muted grid gap-4 p-4">
@@ -362,7 +362,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
                   type="checkbox"
                   value="1"
                 />
-                Nao lidos
+                Não lidos
               </label>
               <label className="flex items-center gap-2 text-sm font-medium text-zinc-700">
                 <input
@@ -394,13 +394,13 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
 
         {gmailInbox.connectedAccountCount === 0 ? (
           <EmptyState
-            description="Conecte uma conta Google em Settings para usar Gmail."
+            description="Conecte uma conta Google em Configurações para usar o Gmail."
             title="Nenhuma conta Google conectada"
           />
         ) : null}
 
         {gmailInbox.reconnectAccountEmails.length > 0 ? (
-          <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          <div className="feedback-panel mb-3" data-tone="warning">
             Reconecte {gmailInbox.reconnectAccountEmails.join(", ")} para
             conceder acesso somente leitura ao Gmail.
           </div>
@@ -408,7 +408,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
 
         {gmailInbox.warnings.length > 0 ? (
           <div className="app-card-muted mb-3 p-3 text-sm text-zinc-600">
-            Algumas contas Google nao puderam carregar emails agora. A Inbox
+            Algumas contas Google não puderam carregar emails agora. A Inbox
             operacional continua funcionando.
           </div>
         ) : null}
@@ -416,7 +416,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
         {gmailInbox.connectedAccountCount > 0 &&
         gmailInbox.messages.length === 0 ? (
           <EmptyState
-            description={`Nenhum email encontrado para: ${activeFilterSummary}. Limpe filtros ou amplie o periodo.`}
+            description={`Nenhum email encontrado para: ${activeFilterSummary}. Limpe os filtros ou amplie o período.`}
             title="Nenhum email recente encontrado"
           />
         ) : null}
@@ -473,7 +473,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
                         message.id,
                       )}
                     >
-                      Criar task
+                      Criar tarefa
                     </Link>
                     <Link
                       className="soft-button px-3 py-2 text-sm font-semibold"
@@ -483,7 +483,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
                         message.id,
                       )}
                     >
-                      Sugerir task com IA
+                      Sugerir tarefa com IA
                     </Link>
                     <form action={sendGmailMessageToCapture} className="sm:contents">
                       <input
@@ -518,7 +518,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
                         value={message.snippet ?? ""}
                       />
                       <button className="primary-button w-full px-3 py-2 text-sm font-semibold sm:w-auto">
-                        Enviar para Capture
+                        Enviar para Capturas
                       </button>
                     </form>
                   </div>
@@ -532,8 +532,8 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
       {emailTask && !selectedEmail ? (
         <section className="section-shell mt-10">
           <EmptyState
-            description="O email selecionado nao apareceu no filtro atual. Limpe filtros ou amplie o periodo para tentar de novo."
-            title="Email nao encontrado para criar task"
+            description="O email selecionado não apareceu no filtro atual. Limpe os filtros ou amplie o período para tentar de novo."
+            title="Email não encontrado para criar tarefa"
           />
         </section>
       ) : null}
@@ -549,8 +549,8 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
                 Cancelar
               </Link>
             }
-            description="Revise os campos antes de salvar. Nada e criado automaticamente a partir do Gmail."
-            title="Criar task a partir deste email"
+            description="Revise os campos antes de salvar. Nada é criado automaticamente a partir do Gmail."
+            title="Criar tarefa a partir deste email"
           />
           <div className="app-card-muted p-4 text-sm leading-6 text-zinc-600">
             <p>
@@ -570,7 +570,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
             domains={selectableDomains}
             projects={projectOptions}
             returnTo={currentInboxHref}
-            submitLabel="Criar task"
+            submitLabel="Criar tarefa"
           />
         </section>
       ) : null}
@@ -578,8 +578,8 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
       {emailAi && !selectedEmailAI ? (
         <section className="section-shell mt-10">
           <EmptyState
-            description="O email selecionado nao apareceu no filtro atual. Limpe filtros ou amplie o periodo para tentar de novo."
-            title="Email nao encontrado para sugestao"
+            description="O email selecionado não apareceu no filtro atual. Limpe os filtros ou amplie o período para tentar de novo."
+            title="Email não encontrado para sugestão"
           />
         </section>
       ) : null}
@@ -587,8 +587,8 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
       {selectedEmailAI ? (
         <section className="section-shell mt-10" id="email-ai-form">
           <SectionHeader
-            description="A IA recebe apenas metadados seguros e o snippet curto. Nada e criado sem sua confirmacao."
-            title="Sugerir task com IA"
+            description="A IA recebe apenas metadados seguros e um trecho curto. Nada é criado sem sua confirmação."
+            title="Sugerir tarefa com IA"
           />
           <div className="app-card-muted p-4 text-sm leading-6 text-zinc-600">
             <p>
@@ -618,19 +618,19 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
           />
         ) : (
           <EmptyState
-            title="Inbox nao encontrada"
-            description="Rode o seed inicial para criar o dominio system Inbox."
+            title="Inbox não encontrada"
+            description="Execute o seed inicial para criar o domínio de sistema Inbox."
           />
         )}
       </section>
 
       <section className="section-shell mt-10">
         <SectionHeader
-          description="Tarefas abertas que ainda moram no dominio system Inbox."
+          description="Tarefas abertas que ainda vivem no domínio de sistema Inbox."
           title="Itens abertos da Inbox operacional"
         />
         <TaskList
-          emptyDescription="Nada pendente no dominio Inbox por enquanto."
+          emptyDescription="Nada pendente no domínio Inbox por enquanto."
           emptyTitle="Inbox vazia"
           returnTo="/inbox"
           tasks={inboxTasks}

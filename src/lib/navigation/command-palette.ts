@@ -26,32 +26,32 @@ export type CommandPaletteSearchResponse = {
 };
 
 export const commandPaletteCommands: CommandPaletteResult[] = [
-  { description: "Painel operacional do dia", href: "/today", title: "Today", type: "command" },
-  { description: "Capturar texto em um toque", href: "/quick-capture", title: "Quick Capture", type: "command" },
-  { description: "Triar capturas pendentes", href: "/capture", title: "Capture", type: "command" },
+  { description: "Painel operacional do dia", href: "/today", title: "Hoje", type: "command" },
+  { description: "Capturar texto em um toque", href: "/quick-capture", title: "Captura rápida", type: "command" },
+  { description: "Triar capturas pendentes", href: "/capture", title: "Capturas", type: "command" },
   { description: "Email e entrada operacional", href: "/inbox", title: "Inbox", type: "command" },
-  { description: "Criar e organizar tarefas", href: "/tasks", title: "Tasks", type: "command" },
-  { description: "Projetos e milestones", href: "/projects", title: "Projects", type: "command" },
+  { description: "Criar e organizar tarefas", href: "/tasks", title: "Tarefas", type: "command" },
+  { description: "Projetos e marcos", href: "/projects", title: "Projetos", type: "command" },
   { description: "Conteúdos, referências e notas", href: "/library", title: "Biblioteca", type: "command" },
-  { description: "Areas e dominios", href: "/domains", title: "Domains", type: "command" },
-  { description: "Revisao semanal", href: "/review", title: "Review", type: "command" },
-  { description: "Historico de planos diarios", href: "/planning", title: "Planning", type: "command" },
-  { description: "Lembretes internos", href: "/notifications", title: "Notifications", type: "command" },
-  { description: "Preferencias do app", href: "/settings", title: "Settings", type: "command" },
-  { description: "Contas Google conectadas", href: "/settings/integrations", title: "Integrations", type: "command" },
-  { description: "Exportacao e recuperacao", href: "/settings/backup", title: "Backup", type: "command" },
-  { description: "Notificacoes push por dispositivo", href: "/settings/notifications", title: "Push Notifications", type: "command" },
-  { description: "Status seguro das configuracoes", href: "/settings/health", title: "System Health", type: "command" },
-  { description: "Checklist para concluir o setup", href: "/settings/health#setup", title: "Setup Checklist", type: "command" },
-  { description: "Preview e limpeza segura do workspace", href: "/settings/data", title: "Workspace Data", type: "command" },
+  { description: "Áreas e domínios", href: "/domains", title: "Domínios", type: "command" },
+  { description: "Revisão semanal", href: "/review", title: "Revisão", type: "command" },
+  { description: "Histórico de planos diários", href: "/planning", title: "Planejamento", type: "command" },
+  { description: "Lembretes internos", href: "/notifications", title: "Notificações", type: "command" },
+  { description: "Preferências do app", href: "/settings", title: "Configurações", type: "command" },
+  { description: "Contas Google conectadas", href: "/settings/integrations", title: "Integrações", type: "command" },
+  { description: "Exportação e recuperação", href: "/settings/backup", title: "Backup", type: "command" },
+  { description: "Notificações push por dispositivo", href: "/settings/notifications", title: "Notificações push", type: "command" },
+  { description: "Status seguro das configurações", href: "/settings/health", title: "Saúde do sistema", type: "command" },
+  { description: "Checklist para concluir o setup", href: "/settings/health#setup", title: "Checklist do setup", type: "command" },
+  { description: "Preview e limpeza segura do workspace", href: "/settings/data", title: "Dados do workspace", type: "command" },
 ];
 
 export const commandPaletteSuggestions = [
-  "Quick Capture",
-  "Today",
+  "Captura rápida",
+  "Hoje",
   "Inbox",
-  "Tasks",
-  "Planning",
+  "Tarefas",
+  "Planejamento",
 ];
 
 export function normalizeCommandPaletteQuery(value: string) {

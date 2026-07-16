@@ -18,7 +18,7 @@ const densityLabels = {
 
 const homeLabels = {
   "/quick-capture": "Captura rápida",
-  "/today": "Today",
+  "/today": "Hoje",
 };
 
 const appearanceLabels = {
@@ -44,7 +44,7 @@ export function AppPreferencesForm({ preferences }: AppPreferencesFormProps) {
           ))}
         </select>
         <span className="mt-1 block text-xs leading-5 text-zinc-500">
-          Controla o tema do Lucas OS. Nao depende da caixa visual das Next Dev
+          Controla o tema do Lucas OS. Não depende da caixa visual das Next Dev
           Tools.
         </span>
       </label>
@@ -67,7 +67,7 @@ export function AppPreferencesForm({ preferences }: AppPreferencesFormProps) {
 
         <label className="block">
           <span className="text-sm font-medium text-zinc-700">
-            Densidade do Today
+            Densidade do Hoje
           </span>
           <select
             className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
@@ -109,10 +109,10 @@ export function AppPreferencesForm({ preferences }: AppPreferencesFormProps) {
         />
         <span>
           <span className="block text-sm font-medium text-zinc-800">
-            Mostrar projetos sem próxima ação no Today
+            Mostrar projetos sem próxima ação no Hoje
           </span>
           <span className="mt-1 block text-sm leading-6 text-zinc-600">
-            Quando desativado, essa lista continua disponível no Weekly Review.
+            Quando desativado, essa lista continua disponível na Revisão semanal.
           </span>
         </span>
       </label>

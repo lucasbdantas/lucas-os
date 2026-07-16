@@ -27,7 +27,7 @@ const feedbackOptions: Array<{
   value: DailyPlanFeedbackRating;
 }> = [
   { label: "Util", value: "useful" },
-  { label: "Nao util", value: "not_useful" },
+  { label: "Não foi útil", value: "not_useful" },
   { label: "Errado", value: "wrong" },
   { label: "Feito", value: "done" },
   { label: "Ignorado", value: "ignored" },
@@ -178,7 +178,7 @@ function ReadyPlan({ plan }: { plan: StoredDailyPlan }) {
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge label="Plano salvo" tone="green" />
           <span className="text-sm text-zinc-600">
-            Gerado em {formatDateTime(plan.generatedAt, "agora", plan.timezone)}. Revisao {plan.generation}.
+            Gerado em {formatDateTime(plan.generatedAt, "agora", plan.timezone)}. Revisão {plan.generation}.
           </span>
         </div>
         <p className="mt-3 text-base leading-7 text-zinc-800">{plan.plan.summary}</p>
@@ -209,7 +209,7 @@ function ReadyPlan({ plan }: { plan: StoredDailyPlan }) {
         <div>
           <h3 className="mb-2 font-semibold text-zinc-950">Reagendamento possivel</h3>
           <PlanList
-            emptyLabel="Nenhuma sugestao de reagendamento."
+            emptyLabel="Nenhuma sugestão de reagendamento."
             items={plan.plan.reschedulingSuggestions}
             plan={plan}
             targetType="reschedule"
@@ -227,7 +227,7 @@ function ReadyPlan({ plan }: { plan: StoredDailyPlan }) {
       </div>
 
       <div>
-        <h3 className="mb-2 font-semibold text-zinc-950">Proximos passos</h3>
+        <h3 className="mb-2 font-semibold text-zinc-950">Próximos passos</h3>
         <FeedbackTextList
           emptyLabel="Nenhum proximo passo adicional."
           items={plan.plan.nextSteps}
@@ -256,11 +256,11 @@ function PlanHistory({
     <div className="mt-5 border-t border-zinc-200 pt-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="font-medium text-zinc-950">Historico recente</p>
-          <p className="mt-1 text-sm text-zinc-600">Os ultimos planos ficam disponiveis em modo leitura.</p>
+          <p className="font-medium text-zinc-950">Histórico recente</p>
+          <p className="mt-1 text-sm text-zinc-600">Os últimos planos ficam disponíveis em modo leitura.</p>
         </div>
         <Link className="soft-button px-3 py-2 text-sm font-medium" href="/planning">
-          Ver historico
+          Ver histórico
         </Link>
       </div>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -303,16 +303,16 @@ export function DailyPlanningPanel({
             {activePersistenceMode === "compatibility" ? (
               <StatusBadge label="modo compatibilidade" tone="amber" />
             ) : null}
-            <StatusBadge label="approval-first" tone="blue" />
+            <StatusBadge label="Confirmação humana" tone="blue" />
           </div>
         }
-        description="Um briefing salvo, baseado nos dados atuais. A IA apenas sugere e nunca executa acoes."
+        description="Um briefing pessoal baseado nos dados atuais. A IA apenas sugere e nunca executa ações."
         title="Plano sugerido"
       />
       {activePersistenceMode === "compatibility" ? (
-        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-          Persistencia em modo compatibilidade. O plano e o feedback ficam em
-          app_settings enquanto a Data API ainda nao reconhece as tabelas de
+        <div className="feedback-panel mt-4" data-tone="warning">
+          Persistência em modo compatibilidade. O plano e o feedback ficam em
+          app_settings enquanto a Data API ainda não reconhece as tabelas de
           planejamento.
         </div>
       ) : null}
@@ -320,7 +320,7 @@ export function DailyPlanningPanel({
         <SubmitButton hasPlan={Boolean(plan)} />
       </form>
       {state.status === "error" ? (
-        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+        <div className="feedback-panel mt-4" data-tone="warning" role="alert">
           {state.message}
         </div>
       ) : null}

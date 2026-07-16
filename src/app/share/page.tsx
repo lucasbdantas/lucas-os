@@ -15,15 +15,15 @@ type SharePageProps = {
 
 function getErrorMessage(error: string | undefined) {
   if (error === "empty") {
-    return "Nao encontrei texto ou link para salvar.";
+    return "Não encontrei texto ou link para salvar.";
   }
 
   if (error === "too_long") {
-    return "O conteudo compartilhado ficou longo demais.";
+    return "O conteúdo compartilhado ficou longo demais.";
   }
 
   if (error) {
-    return "Nao foi possivel salvar a captura compartilhada.";
+    return "Não foi possível salvar a captura compartilhada.";
   }
 
   return null;
@@ -71,12 +71,12 @@ export default async function SharePage({ searchParams }: SharePageProps) {
           Compartilhar captura
         </h1>
         <p className="mt-3 text-sm leading-6 text-zinc-600">
-          Revise o texto recebido e salve como pending capture. Nada vira task
+          Revise o texto recebido e salve como captura pendente. Nada vira tarefa
           automaticamente.
         </p>
 
         {errorMessage ? (
-          <p className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="feedback-panel mt-5" data-tone="danger" role="alert">
             {errorMessage}
           </p>
         ) : null}
@@ -85,7 +85,7 @@ export default async function SharePage({ searchParams }: SharePageProps) {
           <form action={createPendingCaptureFromShare} className="mt-6 grid gap-4">
             <label className="block">
               <span className="text-sm font-semibold text-zinc-800">
-                Conteudo
+                Conteúdo
               </span>
               <textarea
                 className="field-control mt-2 min-h-56 w-full px-3 py-3 text-base leading-6 outline-none"
@@ -102,7 +102,7 @@ export default async function SharePage({ searchParams }: SharePageProps) {
         ) : (
           <div className="app-card-muted mt-6 p-4 text-sm leading-6 text-zinc-600">
             Use o menu de compartilhar do Android para enviar texto ou links
-            para o Lucas OS. Se preferir, use a captura rapida.
+            para o Lucas OS. Se preferir, use a captura rápida.
           </div>
         )}
 
@@ -117,13 +117,13 @@ export default async function SharePage({ searchParams }: SharePageProps) {
             className="soft-button min-h-12 px-4 py-3 text-center text-sm font-semibold"
             href="/capture"
           >
-            Ver inbox
+            Ver Capturas
           </Link>
           <Link
             className="ghost-button min-h-12 px-4 py-3 text-center text-sm font-semibold"
             href="/today"
           >
-            Voltar para Today
+            Voltar para Hoje
           </Link>
         </div>
       </section>

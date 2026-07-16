@@ -54,6 +54,7 @@ const navIcons: Record<string, LucideIcon> = {
   "/settings": Settings,
   "/settings/backup": Cloud,
   "/settings/health": HeartPulse,
+  "/settings/data": Layers3,
   "/settings/integrations": SlidersHorizontal,
   "/settings/notifications": Bell,
   "/tasks": CheckSquare2,
@@ -63,18 +64,18 @@ const navIcons: Record<string, LucideIcon> = {
 const mobileMenuCards = [
   {
     href: "/today",
-    label: "Today",
+    label: "Hoje",
     description: "Painel do dia",
   },
   {
     href: "/quick-capture",
-    label: "Quick Capture",
+    label: "Captura rápida",
     description: "Capturar em um toque",
   },
   {
     href: "/capture",
-    label: "Capture",
-    description: "Triar pendencias",
+    label: "Capturas",
+    description: "Triar pendências",
   },
   {
     href: "/inbox",
@@ -83,13 +84,13 @@ const mobileMenuCards = [
   },
   {
     href: "/tasks",
-    label: "Tasks",
+    label: "Tarefas",
     description: "Criar e editar tarefas",
   },
   {
     href: "/projects",
-    label: "Projects",
-    description: "Projetos e milestones",
+    label: "Projetos",
+    description: "Projetos e marcos",
   },
   {
     href: "/library",
@@ -98,27 +99,32 @@ const mobileMenuCards = [
   },
   {
     href: "/domains",
-    label: "Domains",
-    description: "Areas da vida",
+    label: "Domínios",
+    description: "Áreas da vida",
+  },
+  {
+    href: "/planning",
+    label: "Planejamento",
+    description: "Planos diários salvos",
   },
   {
     href: "/review",
-    label: "Review",
-    description: "Revisao semanal",
+    label: "Revisão",
+    description: "Revisão semanal",
   },
   {
     href: "/notifications",
-    label: "Notifications",
+    label: "Notificações",
     description: "Lembretes internos",
   },
   {
     href: "/settings",
-    label: "Settings",
-    description: "Preferencias do app",
+    label: "Configurações",
+    description: "Preferências do app",
   },
   {
     href: "/settings/integrations",
-    label: "Integrations",
+    label: "Integrações",
     description: "Google e contas conectadas",
   },
   {
@@ -128,8 +134,18 @@ const mobileMenuCards = [
   },
   {
     href: "/settings/notifications",
-    label: "Push Notifications",
+    label: "Notificações push",
     description: "Push por dispositivo",
+  },
+  {
+    href: "/settings/health",
+    label: "Saúde do sistema",
+    description: "Status e checklist do setup",
+  },
+  {
+    href: "/settings/data",
+    label: "Dados do workspace",
+    description: "Prévia e limpeza segura",
   },
 ];
 
@@ -233,7 +249,11 @@ export function AppNav({
             const active = isActivePath(pathname, item.href);
             const Icon = navIcons[item.href] ?? Layers3;
             const label =
-              item.href === "/quick-capture" ? "Quick" : item.label;
+              item.href === "/quick-capture"
+                ? "Rápida"
+                : item.href === "/capture"
+                  ? "Capturas"
+                  : item.label;
 
             return (
               <Link

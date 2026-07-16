@@ -18,9 +18,9 @@ const entityLabels = {
   content_items: "Biblioteca",
   content_notes: "Notas da Biblioteca",
   domains: "Domínios",
-  milestones: "Milestones",
+  milestones: "Marcos",
   projects: "Projetos",
-  tasks: "Tasks",
+  tasks: "Tarefas",
 };
 
 export function BackupRestorePanel() {
@@ -66,7 +66,7 @@ export function BackupRestorePanel() {
         />
         <div>
           <h2 className="text-lg font-semibold text-zinc-950">
-            Preview de restauração
+            Prévia de restauração
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-600">
             Selecione um export do Lucas OS para comparar com sua conta atual.

@@ -9,6 +9,7 @@ import {
   type ProjectListItem,
 } from "@/components/projects/project-list";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { SectionHeader } from "@/components/ui/section-header";
 import { requireSession } from "@/lib/supabase/require-session";
 
 type ProjectsPageProps = {
@@ -106,22 +107,23 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     <main className="app-page mx-auto max-w-6xl">
       <PageHeader
         eyebrow="Operacional"
-        title="Projects"
-        description="CRUD manual mínimo de projetos e milestones via Supabase Auth + RLS."
+        title="Projetos"
+        description="Acompanhe resultados finitos, marcos e próximas ações em cada área da sua vida."
       />
 
       {visibleError ? (
-        <p className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="feedback-panel mt-6" data-tone="danger" role="alert">
           {visibleError}
         </p>
       ) : null}
 
       {editProject ? (
-        <section className="mt-8" id="edit-project">
-          <div className="mb-3 flex items-center gap-2">
-            <h2 className="font-semibold text-zinc-950">Editar projeto</h2>
-            <StatusBadge label="edição manual" tone="amber" />
-          </div>
+        <section className="section-shell mt-8" id="edit-project">
+          <SectionHeader
+            action={<StatusBadge label="Edição manual" tone="amber" />}
+            description="Ajuste os dados do projeto sem alterar automaticamente as tarefas associadas."
+            title="Editar projeto"
+          />
           <ProjectForm
             domains={editDomains}
             initialProject={editProject}
@@ -130,16 +132,21 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
         </section>
       ) : null}
 
-      <section className="mt-8">
-        <div className="mb-3 flex items-center gap-2">
-          <h2 className="font-semibold text-zinc-950">Novo projeto</h2>
-          <StatusBadge label="manual" />
-        </div>
+      <section className="section-shell mt-8">
+        <SectionHeader
+          action={<StatusBadge label="manual" />}
+          description="Defina um resultado claro e conecte-o ao domínio certo."
+          title="Novo projeto"
+        />
         <ProjectForm domains={activeDomains} returnTo="/projects" />
       </section>
 
-      <section className="mt-10">
-        <h2 className="mb-3 font-semibold text-zinc-950">Projetos</h2>
+      <section className="section-shell mt-10">
+        <SectionHeader
+          action={<StatusBadge label={`${projects.length}`} tone="green" />}
+          description="Acompanhe status, marcos e próximas ações sem perder o contexto."
+          title="Seus projetos"
+        />
         <ProjectList projects={projects} returnTo="/projects" />
       </section>
     </main>

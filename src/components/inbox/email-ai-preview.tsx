@@ -27,7 +27,7 @@ function SubmitButton() {
       disabled={pending}
       type="submit"
     >
-      {pending ? "Gerando sugestao..." : "Sugerir task com IA"}
+      {pending ? "Gerando sugestão..." : "Sugerir tarefa com IA"}
     </button>
   );
 }
@@ -51,7 +51,7 @@ export function EmailAIPreview({
   return (
     <div className="app-card-muted mt-4 p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <StatusBadge label="preview IA" tone="blue" />
+        <StatusBadge label="Prévia da IA" tone="blue" />
         <span className="text-sm text-zinc-600">
           A IA apenas sugere. Revise e confirme antes de criar.
         </span>
@@ -66,11 +66,11 @@ export function EmailAIPreview({
       {state.status !== "idle" ? (
         <div className="mt-4 grid gap-3">
           <p className="text-sm text-zinc-700">
-            {state.message ?? "Sugestao pronta para revisao."}
+            {state.message ?? "Sugestão pronta para revisão."}
           </p>
           {state.status === "task" && state.preview ? (
             <StatusBadge
-              label={`Confianca: ${Math.round(state.preview.confidence * 100)}%`}
+              label={`Confiança: ${Math.round(state.preview.confidence * 100)}%`}
               tone="blue"
             />
           ) : null}
@@ -91,7 +91,7 @@ export function EmailAIPreview({
               domains={domains}
               projects={projects}
               returnTo={returnTo}
-              submitLabel="Usar sugestao e criar task"
+              submitLabel="Usar sugestão e criar tarefa"
             />
           ) : null}
         </div>

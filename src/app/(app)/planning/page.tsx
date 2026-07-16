@@ -20,7 +20,7 @@ function StoredPlan({ plan }: { plan: StoredDailyPlan }) {
   return (
     <section className="section-shell">
       <SectionHeader
-        action={<StatusBadge label={`Revisao ${plan.generation}`} tone="blue" />}
+        action={<StatusBadge label={`Revisão ${plan.generation}`} tone="blue" />}
         description={`Gerado em ${formatDateTime(plan.generatedAt, "Sem data", plan.timezone)} no fuso ${plan.timezone}.`}
         title={`Plano de ${formatDate(plan.planDate)}`}
       />
@@ -51,7 +51,7 @@ function StoredPlan({ plan }: { plan: StoredDailyPlan }) {
             title="Triagem sugerida"
           />
         </div>
-        <PlanItems items={plan.plan.nextSteps} title="Proximos passos" />
+        <PlanItems items={plan.plan.nextSteps} title="Próximos passos" />
       </div>
     </section>
   );
@@ -93,23 +93,23 @@ export default async function PlanningPage({ searchParams }: PlanningPageProps) 
     <main className="app-page mx-auto max-w-5xl">
       <PageHeader
         eyebrow="Lucas OS"
-        title="Historico de planos"
-        description="Planos diarios salvos para consulta. Eles registram sugestoes, nunca acoes executadas pela IA."
+        title="Histórico de planos"
+        description="Consulte os planos diários sugeridos pela IA. Eles registram recomendações, nunca ações executadas automaticamente."
       />
 
       {availability.mode === "compatibility" ? (
-        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-          Persistencia em modo compatibilidade: os planos ficam em app_settings
-          enquanto a Data API ainda nao reconhece as tabelas de planejamento.
+        <div className="feedback-panel mt-6" data-tone="warning">
+          Persistência em modo compatibilidade: os planos ficam em app_settings
+          enquanto a Data API ainda não reconhece as tabelas de planejamento.
         </div>
       ) : null}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
         <aside className="section-shell h-fit">
-          <p className="font-semibold text-zinc-950">Ultimos 14 dias</p>
+          <p className="font-semibold text-zinc-950">Últimos 14 dias</p>
           {history.length === 0 ? (
             <p className="mt-2 text-sm leading-6 text-zinc-600">
-              Gere o primeiro plano no Today.
+              Gere o primeiro plano no Hoje.
             </p>
           ) : (
             <nav className="mt-3 grid gap-2">
@@ -137,8 +137,8 @@ export default async function PlanningPage({ searchParams }: PlanningPageProps) 
           <EmptyState
             description={
               history.length > 0
-                ? "Escolha um plano no historico para abrir em modo leitura."
-                : "O historico aparecera aqui depois que voce gerar um plano no Today."
+                ? "Escolha um plano no histórico para abrir em modo leitura."
+                : "O histórico aparecerá aqui depois que você gerar um plano no Hoje."
             }
             title={history.length > 0 ? "Selecione um plano" : "Sem planos salvos"}
           />

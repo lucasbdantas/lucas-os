@@ -54,7 +54,7 @@ export function NotificationPreferencesForm({
           </select>
         </label>
         <label className="grid gap-2 text-sm font-medium text-zinc-800">
-          Lembrete padrão para novas tasks
+          Lembrete padrão para novas tarefas
           <select
             className="form-select min-h-11"
             defaultValue={preferences.defaultReminderOffset}

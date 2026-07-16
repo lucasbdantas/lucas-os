@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { NotificationPreferencesForm } from "@/components/settings/notification-preferences-form";
 import { PushNotificationsPanel } from "@/components/settings/push-notifications-panel";
 import { SectionHeader } from "@/components/ui/section-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDateTime } from "@/lib/format";
 import { revokePushDevice } from "@/lib/push/notification-actions";
@@ -57,26 +58,26 @@ export default async function NotificationSettingsPage({
   return (
     <main className="app-page mx-auto max-w-6xl">
       <PageHeader
-        eyebrow="Settings"
+        eyebrow="Configurações"
         title="Notificações"
-        description="Ative, teste e diagnostique push notifications para lembretes de tasks neste dispositivo."
+        description="Ative, teste e acompanhe notificações push para os lembretes deste dispositivo."
       />
 
       <div className="mt-4">
         <Link className="muted-link text-sm font-medium" href="/settings">
-          Voltar para Settings
+          Voltar para Configurações
         </Link>
       </div>
 
       {params.saved ? (
-        <p className="mt-5 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+        <p className="feedback-panel mt-5" data-tone="success" role="status">
           {params.saved === "device"
             ? "Dispositivo revogado."
             : "Preferências de notificação salvas."}
         </p>
       ) : null}
       {params.error ? (
-        <p className="mt-5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <p className="feedback-panel mt-5" data-tone="danger" role="alert">
           Não foi possível concluir a operação. Tente novamente.
         </p>
       ) : null}
@@ -84,16 +85,16 @@ export default async function NotificationSettingsPage({
       <section className="section-shell mt-8">
         <SectionHeader
           description="Controle o canal push, fins de semana e a janela em que o Lucas OS deve permanecer silencioso."
-          title="Preferências e quiet hours"
+          title="Preferências e horário silencioso"
         />
         <NotificationPreferencesForm preferences={preferences} />
       </section>
 
       <section className="section-shell mt-10">
         <SectionHeader
-          action={<StatusBadge label="opt-in" tone="blue" />}
+          action={<StatusBadge label="Ativação manual" tone="blue" />}
           description="Push depende do navegador, do dispositivo e das VAPID keys do servidor. O painel abaixo permite testar o fluxo sem abrir o console."
-          title="Push Notifications V1"
+          title="Notificações push neste dispositivo"
         />
 
         <PushNotificationsPanel
@@ -111,9 +112,10 @@ export default async function NotificationSettingsPage({
         />
 
         {devices.length === 0 ? (
-          <div className="app-card-muted p-4 text-sm leading-6 text-zinc-600">
-            Nenhum dispositivo push ativo. Use o painel acima para registrar este navegador.
-          </div>
+          <EmptyState
+            description="Use o painel acima para registrar este navegador quando quiser receber lembretes por push."
+            title="Nenhum dispositivo push ativo"
+          />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {devices.map((device) => (

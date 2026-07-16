@@ -34,14 +34,14 @@ export const contentTypeLabels: Record<ContentItemType, string> = {
   other: "Outro",
   podcast: "Podcast",
   theater_live: "Teatro / ao vivo",
-  tiktok_reel: "TikTok / Reel",
+  tiktok_reel: "TikTok / Reels",
   youtube_video: "Vídeo do YouTube",
 };
 
 export const contentStatusLabels: Record<ContentItemStatus, string> = {
   abandoned: "Abandonado",
-  consumed: "Concluído",
-  consuming: "Em andamento",
+  consumed: "Consumido",
+  consuming: "Consumindo",
   paused: "Pausado",
   want_to_consume: "Quero consumir",
 };

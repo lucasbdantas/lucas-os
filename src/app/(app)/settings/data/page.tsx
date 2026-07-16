@@ -18,14 +18,14 @@ export default async function WorkspaceDataSettingsPage() {
   return (
     <main className="app-page mx-auto max-w-6xl">
       <PageHeader
-        eyebrow="Settings"
+        eyebrow="Configurações"
         title="Dados do workspace"
         description="Revise e limpe dados operacionais de teste sem desconectar integrações ou perder preferências."
       />
 
       <div className="mt-4 flex flex-wrap gap-3">
         <Link className="muted-link text-sm font-medium" href="/settings">
-          Voltar para Settings
+          Voltar para Configurações
         </Link>
         <Link className="muted-link text-sm font-medium" href="/settings/backup">
           Fazer backup antes
@@ -34,13 +34,13 @@ export default async function WorkspaceDataSettingsPage() {
 
       <section className="section-shell mt-8">
         <SectionHeader
-          action={<StatusBadge label="dry-run visível" tone="blue" />}
+          action={<StatusBadge label="Prévia segura" tone="blue" />}
           description="As contagens abaixo são lidas com sua sessão Supabase e RLS antes de qualquer ação."
-          title="Preview da limpeza"
+          title="Prévia da limpeza"
         />
         {!preview.dailyPlanningTablesAvailable ? (
-          <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            As tabelas dedicadas de planejamento não estão disponíveis pela Data API. O reset ainda removerá o histórico compatível salvo em app_settings.
+          <p className="feedback-panel mb-4" data-tone="warning">
+            As tabelas dedicadas de planejamento não estão disponíveis pela Data API. A limpeza ainda removerá o histórico compatível salvo em app_settings.
           </p>
         ) : null}
         <WorkspaceResetPanel counts={preview.counts} />

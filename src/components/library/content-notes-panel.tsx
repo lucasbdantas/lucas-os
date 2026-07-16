@@ -1,4 +1,5 @@
 import { ContentNoteAIRewrite } from "@/components/library/content-note-ai-rewrite";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   createContentNote,
   deleteContentNote,
@@ -88,7 +89,7 @@ export function ContentNotesPanel({
                 </form>
               </details>
 
-              <details className="mt-3">
+              <details className="danger-zone mt-4 p-3">
                 <summary className="cursor-pointer text-sm font-semibold text-red-700">Excluir nota</summary>
                 <form action={deleteContentNote} className="mt-3 flex flex-wrap items-end gap-2">
                   <input name="noteId" type="hidden" value={note.id} />
@@ -104,10 +105,10 @@ export function ContentNotesPanel({
           ))}
         </div>
       ) : (
-        <div className="app-card-soft px-5 py-7">
-          <h3 className="font-semibold text-zinc-950">Nenhuma nota ainda</h3>
-          <p className="mt-2 text-sm leading-6 text-zinc-600">Guarde uma frase, insight ou dúvida. Não precisa estar pronta.</p>
-        </div>
+        <EmptyState
+          description="Guarde uma frase, um insight ou uma dúvida. A nota não precisa estar pronta."
+          title="Nenhuma nota ainda"
+        />
       )}
     </section>
   );

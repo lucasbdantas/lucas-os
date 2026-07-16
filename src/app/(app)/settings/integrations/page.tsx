@@ -31,16 +31,16 @@ type IntegrationsPageProps = {
 };
 
 const errorMessages: Record<string, string> = {
-  google_account_missing: "Conta Google nao encontrada para desconectar.",
+  google_account_missing: "Conta Google não encontrada para desconectar.",
   google_callback_invalid: "Callback do Google invalido. Tente conectar de novo.",
-  google_connect_failed: "Nao foi possivel conectar a conta Google.",
-  google_disconnect_failed: "Nao foi possivel desconectar a conta Google.",
+  google_connect_failed: "Não foi possível conectar a conta Google.",
+  google_disconnect_failed: "Não foi possível desconectar a conta Google.",
   google_env_missing:
-    "Configuracao Google OAuth incompleta no ambiente do servidor.",
-  google_oauth_denied: "Conexao Google cancelada ou recusada.",
+    "Configuração Google OAuth incompleta no ambiente do servidor.",
+  google_oauth_denied: "Conexão Google cancelada ou recusada.",
   google_state_invalid:
-    "Sessao de conexao Google expirada ou invalida. Tente novamente.",
-  google_token_missing: "Google nao retornou token de acesso.",
+    "Sessão de conexão Google expirada ou inválida. Tente novamente.",
+  google_token_missing: "O Google não retornou um token de acesso.",
 };
 
 function statusTone(status: ConnectedAccountListItem["status"]) {
@@ -81,38 +81,38 @@ export default async function IntegrationsPage({
   return (
     <main className="app-page mx-auto max-w-6xl">
       <PageHeader
-        eyebrow="Configuracoes"
-        title="Integracoes"
+        eyebrow="Configurações"
+        title="Integrações"
         description="Conecte contas externas com tokens criptografados no servidor. Google Calendar e Gmail usam acesso somente leitura."
       />
 
       <div className="mt-4">
         <Link className="text-sm font-medium text-zinc-700 underline" href="/settings">
-          Voltar para Settings
+          Voltar para Configurações
         </Link>
       </div>
 
       {params.connected === "google" ? (
-        <p className="mt-6 max-w-4xl rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+        <p className="feedback-panel mt-6 max-w-4xl" data-tone="success" role="status">
           Conta Google conectada.
         </p>
       ) : null}
 
       {params.disconnected === "google" ? (
-        <p className="mt-6 max-w-4xl rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+        <p className="feedback-panel mt-6 max-w-4xl" data-tone="success" role="status">
           Conta Google desconectada.
         </p>
       ) : null}
 
       {params.calendar_lanes === "saved" ? (
-        <p className="mt-6 max-w-4xl rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
-          Preferencias de calendarios salvas.
+        <p className="feedback-panel mt-6 max-w-4xl" data-tone="success" role="status">
+          Preferências de calendários salvas.
         </p>
       ) : null}
 
       {params.error ? (
-        <p className="mt-6 max-w-4xl rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {errorMessages[params.error] ?? "Erro ao processar integracao."}
+        <p className="feedback-panel mt-6 max-w-4xl" data-tone="danger" role="alert">
+          {errorMessages[params.error] ?? "Erro ao processar a integração."}
         </p>
       ) : null}
 
@@ -121,7 +121,7 @@ export default async function IntegrationsPage({
           <div>
             <h2 className="font-semibold text-zinc-950">Google</h2>
             <p className="mt-1 text-sm text-zinc-600">
-              Fundacao OAuth para multiplas contas. Calendar read-only esta
+              Fundação OAuth para múltiplas contas. O Calendar somente leitura está
               disponivel; Gmail read-only alimenta a Action Inbox sem modificar
               emails.
             </p>
@@ -176,7 +176,7 @@ export default async function IntegrationsPage({
 
               {!hasGoogleCalendarReadonlyScope(account.scopes) &&
               account.status !== "revoked" ? (
-                <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                <p className="feedback-panel mt-3" data-tone="warning">
                   Esta conta foi conectada antes do escopo Calendar. Clique em
                   Conectar Google novamente e escolha esta conta para conceder
                   acesso somente leitura.
@@ -185,8 +185,8 @@ export default async function IntegrationsPage({
 
               {!hasGoogleGmailReadonlyScope(account.scopes) &&
               account.status !== "revoked" ? (
-                <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                  Esta conta ainda nao concedeu Gmail read-only. Clique em
+                <p className="feedback-panel mt-3" data-tone="warning">
+                  Esta conta ainda não concedeu Gmail somente leitura. Clique em
                   Conectar Google novamente e escolha esta conta para habilitar a
                   Action Inbox.
                 </p>
@@ -210,7 +210,7 @@ export default async function IntegrationsPage({
                 <div>
                   <dt className="font-medium text-zinc-500">Expira em</dt>
                   <dd className="mt-1 text-zinc-800">
-                    {formatDateTime(account.expires_at, "Sem expiracao")}
+                    {formatDateTime(account.expires_at, "Sem expiração")}
                   </dd>
                 </div>
                 <div>
@@ -228,7 +228,7 @@ export default async function IntegrationsPage({
                   method="post"
                 >
                   <input name="accountId" type="hidden" value={account.id} />
-                  <button className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
+                  <button className="danger-button min-h-11 px-3 py-2 text-sm font-semibold">
                     Desconectar
                   </button>
                 </form>
@@ -242,10 +242,10 @@ export default async function IntegrationsPage({
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-zinc-950">
-              Calendarios no Today
+              Calendários no Hoje
             </h2>
             <p className="mt-1 text-sm text-zinc-600">
-              Separe calendarios principais, contexto/interesses e ocultos sem
+              Separe calendários principais, contexto/interesses e ocultos sem
               editar nada no Google.
             </p>
           </div>
@@ -253,8 +253,8 @@ export default async function IntegrationsPage({
         </div>
 
         {calendarSources.warnings.length > 0 ? (
-          <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            Algumas contas nao puderam carregar calendarios agora. Contas antigas
+          <div className="feedback-panel mb-4" data-tone="warning">
+            Algumas contas não puderam carregar calendários agora. Contas antigas
             podem precisar reconectar para conceder Calendar read-only.
           </div>
         ) : null}

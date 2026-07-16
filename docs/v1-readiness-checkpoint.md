@@ -1,5 +1,15 @@
 # Lucas OS v1.0 Readiness Checkpoint
 
+## Super UX Polish
+
+- Sistema visual consolidado com tokens de papel, verde esmeralda, tipografia, foco, estados e sombras discretas.
+- Cabeçalhos, estados vazios, mensagens de feedback, filtros e zonas de atenção ganharam padrões reutilizáveis.
+- Navegação desktop, menu mobile e Command Palette foram revisados para cobrir as rotas operacionais atuais.
+- Copy visível revisada em português do Brasil, preservando nomes técnicos apenas quando ajudam no diagnóstico.
+- Today, Planning, Review, Library, Capture, Inbox, Tasks, Projects, Notifications e Settings foram polidos sem alteração de regras de negócio.
+- Login e Share Target foram conferidos visualmente em desktop e viewport mobile; as rotas autenticadas continuam no checklist manual de produção.
+- Nenhum schema, migration, segredo, integração, regra de RLS ou fluxo automático foi alterado nesta etapa.
+
 Data: 2026-07-16. Status: candidato a v1.0 para revisão humana; sem tag, deploy ou migration aplicada nesta sprint.
 
 ## Produto atual

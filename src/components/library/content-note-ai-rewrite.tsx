@@ -31,7 +31,7 @@ export function ContentNoteAIRewrite({
     }
 
     setPreview(result.rewrite);
-    setMessage("Preview pronto. Revise antes de confirmar.");
+    setMessage("Prévia pronta. Revise antes de confirmar.");
   }
 
   async function save() {
@@ -67,7 +67,7 @@ export function ContentNoteAIRewrite({
       {preview !== null ? (
         <div className="mt-3 grid gap-3">
           <label className="grid gap-2 text-sm font-medium text-zinc-800">
-            Preview editável
+            Prévia editável
             <textarea className="field-control min-h-36 px-3 py-2" onChange={(event) => setPreview(event.target.value)} value={preview} />
           </label>
           <div className="flex flex-wrap gap-2">
@@ -75,7 +75,7 @@ export function ContentNoteAIRewrite({
               Confirmar e salvar reescrita
             </button>
             <button className="ghost-button min-h-11 px-4 py-2 text-sm font-semibold" onClick={() => setPreview(null)} type="button">
-              Cancelar preview
+              Cancelar prévia
             </button>
           </div>
         </div>

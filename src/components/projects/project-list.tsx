@@ -145,7 +145,7 @@ export function ProjectList({ projects, returnTo }: ProjectListProps) {
           <div className="mt-5 border-t border-zinc-100 pt-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-zinc-950">
-                Milestones
+                Marcos
               </h3>
               <StatusBadge label={`${project.milestones.length}`} />
             </div>
@@ -154,7 +154,7 @@ export function ProjectList({ projects, returnTo }: ProjectListProps) {
 
             {project.milestones.length === 0 ? (
               <p className="mt-3 text-sm text-zinc-500">
-                Nenhuma milestone neste projeto.
+                Nenhum marco neste projeto.
               </p>
             ) : (
               <div className="mt-4 grid gap-2">
