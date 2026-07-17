@@ -15,6 +15,7 @@ import {
   CaptureTokenList,
   type CaptureTokenListItem,
 } from "@/components/settings/capture-token-list";
+import { SamsungWatchCaptureSetup } from "@/components/settings/samsung-watch-capture-setup";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { SectionHeader } from "@/components/ui/section-header";
 import { getAppPreferencesForUser } from "@/lib/app-settings/server";
@@ -193,6 +194,8 @@ export default async function SettingsPage({
           </h3>
           <CaptureTokenList tokens={captureTokensResult.data} />
         </div>
+
+        <SamsungWatchCaptureSetup />
 
         <div className="app-card-muted mt-6 p-4">
           <h3 className="text-sm font-semibold text-zinc-950">

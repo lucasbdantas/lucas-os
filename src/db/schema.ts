@@ -50,6 +50,7 @@ export const taskEnergyEnum = pgEnum("task_energy_required", [
 export const taskSourceEnum = pgEnum("task_source", [
   "manual",
   "voice",
+  "watch",
   "email",
   "observation",
   "import",

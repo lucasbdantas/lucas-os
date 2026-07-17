@@ -16,6 +16,7 @@ const captureSourceValues = [
   "ios_shortcut",
   "android_shortcut",
   "voice",
+  "watch",
   "email",
   "webhook",
 ] as const;

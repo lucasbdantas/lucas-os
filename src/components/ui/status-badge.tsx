@@ -23,6 +23,7 @@ const humanLabels: Record<string, string> = {
   system: "Sistema",
   todo: "A fazer",
   waiting: "Aguardando",
+  watch: "Relógio",
 };
 
 export function StatusBadge({ label, tone = "default" }: StatusBadgeProps) {
