@@ -44,7 +44,7 @@ function TaskSubmitButton() {
       disabled={pending}
       type="submit"
     >
-      {pending ? "Criando..." : "Confirmar e criar task"}
+      {pending ? "Criando..." : "Confirmar e criar tarefa"}
     </button>
   );
 }
@@ -81,7 +81,7 @@ export function SmartCaptureForm({
   const parsedTitle = parsed.kind === "task" ? parsed.title : "";
   const statusLabel =
     parsed.kind === "task"
-      ? "preview task"
+      ? "prévia de tarefa"
       : parsed.kind === "multiple_lines"
         ? "multiplas linhas"
         : "pending";
@@ -144,7 +144,7 @@ export function SmartCaptureForm({
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block">
               <span className="text-sm font-medium text-zinc-700">
-                Dominio
+                Domínio
               </span>
               <select
                 className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
@@ -190,7 +190,7 @@ export function SmartCaptureForm({
             </label>
             <label className="block">
               <span className="text-sm font-medium text-zinc-700">
-                Horario
+                Horário
               </span>
               <input
                 className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
@@ -266,7 +266,7 @@ export function SmartCaptureForm({
         <div className="app-card-soft mt-4 p-3">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge
-              label={aiState.status === "task" ? "preview IA" : aiState.status}
+              label={aiState.status === "task" ? "Prévia da IA" : aiState.status}
               tone={aiState.status === "task" ? "blue" : "amber"}
             />
             {aiState.message ? (
@@ -309,7 +309,7 @@ export function SmartCaptureForm({
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
                   <span className="text-sm font-medium text-zinc-700">
-                    Dominio
+                    Domínio
                   </span>
                   <select
                     className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"
@@ -360,7 +360,7 @@ export function SmartCaptureForm({
                 </label>
                 <label className="block">
                   <span className="text-sm font-medium text-zinc-700">
-                    Horario
+                    Horário
                   </span>
                   <input
                     className="field-control mt-2 w-full px-3 py-2 text-sm outline-none"

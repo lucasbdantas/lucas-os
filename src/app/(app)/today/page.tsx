@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DailyPlanningPanel } from "@/components/today/daily-planning-panel";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -9,6 +10,11 @@ import {
   toDateOnlyInTimezone,
 } from "@/lib/app-settings/preferences";
 import { getAppPreferencesForUser } from "@/lib/app-settings/server";
+import {
+  getDailyPlanForDate,
+  getDailyPlanningPersistenceAvailability,
+  getRecentDailyPlans,
+} from "@/lib/ai/daily-plan-repository";
 import { formatDate, formatDateTime } from "@/lib/format";
 import {
   getGoogleCalendarAgendaForUser,
@@ -199,11 +205,11 @@ function TaskSection({
                   <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-600">
                     <span>Data: {formatDate(task.due_date)}</span>
                     {task.due_time ? (
-                      <span>Horario: {task.due_time.slice(0, 5)}</span>
+                      <span>Horário: {task.due_time.slice(0, 5)}</span>
                     ) : null}
                     <span>
-                      Dominio:{" "}
-                      {domainNameById.get(task.domain_id) ?? "Sem dominio"}
+                      Domínio:{" "}
+                      {domainNameById.get(task.domain_id) ?? "Sem domínio"}
                     </span>
                     {task.project_id ? (
                       <span>
@@ -256,7 +262,7 @@ function formatCalendarEventTime(
     return "Dia todo";
   }
 
-  return formatDateTime(event.start, "Sem horario", timezone);
+  return formatDateTime(event.start, "Sem horário", timezone);
 }
 
 function CalendarEventList({
@@ -284,7 +290,7 @@ function CalendarEventList({
               <div className="mt-2 grid gap-1 text-sm text-zinc-600">
                 <p>{formatCalendarEventTime(event, timezone)}</p>
                 <p>Conta: {event.accountEmail}</p>
-                <p>Calendario: {event.calendarSummary}</p>
+                <p>Calendário: {event.calendarSummary}</p>
                 {event.location ? <p>Local: {event.location}</p> : null}
               </div>
             </div>
@@ -336,13 +342,13 @@ function CalendarSection({
             Configurar Google
           </Link>
         }
-        description="Eventos Google Calendar em lanes para reduzir ruido."
+        description="Seus eventos do Google Calendar organizados para destacar o que realmente compete pelo dia."
         title="Agenda"
       />
 
       {agenda.connectedAccountCount === 0 ? (
         <EmptyState
-          description="Conecte uma conta Google em Settings para ver sua agenda aqui."
+          description="Conecte uma conta Google em Configurações para ver sua agenda aqui."
           title="Nenhuma conta Google conectada"
         />
       ) : null}
@@ -357,8 +363,8 @@ function CalendarSection({
 
       {agenda.warnings.length > 0 ? (
         <div className="app-card-muted mb-3 p-3 text-sm text-zinc-600">
-          Algumas contas Google nao puderam ser sincronizadas agora. O restante
-          do Today continua funcionando.
+          Algumas contas Google não puderam ser sincronizadas agora. O restante
+          do painel Hoje continua funcionando.
         </div>
       ) : null}
 
@@ -366,7 +372,7 @@ function CalendarSection({
       !hasPrimaryEvents &&
       !hasContextEvents ? (
         <EmptyState
-          description="Nenhum evento visivel encontrado para hoje ou proximos 7 dias. Calendarios ocultos ficam fora do Today."
+          description="Nenhum evento visível encontrado para hoje ou para os próximos 7 dias. Calendários ocultos não aparecem aqui."
           title="Agenda livre"
         />
       ) : null}
@@ -405,7 +411,7 @@ function CalendarSection({
                 {primaryNextEvents.length > 0 ? (
                   <div>
                     <h4 className="mb-2 text-sm font-medium text-zinc-700">
-                      Proximos 7 dias
+                      Próximos 7 dias
                     </h4>
                     <CalendarEventList
                       events={primaryNextEvents}
@@ -429,7 +435,7 @@ function CalendarSection({
                   Contexto / Interesses
                 </h3>
                 <p className="mt-1 text-sm text-zinc-600">
-                  Calendarios uteis que nao devem competir com compromissos.
+                  Calendários úteis que não devem competir com seus compromissos.
                 </p>
               </div>
               <StatusBadge
@@ -455,7 +461,7 @@ function CalendarSection({
                 {contextNextEvents.length > 0 ? (
                   <div>
                     <h4 className="mb-2 text-sm font-medium text-zinc-600">
-                      Proximos 7 dias
+                      Próximos 7 dias
                     </h4>
                     <CalendarEventList
                       events={contextNextEvents}
@@ -467,7 +473,7 @@ function CalendarSection({
               </div>
             ) : (
               <EmptyState
-                description="Calendarios de contexto aparecerao aqui quando tiverem eventos visiveis."
+                description="Calendários de contexto aparecerão aqui quando tiverem eventos visíveis."
                 title="Sem contexto agora"
               />
             )}
@@ -514,6 +520,9 @@ export default async function TodayPage() {
     calendarLanePreferences,
     domainsResult,
     projectsForNamesResult,
+    dailyPlan,
+    dailyPlanHistory,
+    dailyPlanningAvailability,
   ] = await Promise.all([
     getCount(
       supabase
@@ -593,6 +602,14 @@ export default async function TodayPage() {
       .from("projects")
       .select("id,name,status,type,target_date,domain_id")
       .returns<ProjectRow[]>(),
+    getDailyPlanForDate(supabase, user.id, today, preferences.timezone).catch(
+      () => null,
+    ),
+    getRecentDailyPlans(supabase, user.id).catch(() => []),
+    getDailyPlanningPersistenceAvailability(supabase).catch(() => ({
+      available: true as const,
+      mode: "compatibility" as const,
+    })),
   ]);
 
   if (overdueTasksResult.error) {
@@ -694,8 +711,8 @@ export default async function TodayPage() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-end">
           <PageHeader
             eyebrow="Lucas OS"
-            title="Today"
-            description={`Painel operacional do dia em ${preferences.timezone}. Um caderno curto para decidir o que merece atencao agora.`}
+            title="Hoje"
+            description={`Seu painel do dia em ${preferences.timezone}: tarefas, agenda e decisões que merecem atenção agora.`}
           />
           <div className="app-card-soft p-4">
             <p className="section-eyebrow">Inbox calma</p>
@@ -709,7 +726,7 @@ export default async function TodayPage() {
               className="primary-button mt-4 w-full px-4 py-3 text-sm font-semibold"
               href="/capture"
             >
-              Abrir Capture
+              Abrir Capturas
             </Link>
           </div>
         </div>
@@ -717,11 +734,17 @@ export default async function TodayPage() {
         <section className="mt-6 grid gap-3 sm:grid-cols-3">
           <StatCard label="Vencidas" value={overdueTasks.length} />
           <StatCard label="Hoje" value={todayTasks.length} />
-          <StatCard label="Proximos 7 dias" value={nextTasks.length} />
+          <StatCard label="Próximos 7 dias" value={nextTasks.length} />
         </section>
       </section>
 
       <div className={sectionGapClass}>
+        <DailyPlanningPanel
+          history={dailyPlanHistory}
+          initialPlan={dailyPlan}
+          persistenceMode={dailyPlanningAvailability.mode}
+        />
+
         <CalendarSection
           agenda={googleCalendarAgenda}
           contextNextEvents={contextNextCalendarEvents.slice(0, isCompact ? 5 : 15)}
@@ -747,7 +770,7 @@ export default async function TodayPage() {
                 className="soft-button px-3 py-2 text-sm font-medium"
                 href="/notifications"
               >
-                Abrir notificacoes
+                Abrir notificações
               </Link>
             }
             description="Lembretes internos vencidos ou previstos para hoje."
@@ -790,7 +813,7 @@ export default async function TodayPage() {
                         className="soft-button px-3 py-2 text-sm font-medium"
                         href={reminder.source_url}
                       >
-                        Abrir task
+                        Abrir tarefa
                       </Link>
                     ) : null}
                   </div>
@@ -801,7 +824,7 @@ export default async function TodayPage() {
         </section>
 
         <TaskSection
-          description="Tasks abertas com data anterior a hoje."
+          description="Tarefas abertas com data anterior a hoje."
           domainNameById={domainNameById}
           emptyDescription="Nada vencido agora. Bom sinal operacional."
           emptyTitle="Nenhuma tarefa vencida"
@@ -811,9 +834,9 @@ export default async function TodayPage() {
         />
 
         <TaskSection
-          description="Tasks abertas com data de hoje."
+          description="Tarefas abertas com data de hoje."
           domainNameById={domainNameById}
-          emptyDescription="Nenhuma tarefa com data de hoje. Use Capture ou Tasks para planejar o dia."
+          emptyDescription="Nenhuma tarefa com data de hoje. Use Capturas ou Tarefas para planejar o dia."
           emptyTitle="Nenhuma tarefa para hoje"
           projectNameById={projectNameById}
           tasks={displayedTodayTasks}
@@ -821,26 +844,26 @@ export default async function TodayPage() {
         />
 
         <TaskSection
-          description="Tasks abertas entre amanha e os proximos 7 dias."
+          description="Tarefas abertas entre amanhã e os próximos 7 dias."
           domainNameById={domainNameById}
-          emptyDescription="Nenhuma task proxima nos proximos 7 dias."
-          emptyTitle="Sem proximos prazos"
+          emptyDescription="Nenhuma tarefa próxima nos próximos 7 dias."
+          emptyTitle="Sem próximos prazos"
           projectNameById={projectNameById}
           tasks={displayedNextTasks}
-          title="Proximos 7 dias"
+          title="Próximos 7 dias"
         />
 
         <section className="section-shell">
           <SectionHeader
             action={<StatusBadge label={`${displayedUpcomingProjects.length}`} />}
-            description="Projetos ativos ou waiting com target nos proximos 14 dias."
-            title="Projetos com prazo proximo"
+            description="Projetos ativos ou aguardando, com data-alvo nos próximos 14 dias."
+            title="Projetos com prazo próximo"
           />
 
           {displayedUpcomingProjects.length === 0 ? (
             <EmptyState
-              description="Projetos com target nos proximos 14 dias aparecerao aqui."
-              title="Nenhum projeto com prazo proximo"
+              description="Projetos com data-alvo nos próximos 14 dias aparecerão aqui."
+              title="Nenhum projeto com prazo próximo"
             />
           ) : (
             <div className="grid gap-3">
@@ -855,7 +878,7 @@ export default async function TodayPage() {
                         {project.name}
                       </h3>
                       <p className="mt-1 text-sm text-zinc-600">
-                        {domainNameById.get(project.domain_id) ?? "Sem dominio"}{" "}
+                        {domainNameById.get(project.domain_id) ?? "Sem domínio"}{" "}
                         - {formatDate(project.target_date)}
                       </p>
                     </div>
@@ -881,14 +904,14 @@ export default async function TodayPage() {
                 label={`${projectsWithoutNextAction.slice(0, projectDisplayLimit).length}`}
               />
             }
-            description="Projetos ativos que nao possuem nenhuma task aberta associada."
-            title="Projetos ativos sem proxima acao"
+            description="Projetos ativos que ainda não têm uma próxima tarefa associada."
+            title="Projetos ativos sem próxima ação"
           />
 
           {projectsWithoutNextAction.length === 0 ? (
             <EmptyState
-              description="Todos os projetos ativos encontrados tem pelo menos uma task aberta."
-              title="Nenhum projeto morto detectado"
+              description="Todos os projetos ativos têm pelo menos uma próxima tarefa aberta."
+              title="Todos os projetos estão em movimento"
             />
           ) : (
             <div className="grid gap-3">
@@ -905,19 +928,19 @@ export default async function TodayPage() {
                         {project.name}
                       </h3>
                       <p className="mt-1 text-sm text-zinc-600">
-                        {domainNameById.get(project.domain_id) ?? "Sem dominio"}
+                        {domainNameById.get(project.domain_id) ?? "Sem domínio"}
                         {project.target_date
                           ? ` - alvo ${formatDate(project.target_date)}`
                           : ""}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <StatusBadge label="sem proxima acao" tone="amber" />
+                      <StatusBadge label="Sem próxima ação" tone="amber" />
                       <Link
                         className="soft-button px-3 py-2 text-sm font-medium"
                         href={getNextActionHref(project)}
                       >
-                        Criar proxima acao
+                        Criar próxima ação
                       </Link>
                     </div>
                   </div>
@@ -931,13 +954,13 @@ export default async function TodayPage() {
         <section className="section-shell">
           <SectionHeader
             description="Atalhos curtos para capturar, revisar e ajustar o sistema."
-            title="Acoes rapidas"
+            title="Ações rápidas"
           />
           <div className="grid gap-3 sm:grid-cols-4">
             <QuickLink href="/capture" label="Nova captura" />
-            <QuickLink href="/review" label="Weekly Review" />
-            <QuickLink href="/tasks" label="Abrir Tasks" />
-            <QuickLink href="/projects" label="Abrir Projects" />
+            <QuickLink href="/review" label="Revisão semanal" />
+            <QuickLink href="/tasks" label="Abrir Tarefas" />
+            <QuickLink href="/projects" label="Abrir Projetos" />
           </div>
         </section>
       </div>

@@ -1,4 +1,9 @@
 import type { PushTestFailureReason } from "@/lib/push/diagnostics";
+import {
+  classifyPushFailure,
+  getPushFailureDebug,
+  type PushSafeErrorDebug,
+} from "@/lib/push/reminder-dispatch";
 import { sendPushTestToSubscription } from "@/lib/push/server";
 import { pushSubscriptionSchema } from "@/lib/push/subscription-schema";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -9,9 +14,11 @@ function pushTestError(
   reason: PushTestFailureReason,
   status: number,
   error = "Nao foi possivel enviar push de teste.",
+  debug?: PushSafeErrorDebug,
 ) {
   return Response.json(
     {
+      debug,
       error,
       ok: false,
       reason,
@@ -83,11 +90,21 @@ export async function POST(request: Request) {
     }
 
     if (!result.ok) {
-      return pushTestError(result.failureReason ?? "web_push_unknown", 502);
+      return pushTestError(
+        result.failureReason ?? "web_push_unknown",
+        502,
+        "Nao foi possivel enviar push de teste.",
+        result.failureDebug ?? undefined,
+      );
     }
 
     return Response.json({ ok: true });
-  } catch {
-    return pushTestError("web_push_unknown", 500);
+  } catch (error) {
+    return pushTestError(
+      classifyPushFailure(error),
+      500,
+      "Nao foi possivel enviar push de teste.",
+      getPushFailureDebug(error),
+    );
   }
 }

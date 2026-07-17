@@ -18,9 +18,9 @@ const laneLabels = {
 };
 
 const laneDescriptions = {
-  context: "Aparece em uma lane mais leve no Today.",
-  hidden: "Nao aparece no Today.",
-  primary: "Compromissos principais no Today.",
+  context: "Aparece em uma seção mais leve no Hoje.",
+  hidden: "Não aparece no Hoje.",
+  primary: "Compromissos principais no Hoje.",
 };
 
 export function CalendarLanesForm({
@@ -30,8 +30,8 @@ export function CalendarLanesForm({
   if (sources.length === 0) {
     return (
       <div className="app-card-muted p-4 text-sm text-zinc-600">
-        Nenhum calendario disponivel para configurar ainda. Conecte ou
-        reconecte uma conta Google com Calendar read-only.
+        Nenhum calendário disponível para configurar ainda. Conecte ou
+        reconecte uma conta Google com Calendar somente leitura.
       </div>
     );
   }
@@ -80,7 +80,7 @@ export function CalendarLanesForm({
       })}
 
       <button className="primary-button w-fit px-4 py-2 text-sm font-semibold">
-        Salvar calendarios
+        Salvar calendários
       </button>
     </form>
   );

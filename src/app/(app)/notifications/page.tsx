@@ -123,13 +123,13 @@ function NotificationSection({
                           className="soft-button px-3 py-2 text-sm font-semibold"
                           href={taskEditHref}
                         >
-                          Abrir task
+                          Abrir tarefa
                         </Link>
                         <Link
                           className="soft-button px-3 py-2 text-sm font-semibold"
                           href={taskEditHref}
                         >
-                          Editar task
+                          Editar tarefa
                         </Link>
                       </>
                     ) : null}
@@ -223,11 +223,11 @@ export default async function NotificationsPage({
       <PageHeader
         eyebrow="Lucas OS"
         title="Notificações"
-        description="Lembretes internos de tasks, sem push notifications."
+        description="Lembretes internos das suas tarefas, com push opcional por dispositivo."
       />
 
       {pageError ? (
-        <p className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="feedback-panel mt-6" data-tone="danger" role="alert">
           {pageError}
         </p>
       ) : null}

@@ -14,7 +14,7 @@ export function MilestoneForm({ projectId, returnTo }: MilestoneFormProps) {
         className="field-control px-3 py-2 text-sm outline-none"
         maxLength={180}
         name="title"
-        placeholder="Nova milestone"
+        placeholder="Novo marco"
         required
         type="text"
       />

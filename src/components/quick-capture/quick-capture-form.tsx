@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight, Mic, MicOff, Save } from "lucide-react";
 import {
   useActionState,
   useEffect,
@@ -72,10 +73,11 @@ function SubmitButton() {
 
   return (
     <button
-      className="primary-button min-h-14 w-full px-5 py-4 text-base font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+      className="primary-button min-h-14 w-full gap-2 px-5 py-4 text-base font-semibold disabled:cursor-not-allowed disabled:opacity-60"
       disabled={pending}
       type="submit"
     >
+      <Save aria-hidden="true" className="h-5 w-5" />
       {pending ? "Salvando..." : "Salvar captura"}
     </button>
   );
@@ -206,10 +208,15 @@ export function QuickCaptureForm() {
         <div className="grid gap-2 sm:grid-cols-[auto_1fr] sm:items-center">
           {isVoiceSupported ? (
             <button
-              className="soft-button min-h-12 px-5 py-3 text-base font-semibold"
+              className="soft-button min-h-12 gap-2 px-5 py-3 text-base font-semibold"
               onClick={isListening ? stopListening : startListening}
               type="button"
             >
+              {isListening ? (
+                <MicOff aria-hidden="true" className="h-5 w-5" />
+              ) : (
+                <Mic aria-hidden="true" className="h-5 w-5" />
+              )}
               {isListening ? "Parar" : "Falar"}
             </button>
           ) : null}
@@ -224,11 +231,9 @@ export function QuickCaptureForm() {
 
         {state.message ? (
           <p
-            className={`rounded-2xl border px-3 py-2 text-sm ${
-              state.status === "error"
-                ? "border-red-200 bg-red-50 text-red-700"
-                : "border-green-200 bg-green-50 text-green-700"
-            }`}
+            className="feedback-panel"
+            data-tone={state.status === "error" ? "danger" : "success"}
+            role={state.status === "error" ? "alert" : "status"}
           >
             {state.message}
           </p>
@@ -242,7 +247,7 @@ export function QuickCaptureForm() {
           className="soft-button min-h-12 px-4 py-3 text-center text-sm font-semibold"
           href="/capture"
         >
-          Ver pendências
+          Ver pendências <ArrowRight aria-hidden="true" className="h-4 w-4" />
         </Link>
         <Link
           className="ghost-button min-h-12 px-4 py-3 text-center text-sm font-semibold"

@@ -32,7 +32,7 @@ function SubmitButton() {
       disabled={pending}
       type="submit"
     >
-      {pending ? "Sugerindo..." : "Sugerir task com IA"}
+      {pending ? "Sugerindo..." : "Sugerir tarefa com IA"}
     </button>
   );
 }
@@ -67,11 +67,17 @@ export function PendingCaptureAIPreview({
         <div className="app-card-soft mt-3 p-3">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge
-              label={state.status === "task" ? "preview IA" : state.status}
+              label={state.status === "task" ? "Prévia da IA" : state.status}
               tone={getStateTone(state.status)}
             />
             {state.message ? (
               <p className="text-sm text-blue-900">{state.message}</p>
+            ) : null}
+            {state.status === "task" && state.preview ? (
+              <StatusBadge
+                label={`Confiança ${Math.round(state.preview.confidence * 100)}%`}
+                tone="blue"
+              />
             ) : null}
           </div>
 
@@ -85,11 +91,12 @@ export function PendingCaptureAIPreview({
                 notes: state.preview.notes,
                 priority: state.preview.priority,
                 projectId: state.preview.projectId,
+                reminderOffsets: state.preview.reminderOffsets,
                 reason: state.preview.reason,
                 title: state.preview.title,
               }}
               domains={domains}
-              label="Confirmar preview IA"
+              label="Confirmar prévia da IA"
               projects={projects}
               rawText={rawText}
               resolutionMode="ai_task"

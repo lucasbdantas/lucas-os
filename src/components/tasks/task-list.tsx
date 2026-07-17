@@ -95,7 +95,7 @@ export function TaskList({
                   {task.due_time ? ` as ${task.due_time.slice(0, 5)}` : ""}
                 </span>
                 {task.domainName ? (
-                  <span>Dominio: {task.domainName}</span>
+                  <span>Domínio: {task.domainName}</span>
                 ) : null}
                 {task.projectName ? (
                   <span>Projeto: {task.projectName}</span>

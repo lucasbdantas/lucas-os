@@ -79,12 +79,16 @@ describe("backup export sanitizers", () => {
             status: "active",
           },
         ],
+        content_items: [{ id: "content-1", title: "Livro" }],
+        content_notes: [{ id: "note-1", raw_note: "Insight" }],
         domains: [{ id: "domain-1", name: "Inbox" }],
       },
     });
 
     expect(exported.export_version).toBe("lucas-os.backup.v1");
     expect(exported.data.domains).toHaveLength(1);
+    expect(exported.data.content_items).toHaveLength(1);
+    expect(exported.data.content_notes).toHaveLength(1);
     expect(exported.data.capture_tokens[0]).not.toHaveProperty("token_hash");
     expect(exported.data.connected_accounts[0]).not.toHaveProperty(
       "access_token_encrypted",

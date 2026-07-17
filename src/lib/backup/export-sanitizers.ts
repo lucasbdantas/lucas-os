@@ -27,6 +27,8 @@ export type LucasOsBackupExport = {
     app_settings: JsonRecord[];
     capture_tokens: SafeCaptureTokenExport[];
     connected_accounts: SafeConnectedAccountExport[];
+    content_items: JsonRecord[];
+    content_notes: JsonRecord[];
     domains: JsonRecord[];
     milestones: JsonRecord[];
     notifications: JsonRecord[];
@@ -47,6 +49,8 @@ export type LucasOsBackupExportInput = Omit<
     app_settings?: JsonRecord[];
     capture_tokens?: JsonRecord[];
     connected_accounts?: JsonRecord[];
+    content_items?: JsonRecord[];
+    content_notes?: JsonRecord[];
     domains?: JsonRecord[];
     milestones?: JsonRecord[];
     notifications?: JsonRecord[];
@@ -118,6 +122,8 @@ export function buildLucasOsBackupExport(
       connected_accounts: (input.data.connected_accounts ?? []).map(
         sanitizeConnectedAccountForExport,
       ),
+      content_items: input.data.content_items ?? [],
+      content_notes: input.data.content_notes ?? [],
       domains: input.data.domains ?? [],
       milestones: input.data.milestones ?? [],
       notifications: input.data.notifications ?? [],

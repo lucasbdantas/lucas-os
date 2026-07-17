@@ -5,6 +5,7 @@ import {
   classifyPushFailure,
   countPushSkippedReasons,
   createEmptyPushFailedReasons,
+  getPushFailureDebug,
   getDuePushReminders,
   getPendingPushDeliveryDiagnostics,
   getPendingPushDeliveryTargets,
@@ -184,7 +185,42 @@ describe("push reminder dispatch helpers", () => {
     expect(classifyPushFailure({ statusCode: 413 })).toBe(
       "web_push_payload_error",
     );
+    expect(
+      classifyPushFailure(new Error("VAPID public key should be 65 bytes long")),
+    ).toBe("vapid_configuration_error");
+    expect(
+      classifyPushFailure(
+        new Error("VAPID subject is not a valid mailto or URL"),
+      ),
+    ).toBe("vapid_subject_error");
+    expect(classifyPushFailure(new Error("Encryption failed"))).toBe(
+      "web_push_payload_error",
+    );
     expect(classifyPushFailure(new Error("network"))).toBe("web_push_unknown");
+  });
+
+  test("builds sanitized debug for unknown push errors", () => {
+    const debug = getPushFailureDebug({
+      body: "Provider body with https://push.example.com/full/endpoint and abcdefghij".repeat(
+        12,
+      ),
+      code: "ERR_TEST",
+      message:
+        "Failed for Bearer very-secret-token-value and https://push.example.com/full/endpoint",
+      name: "WebPushError",
+      statusCode: 500,
+    });
+
+    expect(debug).toMatchObject({
+      bodyPreview: expect.stringContaining("[url]"),
+      code: "ERR_TEST",
+      messagePreview: expect.stringContaining("Bearer [redacted]"),
+      name: "WebPushError",
+      statusCode: 500,
+    });
+    expect(debug.bodyPreview?.length).toBeLessThanOrEqual(240);
+    expect(debug.messagePreview).not.toContain("https://push.example.com");
+    expect(debug.messagePreview).not.toContain("very-secret-token-value");
   });
 
   test("records failed reasons with limited safe examples", () => {

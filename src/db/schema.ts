@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   date,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -12,6 +13,7 @@ import {
   text,
   time,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
   varchar,
@@ -48,6 +50,7 @@ export const taskEnergyEnum = pgEnum("task_energy_required", [
 export const taskSourceEnum = pgEnum("task_source", [
   "manual",
   "voice",
+  "watch",
   "email",
   "observation",
   "import",
@@ -114,6 +117,42 @@ export const pushDeliveryStatusEnum = pgEnum("push_delivery_status", [
   "pending",
   "sent",
   "failed",
+]);
+
+export const dailyPlanFeedbackTargetTypeEnum = pgEnum(
+  "daily_plan_feedback_target_type",
+  ["priority", "risk", "reschedule", "triage", "next_step"],
+);
+
+export const dailyPlanFeedbackRatingEnum = pgEnum(
+  "daily_plan_feedback_rating",
+  ["useful", "not_useful", "wrong", "done", "ignored"],
+);
+
+export const contentItemTypeEnum = pgEnum("content_item_type", [
+  "book",
+  "movie_tv",
+  "youtube_video",
+  "podcast",
+  "tiktok_reel",
+  "article",
+  "class_course",
+  "theater_live",
+  "other",
+]);
+
+export const contentItemStatusEnum = pgEnum("content_item_status", [
+  "want_to_consume",
+  "consuming",
+  "consumed",
+  "paused",
+  "abandoned",
+]);
+
+export const contentItemPriorityEnum = pgEnum("content_item_priority", [
+  "low",
+  "medium",
+  "high",
 ]);
 
 export const domains = pgTable(
@@ -373,6 +412,94 @@ export const pendingCaptures = pgTable(
   ],
 );
 
+export const contentItems = pgTable(
+  "content_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    type: contentItemTypeEnum("type").notNull().default("other"),
+    status: contentItemStatusEnum("status")
+      .notNull()
+      .default("want_to_consume"),
+    priority: contentItemPriorityEnum("priority")
+      .notNull()
+      .default("medium"),
+    title: varchar("title", { length: 240 }).notNull(),
+    creator: varchar("creator", { length: 180 }),
+    url: text("url"),
+    sourceLabel: varchar("source_label", { length: 120 }),
+    sourceUrl: text("source_url"),
+    description: text("description"),
+    tags: jsonb("tags").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    startedAt: date("started_at"),
+    finishedAt: date("finished_at"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("content_items_user_identity_unique").on(table.id, table.userId),
+    index("content_items_user_status_updated_idx").on(
+      table.userId,
+      table.status,
+      table.updatedAt,
+    ),
+    index("content_items_user_type_idx").on(table.userId, table.type),
+    index("content_items_user_priority_idx").on(
+      table.userId,
+      table.priority,
+    ),
+    check(
+      "content_items_title_not_blank",
+      sql`length(btrim(${table.title})) > 0`,
+    ),
+    check("content_items_tags_array", sql`jsonb_typeof(${table.tags}) = 'array'`),
+  ],
+);
+
+export const contentNotes = pgTable(
+  "content_notes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    contentItemId: uuid("content_item_id").notNull(),
+    rawNote: text("raw_note").notNull(),
+    context: text("context"),
+    aiRewrite: text("ai_rewrite"),
+    noteContext: varchar("note_context", { length: 160 }),
+    positionLabel: varchar("position_label", { length: 160 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.contentItemId, table.userId],
+      foreignColumns: [contentItems.id, contentItems.userId],
+      name: "content_notes_item_user_fk",
+    }).onDelete("cascade"),
+    index("content_notes_item_created_idx").on(
+      table.contentItemId,
+      table.createdAt,
+    ),
+    index("content_notes_user_created_idx").on(table.userId, table.createdAt),
+    check(
+      "content_notes_raw_note_not_blank",
+      sql`length(btrim(${table.rawNote})) > 0`,
+    ),
+  ],
+);
+
 export const captureTokens = pgTable(
   "capture_tokens",
   {
@@ -496,6 +623,106 @@ export const pushNotificationDeliveries = pgTable(
     ),
     index("push_notification_deliveries_notification_idx").on(
       table.notificationId,
+    ),
+  ],
+);
+
+export const dailyPlans = pgTable(
+  "daily_plans",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    planDate: date("plan_date").notNull(),
+    timezone: varchar("timezone", { length: 80 }).notNull(),
+    generatedAt: timestamp("generated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    generation: integer("generation").notNull().default(1),
+    summary: text("summary").notNull(),
+    priorities: jsonb("priorities")
+      .$type<unknown[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    risks: jsonb("risks")
+      .$type<unknown[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    rescheduleSuggestions: jsonb("reschedule_suggestions")
+      .$type<unknown[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    triageSuggestions: jsonb("triage_suggestions")
+      .$type<unknown[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    nextSteps: jsonb("next_steps")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    sourceSnapshot: jsonb("source_snapshot")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    model: varchar("model", { length: 160 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("daily_plans_user_date_timezone_unique").on(
+      table.userId,
+      table.planDate,
+      table.timezone,
+    ),
+    index("daily_plans_user_generated_idx").on(table.userId, table.generatedAt),
+    check("daily_plans_generation_check", sql`${table.generation} >= 1`),
+  ],
+);
+
+export const dailyPlanFeedback = pgTable(
+  "daily_plan_feedback",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    dailyPlanId: uuid("daily_plan_id")
+      .notNull()
+      .references(() => dailyPlans.id, { onDelete: "cascade" }),
+    planGeneration: integer("plan_generation").notNull().default(1),
+    targetType: dailyPlanFeedbackTargetTypeEnum("target_type").notNull(),
+    targetIndex: integer("target_index").notNull(),
+    rating: dailyPlanFeedbackRatingEnum("rating").notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("daily_plan_feedback_target_unique").on(
+      table.userId,
+      table.dailyPlanId,
+      table.planGeneration,
+      table.targetType,
+      table.targetIndex,
+    ),
+    index("daily_plan_feedback_user_created_idx").on(table.userId, table.createdAt),
+    index("daily_plan_feedback_plan_generation_idx").on(
+      table.dailyPlanId,
+      table.planGeneration,
+    ),
+    check(
+      "daily_plan_feedback_generation_check",
+      sql`${table.planGeneration} >= 1`,
+    ),
+    check(
+      "daily_plan_feedback_target_index_check",
+      sql`${table.targetIndex} >= 0`,
     ),
   ],
 );

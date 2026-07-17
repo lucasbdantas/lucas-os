@@ -21,12 +21,29 @@ import {
 } from "@/lib/push/diagnostics";
 import type {
   PushFailedReasons,
+  PushSafeErrorDebug,
   PushSkippedReasons,
 } from "@/lib/push/reminder-dispatch";
 
 type PushNotificationsPanelProps = {
   activeSubscriptionCount: number;
+  lastDeliveryAt: string | null;
+  schedulerConfigured: boolean;
 };
+
+function formatLastDelivery(value: string | null) {
+  if (!value) return "Nenhum envio registrado";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "Data indisponivel";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "America/Sao_Paulo",
+  }).format(date);
+}
 
 type PublicKeyResponse = {
   enabled: boolean;
@@ -102,6 +119,8 @@ async function readJsonResponse<T>(response: Response) {
 
 export function PushNotificationsPanel({
   activeSubscriptionCount,
+  lastDeliveryAt,
+  schedulerConfigured,
 }: PushNotificationsPanelProps) {
   const router = useRouter();
   const [permission, setPermission] = useState<
@@ -115,6 +134,8 @@ export function PushNotificationsPanel({
   const [isConfirmingReminder, setIsConfirmingReminder] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastTestDebug, setLastTestDebug] =
+    useState<PushSafeErrorDebug | null>(null);
   const [lastProcessResult, setLastProcessResult] =
     useState<PushProcessResult | null>(null);
   const [testTask, setTestTask] = useState<{
@@ -168,6 +189,7 @@ export function PushNotificationsPanel({
   function startOperation() {
     setIsBusy(true);
     setError(null);
+    setLastTestDebug(null);
     setMessage(null);
   }
 
@@ -415,6 +437,7 @@ export function PushNotificationsPanel({
         method: "POST",
       });
       const payload = await readJsonResponse<{
+        debug?: PushSafeErrorDebug;
         error?: string;
         failureReason?: PushTestFailureReason;
         reason?: PushTestFailureReason;
@@ -422,6 +445,7 @@ export function PushNotificationsPanel({
 
       if (!response.ok) {
         const reason = payload.reason ?? payload.failureReason;
+        setLastTestDebug(payload.debug ?? null);
 
         if (reason) {
           throw new Error(getPushTestFailureMessage(reason));
@@ -485,6 +509,14 @@ export function PushNotificationsPanel({
         <StatusItem
           label="Seus dispositivos ativos"
           value={String(activeSubscriptionCount)}
+        />
+        <StatusItem
+          label="Scheduler"
+          value={schedulerConfigured ? "Configurado" : "Ainda não configurado"}
+        />
+        <StatusItem
+          label="Ultimo processamento conhecido"
+          value={formatLastDelivery(lastDeliveryAt)}
         />
       </div>
 
@@ -565,34 +597,48 @@ export function PushNotificationsPanel({
       ) : null}
 
       {permission === "denied" ? (
-        <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <p className="feedback-panel mt-4" data-tone="warning">
           O navegador bloqueou notificações. Reative nas configurações do site
           e volte para resetar a inscrição deste dispositivo.
         </p>
       ) : null}
 
       {message ? (
-        <p className="mt-4 rounded-2xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+        <p className="feedback-panel mt-4" data-tone="success" role="status">
           {message}
         </p>
       ) : null}
 
       {error ? (
-        <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="feedback-panel mt-4" data-tone="danger" role="alert">
           {error}
         </p>
       ) : null}
 
+      {lastTestDebug && Object.keys(lastTestDebug).length > 0 ? (
+        <div className="feedback-panel mt-4" data-tone="danger" role="alert">
+          <p className="font-semibold">Diagnostico seguro do teste</p>
+          <dl className="mt-2 grid gap-1">
+            {Object.entries(lastTestDebug).map(([key, value]) => (
+              <div className="grid gap-1 sm:grid-cols-[140px_1fr]" key={key}>
+                <dt className="font-semibold">{key}</dt>
+                <dd className="break-words text-red-700">{String(value)}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ) : null}
+
       {testTask ? (
-        <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 sm:flex-row sm:items-center sm:justify-between">
+        <div className="feedback-panel mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" data-tone="success">
           <span>
-            Task de teste preparada para {testTask.dueDate} às {testTask.dueTime}.
+            Tarefa de teste preparada para {testTask.dueDate} às {testTask.dueTime}.
           </span>
           <Link
             className="font-semibold underline underline-offset-4"
             href={`/tasks?edit=${testTask.taskId}#edit-task`}
           >
-            Abrir task
+            Abrir tarefa
           </Link>
         </div>
       ) : null}
@@ -646,9 +692,10 @@ export function PushNotificationsPanel({
       <div className="mt-5 app-card-muted flex items-start gap-3 p-4 text-sm leading-6 text-zinc-600">
         <Smartphone aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-green-700" />
         <p>
-          Nesta V1, o processamento é manual. O scheduler automático fica para
-          a V2; até lá, use esta tela para criar o teste, enviar um push direto
-          ou processar lembretes vencidos sem abrir o console.
+          O botao manual continua disponivel para diagnostico. Com CRON_SECRET,
+          hash configurado no Supabase Vault e um scheduler externo (ou cron
+          diario compativel com Vercel Hobby), os lembretes vencidos tambem
+          podem ser processados automaticamente.
         </p>
       </div>
     </div>

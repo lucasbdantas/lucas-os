@@ -85,21 +85,21 @@ export default async function CapturePage({ searchParams }: CapturePageProps) {
   return (
     <main className="app-page mx-auto max-w-6xl">
       <PageHeader
-        eyebrow="Fase 2"
-        title="Capture"
-        description="Captura manual de texto bruto com preview determinístico e IA opcional, sempre com confirmação humana."
+        eyebrow="Entrada operacional"
+        title="Capturas"
+        description="Guarde textos soltos, revise sugestões e transforme cada captura com confirmação humana."
       />
 
       {pageError ? (
-        <p className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="feedback-panel mt-6" data-tone="danger" role="alert">
           {pageError}
         </p>
       ) : null}
 
       <section className="section-shell mt-8">
         <SectionHeader
-          action={<StatusBadge label="deterministica" />}
-          description="Use regra local ou IA opcional para preparar uma sugestao antes de salvar."
+          action={<StatusBadge label="Determinística" />}
+          description="Use uma regra local ou IA opcional para preparar uma sugestão antes de salvar."
           title="Captura inteligente"
         />
         <SmartCaptureForm
@@ -112,7 +112,7 @@ export default async function CapturePage({ searchParams }: CapturePageProps) {
       <section className="section-shell mt-10">
         <SectionHeader
           action={<StatusBadge label={`${capturesResult.data.length}`} tone="amber" />}
-          description="Caixa de entrada para textos que ainda precisam virar task, nota ou decisao."
+          description="Caixa de entrada para textos que ainda precisam virar tarefa, nota ou decisão."
           title="Pendentes"
         />
         <PendingCaptureList

@@ -10,6 +10,11 @@ export const aiCaptureSuggestionSchema = z.object({
   due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   due_time: z.string().regex(/^\d{2}:\d{2}$/).nullable(),
   priority: z.enum(["low", "medium", "high", "critical"]).nullable(),
+  reminder_offsets: z
+    .array(z.number().int().min(0).max(10080))
+    .max(4)
+    .nullable()
+    .optional(),
   reason: z.string().max(240),
 });
 
@@ -26,6 +31,8 @@ export type AICapturePreviewState = {
     dueDate: string | null;
     dueTime: string | null;
     priority: "low" | "medium" | "high" | "critical";
+    reminderOffsets: number[];
+    confidence: number;
     reason: string;
   };
 };
@@ -98,11 +105,11 @@ export function buildAICapturePreviewState(
     };
   }
 
-  const domain = suggestion.domain_name
+  const suggestedDomain = suggestion.domain_name
     ? context.domains.find((item) => item.name === suggestion.domain_name)
     : null;
 
-  if (suggestion.domain_name && !domain) {
+  if (suggestion.domain_name && !suggestedDomain) {
     return {
       message:
         "A IA sugeriu um dominio que nao existe no contexto. Salve como pending.",
@@ -122,7 +129,7 @@ export function buildAICapturePreviewState(
     };
   }
 
-  if (project && domain && project.domainId !== domain.id) {
+  if (project && suggestedDomain && project.domainId !== suggestedDomain.id) {
     return {
       message:
         "A IA sugeriu projeto e dominio inconsistentes. Salve como pending.",
@@ -130,14 +137,22 @@ export function buildAICapturePreviewState(
     };
   }
 
+  const domain =
+    suggestedDomain ??
+    (project
+      ? context.domains.find((item) => item.id === project.domainId) ?? null
+      : null);
+
   return {
     preview: {
       domainId: domain?.id ?? null,
       dueDate: suggestion.due_date,
       dueTime: suggestion.due_time,
+      confidence: suggestion.confidence,
       notes: suggestion.notes?.trim() || null,
       priority: suggestion.priority ?? "medium",
       projectId: project?.id ?? null,
+      reminderOffsets: suggestion.reminder_offsets ?? [],
       reason: suggestion.reason,
       title: title.slice(0, 220),
     },

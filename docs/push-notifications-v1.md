@@ -29,7 +29,8 @@ WEB_PUSH_SUBJECT=mailto:you@example.com
 
 `WEB_PUSH_PUBLIC_KEY` pode ser exposta ao browser, mas continua vindo por rota server-side. `WEB_PUSH_PRIVATE_KEY` nunca deve aparecer no client ou no Git.
 
-`CRON_SECRET` fica reservado para um scheduler futuro. A V1 nao usa cron automatico.
+`CRON_SECRET` protege o scheduler automatico documentado em
+`docs/automatic-reminder-scheduler-v1.md`. Ele nunca vai para o client ou Git.
 
 ## Como gerar VAPID keys
 
@@ -71,6 +72,10 @@ remove-a do navegador e registra uma nova com a chave pública atual.
 
 ```json
 {
+  "debug": {
+    "messagePreview": "Provider error preview",
+    "statusCode": 403
+  },
   "ok": false,
   "error": "Nao foi possivel enviar push de teste.",
   "reason": "missing_subscription"
@@ -83,17 +88,33 @@ payload privado. Motivos esperados:
 - `missing_configuration`: env vars Web Push/VAPID ausentes ou invalidas no ambiente;
 - `missing_subscription`: este navegador nao possui subscription ativa salva para o usuario;
 - `subscription_revoked`: a subscription existe, mas foi revogada localmente;
+- `vapid_configuration_error`: a public/private key VAPID parece invalida, incompatível ou rejeitada pela biblioteca/provedor;
+- `vapid_subject_error`: `WEB_PUSH_SUBJECT` parece invalido. Use formato `mailto:email@example.com`;
 - `web_push_unauthorized`: o provedor recusou a assinatura, geralmente por VAPID diferente;
 - `web_push_gone` ou `web_push_not_found`: a subscription expirou ou nao existe mais no navegador/provedor;
 - `web_push_bad_subscription`: o navegador enviou uma subscription invalida;
 - `web_push_payload_error`: o payload foi rejeitado pelo provedor;
 - `web_push_unknown`: erro nao classificado.
 
+Quando existir, `debug` pode conter apenas campos sanitizados:
+
+- `name`;
+- `statusCode`;
+- `code`;
+- `messagePreview`;
+- `bodyPreview`.
+
+Esses previews removem URLs completas, tokens bearer e strings longas. Eles
+servem para diagnostico operacional e nao devem conter endpoint completo,
+chaves VAPID ou payload sensivel.
+
 Na Vercel, se `/api/push/public-key` retorna `enabled: true` mas `/api/push/test`
-falha, confira primeiro `reason`. Para `web_push_unauthorized`, reative ou resete
-a inscricao no dispositivo depois de confirmar as VAPID keys no ambiente. Para
-`missing_subscription` ou `subscription_revoked`, use `Ativar notificacoes neste
-dispositivo` ou `Resetar inscricao deste dispositivo`.
+falha, confira primeiro `reason` e depois `debug`. Para
+`web_push_unauthorized` ou `vapid_configuration_error`, reative ou resete a
+inscricao no dispositivo depois de confirmar as VAPID keys no ambiente. Para
+`vapid_subject_error`, ajuste `WEB_PUSH_SUBJECT`. Para `missing_subscription` ou
+`subscription_revoked`, use `Ativar notificacoes neste dispositivo` ou `Resetar
+inscricao deste dispositivo`.
 
 ## Como testar na Vercel
 
@@ -111,16 +132,17 @@ dispositivo` ou `Resetar inscricao deste dispositivo`.
 
 ## Scheduler/Cron
 
-A V1 nao promete envio automatico em segundo plano sem scheduler.
+O scheduler automatico esta disponivel em
+`/api/cron/process-reminders` e usa `CRON_SECRET`. A configuracao completa,
+incluindo o hash no Supabase Vault e um scheduler externo para frequencia
+subdiaria no Vercel Hobby, esta em
+`docs/automatic-reminder-scheduler-v1.md`.
 
-O endpoint `/api/push/process` exige usuario autenticado e processa apenas os lembretes desse usuario, respeitando RLS. Isso evita service role e evita expor uma rota publica que varre dados de todos os usuarios.
+O endpoint manual `/api/push/process` continua exigindo usuario autenticado e
+processa apenas os lembretes desse usuario, respeitando RLS.
 
-Para envio automatico real no futuro, existem duas opcoes seguras:
-
-1. criar um job/cron com um mecanismo server-side confiavel e segredo `CRON_SECRET`;
-2. criar uma funcao SQL/RPC de claim cuidadosamente protegida, sem expor subscriptions para anon.
-
-Essa etapa ficou documentada para Push Notifications V2.
+O scheduler usa a segunda opcao: RPCs de claim protegidas por hash e sem
+service role. A rota de cron continua sem expor subscriptions ao client.
 
 ## Diagnostico de `/api/push/process`
 
@@ -187,22 +209,30 @@ Quando `failed > 0`, olhe primeiro `failedReasons`. Se aparecer
 - subscriptions revogadas deixam de receber push;
 - erros 404/410 do provedor de push revogam a subscription local.
 
+## Preferencias, quiet hours e dispositivos
+
+`/settings/notifications` armazena em `app_settings` a chave `notification_preferences_v1`, com canal push, fins de semana, timezone, lembrete padrao e janela de silencio. O calculo cobre janelas normais e aquelas que atravessam meia-noite.
+
+O cron automatico atual reivindica entregas por uma funcao SQL `SECURITY DEFINER`. Por seguranca, quiet hours ainda nao alteram essa reivindicacao: aplicar o filtro somente depois do claim poderia consumir uma entrega sem envia-la. Uma versao futura deve atualizar atomicamente a funcao SQL para adiar o claim. A interface deixa essa limitacao explicita.
+
+A pagina lista dispositivos ativos usando somente navegador/plataforma e timestamps. Endpoint, `p256dh` e `auth` nunca sao enviados ao client. Qualquer dispositivo pode ser revogado por uma action autenticada e limitada por `user_id`.
+
 ## Limitacoes
 
 - iOS, Android e desktop têm suporte diferente a PWA push;
 - navegadores podem bloquear permissao;
 - push depende de HTTPS em producao;
 - local HTTP funciona apenas em `localhost` e casos permitidos pelo navegador;
-- sem cron automatico nesta versao;
 - sem push para emails, Calendar ou IA;
 - sem preferencias avancadas por horario silencioso.
 
-O painel permite processamento manual e teste real sem DevTools. Scheduler/cron
-automático continua fora da V1 e fica reservado para Push Notifications V2.
+O painel permite processamento manual e teste real sem DevTools. O scheduler
+automático já está disponível em Automatic Reminder Scheduler V1; a
+configuração de `CRON_SECRET`, Supabase Vault e scheduler externo/cron diário está em
+`docs/automatic-reminder-scheduler-v1.md`.
 
 ## Proximos passos
 
-- Push scheduler/cron V2;
 - quiet hours;
 - teste E2E autenticado de subscription quando viavel;
 - preferencias por tipo de notificacao;

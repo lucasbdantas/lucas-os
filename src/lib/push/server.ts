@@ -10,6 +10,7 @@ import {
   countPushSkippedReasons,
   createEmptyPushFailedReasons,
   createEmptyPushSkippedReasons,
+  getPushFailureDebug,
   getPendingPushDeliveryDiagnostics,
   getPushReminderEligibilityDiagnostics,
   mergePushSkippedReasons,
@@ -17,6 +18,7 @@ import {
   type PushFailedExample,
   type PushFailedReason,
   type PushFailedReasons,
+  type PushSafeErrorDebug,
   type PushReminderNotification,
   type PushSkippedExample,
   type PushSkippedReasons,
@@ -45,6 +47,7 @@ type PushSubscriptionRow = PushSubscriptionTarget & {
 };
 
 export type SendPushTestResult = {
+  failureDebug: PushSafeErrorDebug | null;
   failureReason: PushFailedReason | null;
   missingConfiguration: boolean;
   ok: boolean;
@@ -85,6 +88,7 @@ export async function sendPushTestToSubscription(input: {
 
   if (!env) {
     return {
+      failureDebug: null,
       failureReason: null,
       missingConfiguration: true,
       ok: false,
@@ -106,6 +110,7 @@ export async function sendPushTestToSubscription(input: {
 
   if (!subscription) {
     return {
+      failureDebug: null,
       failureReason: null,
       missingConfiguration: false,
       ok: false,
@@ -116,6 +121,7 @@ export async function sendPushTestToSubscription(input: {
 
   if (subscription.revoked_at) {
     return {
+      failureDebug: null,
       failureReason: null,
       missingConfiguration: false,
       ok: false,
@@ -142,6 +148,7 @@ export async function sendPushTestToSubscription(input: {
     );
 
     return {
+      failureDebug: null,
       failureReason: null,
       missingConfiguration: false,
       ok: true,
@@ -150,6 +157,7 @@ export async function sendPushTestToSubscription(input: {
     };
   } catch (sendError) {
     const failureReason = classifyPushFailure(sendError);
+    const failureDebug = getPushFailureDebug(sendError);
 
     if (shouldRevokeSubscriptionAfterError(sendError)) {
       await input.supabase
@@ -160,6 +168,7 @@ export async function sendPushTestToSubscription(input: {
     }
 
     return {
+      failureDebug,
       failureReason,
       missingConfiguration: false,
       ok: false,

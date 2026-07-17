@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import type { AICapturePreviewState } from "@/lib/captures/ai-preview";
+import { buildAIPreviewForEmail } from "@/lib/captures/ai-preview-server";
 import { buildGmailPendingCaptureText } from "@/lib/integrations/google/gmail-messages";
+import { getGmailActionInboxForUser } from "@/lib/integrations/google/gmail";
+import { normalizeGmailInboxFilters } from "@/lib/integrations/google/gmail-filters";
 import { requireSession } from "@/lib/supabase/require-session";
 
 const gmailCaptureSchema = z.object({
@@ -71,4 +75,36 @@ export async function sendGmailMessageToCapture(formData: FormData) {
   revalidatePath("/today");
 
   redirectWithParam(returnTo, "notice", "Email enviado para Capture.");
+}
+
+export async function previewGmailMessageWithAI(
+  _previousState: AICapturePreviewState,
+  formData: FormData,
+): Promise<AICapturePreviewState> {
+  const accountId = String(formData.get("accountId") ?? "");
+  const messageId = String(formData.get("messageId") ?? "");
+
+  if (!accountId || !messageId) {
+    return { status: "error", message: "Email invalido para sugestao." };
+  }
+
+  const { supabase, user } = await requireSession();
+  const inbox = await getGmailActionInboxForUser({
+    filters: normalizeGmailInboxFilters({}),
+    maxResultsPerAccount: 30,
+    supabase,
+    userId: user.id,
+  });
+  const message = inbox.messages.find(
+    (item) => item.accountId === accountId && item.id === messageId,
+  );
+
+  if (!message) {
+    return {
+      status: "error",
+      message: "Email nao encontrado ou indisponivel para sugestao.",
+    };
+  }
+
+  return buildAIPreviewForEmail(supabase, message);
 }

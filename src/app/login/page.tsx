@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { loginWithPassword } from "@/lib/auth/actions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -71,13 +72,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </label>
 
           {error ? (
-            <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p className="feedback-panel" data-tone="danger" role="alert">
               {error}
             </p>
           ) : null}
 
-          <button className="primary-button w-full px-4 py-3 text-sm font-semibold">
-            Entrar
+          <button className="primary-button w-full gap-2 px-4 py-3 text-sm font-semibold">
+            Entrar <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </button>
         </form>
       </section>

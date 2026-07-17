@@ -5,6 +5,7 @@ import {
   type DomainListItem,
 } from "@/components/domains/domain-list";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { SectionHeader } from "@/components/ui/section-header";
 import { requireSession } from "@/lib/supabase/require-session";
 
 type DomainsPageProps = {
@@ -77,26 +78,31 @@ export default async function DomainsPage({ searchParams }: DomainsPageProps) {
     <main className="app-page mx-auto max-w-6xl">
       <PageHeader
         eyebrow="Operacional"
-        title="Domains"
-        description="CRUD manual mínimo de domínios, sem delete e com Inbox protegida."
+        title="Domínios"
+        description="Organize as áreas permanentes da sua vida sem perder o contexto de projetos e tarefas."
       />
 
       {pageError ? (
-        <p className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="feedback-panel mt-6" data-tone="danger" role="alert">
           {pageError}
         </p>
       ) : null}
 
-      <section className="mt-8">
-        <div className="mb-3 flex items-center gap-2">
-          <h2 className="font-semibold text-zinc-950">Novo domínio</h2>
-          <StatusBadge label="manual" />
-        </div>
+      <section className="section-shell mt-8">
+        <SectionHeader
+          action={<StatusBadge label="manual" />}
+          description="Crie uma nova área permanente para organizar projetos e tarefas."
+          title="Novo domínio"
+        />
         <DomainForm returnTo="/domains" />
       </section>
 
-      <section className="mt-10">
-        <h2 className="mb-3 font-semibold text-zinc-950">Domínios</h2>
+      <section className="section-shell mt-10">
+        <SectionHeader
+          action={<StatusBadge label={`${domains.length}`} tone="green" />}
+          description="Inbox permanece protegida; outros domínios podem ser ativados ou pausados."
+          title="Seus domínios"
+        />
         <DomainList domains={domains} returnTo="/domains" />
       </section>
     </main>

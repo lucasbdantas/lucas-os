@@ -5,9 +5,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
   type AICapturePreviewState,
-  buildAICapturePreviewState,
 } from "@/lib/captures/ai-preview";
-import { parseCaptureWithAI } from "@/lib/captures/ai-parser";
+import { buildAIPreviewForRawText } from "@/lib/captures/ai-preview-server";
+import { normalizeReminderOffsets } from "@/lib/reminders/reminders";
 import { requireSession } from "@/lib/supabase/require-session";
 
 const captureSourceValues = [
@@ -16,6 +16,7 @@ const captureSourceValues = [
   "ios_shortcut",
   "android_shortcut",
   "voice",
+  "watch",
   "email",
   "webhook",
 ] as const;
@@ -23,6 +24,9 @@ const captureSourceValues = [
 const captureStatusValues = ["resolved", "dismissed", "expired"] as const;
 const taskPriorityValues = ["low", "medium", "high", "critical"] as const;
 const taskEnergyValues = ["low", "medium", "high"] as const;
+const reminderOffsetsSchema = z
+  .array(z.string())
+  .transform((values) => normalizeReminderOffsets(values));
 
 const optionalUuid = z
   .string()
@@ -80,6 +84,7 @@ const createTaskFromCaptureSchema = z.object({
     .transform((value) => (value === "" ? null : value))
     .pipe(z.enum(taskEnergyValues).nullable()),
   context: optionalText(80),
+  reminderOffsets: reminderOffsetsSchema.default([]),
   resolutionMode: z.enum(["task", "ai_task"]).default("task"),
   returnTo: z.string().optional(),
 });
@@ -200,88 +205,6 @@ async function validateProject(
   return data;
 }
 
-function toSaoPauloDateOnly(date = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    day: "2-digit",
-    month: "2-digit",
-    timeZone: "America/Sao_Paulo",
-    year: "numeric",
-  }).formatToParts(date);
-
-  const valueByType = new Map(parts.map((part) => [part.type, part.value]));
-
-  return `${valueByType.get("year")}-${valueByType.get("month")}-${valueByType.get("day")}`;
-}
-
-async function buildAIPreviewForRawText(
-  supabase: Awaited<ReturnType<typeof requireSession>>["supabase"],
-  rawText: string,
-): Promise<AICapturePreviewState> {
-  const [domainsResult, projectsResult] = await Promise.all([
-    supabase
-      .from("domains")
-      .select("id,name,is_system,active")
-      .order("name", { ascending: true })
-      .returns<Array<DomainIdentity>>(),
-    supabase
-      .from("projects")
-      .select("id,name,domain_id")
-      .in("status", ["active", "waiting"])
-      .order("name", { ascending: true })
-      .returns<Array<{ id: string; name: string; domain_id: string }>>(),
-  ]);
-
-  if (domainsResult.error) {
-    return { status: "error", message: domainsResult.error.message };
-  }
-
-  if (projectsResult.error) {
-    return { status: "error", message: projectsResult.error.message };
-  }
-
-  const selectableDomains = domainsResult.data.filter(
-    (domain) => domain.active || (domain.is_system && domain.name === "Inbox"),
-  );
-  const domainNameById = new Map(
-    domainsResult.data.map((domain) => [domain.id, domain.name]),
-  );
-  const projects = projectsResult.data
-    .map((project) => ({
-      ...project,
-      domainName: domainNameById.get(project.domain_id),
-    }))
-    .filter(
-      (project): project is typeof project & { domainName: string } =>
-        Boolean(project.domainName),
-    );
-  const aiResult = await parseCaptureWithAI({
-    currentDate: toSaoPauloDateOnly(),
-    domains: selectableDomains.map((domain) => ({ name: domain.name })),
-    projects: projects.map((project) => ({
-      domainName: project.domainName,
-      name: project.name,
-    })),
-    rawText,
-    timezone: "America/Sao_Paulo",
-  });
-
-  if (!aiResult.ok) {
-    return { status: "error", message: aiResult.reason };
-  }
-
-  return buildAICapturePreviewState(aiResult.suggestion, {
-    domains: selectableDomains.map((domain) => ({
-      id: domain.id,
-      name: domain.name,
-    })),
-    projects: projects.map((project) => ({
-      domainId: project.domain_id,
-      id: project.id,
-      name: project.name,
-    })),
-  });
-}
-
 export async function createPendingCapture(formData: FormData) {
   const returnTo = getReturnTo(String(formData.get("returnTo") ?? "/capture"));
   const parsed = createPendingCaptureSchema.safeParse({
@@ -370,6 +293,7 @@ export async function createTaskFromPendingCapture(formData: FormData) {
     priority: formData.get("priority") ?? "medium",
     energyRequired: formData.get("energyRequired") ?? "",
     context: formData.get("context") ?? "",
+    reminderOffsets: formData.getAll("reminderOffsets"),
     resolutionMode: formData.get("resolutionMode") ?? "task",
     returnTo,
   });
@@ -442,6 +366,7 @@ export async function createTaskFromPendingCapture(formData: FormData) {
       context: parsed.data.context,
       status: "todo",
       source: "import",
+      reminder_offsets: parsed.data.reminderOffsets,
     })
     .select("id")
     .single<{ id: string }>();
@@ -494,6 +419,7 @@ export async function createTaskFromSmartCapture(formData: FormData) {
     priority: formData.get("priority") ?? "medium",
     energyRequired: formData.get("energyRequired") ?? "",
     context: formData.get("context") ?? "",
+    reminderOffsets: formData.getAll("reminderOffsets"),
     returnTo,
   });
 
@@ -539,6 +465,7 @@ export async function createTaskFromSmartCapture(formData: FormData) {
     context: parsed.data.context,
     status: "todo",
     source: "manual",
+    reminder_offsets: parsed.data.reminderOffsets,
   });
 
   if (error) {

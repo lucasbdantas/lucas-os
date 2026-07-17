@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { SectionHeader } from "@/components/ui/section-header";
 import {
   TaskForm,
   type EditableTaskValues,
@@ -103,7 +104,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
 
   if (edit) {
     if (!uuidRegex.test(edit)) {
-      editError = "Tarefa invalida para edicao.";
+      editError = "Tarefa inválida para edição.";
     } else {
       const { data, error } = await supabase
         .from("tasks")
@@ -118,7 +119,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       }
 
       if (!data) {
-        editError = "Tarefa nao encontrada ou sem permissao.";
+        editError = "Tarefa não encontrada ou sem permissão.";
       } else {
         editTask = data;
       }
@@ -183,31 +184,32 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     <main className="app-page mx-auto max-w-6xl">
       <PageHeader
         eyebrow="Operacional"
-        title="Tasks"
-        description="Criacao manual, edicao basica e leitura real via Supabase Auth + RLS."
+        title="Tarefas"
+        description="Crie, organize e conclua o trabalho que move seus projetos e compromissos."
       />
 
       {visibleError ? (
-        <p className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="feedback-panel mt-6" data-tone="danger" role="alert">
           {visibleError}
         </p>
       ) : null}
 
       {pageNotice ? (
-        <p className="mt-6 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <p className="feedback-panel mt-6" data-tone="warning" role="status">
           {pageNotice}
         </p>
       ) : null}
 
       {editTask ? (
-        <section className="mt-8" id="edit-task">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <h2 className="font-semibold text-zinc-950">Editar tarefa</h2>
-            <StatusBadge label="manual" />
-          </div>
+        <section className="section-shell mt-8" id="edit-task">
+          <SectionHeader
+            action={<StatusBadge label="Edição manual" tone="amber" />}
+            description="Revise contexto, prazo, projeto e lembretes antes de salvar."
+            title="Editar tarefa"
+          />
           {!currentEditDomainIsSelectable ? (
-            <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              O dominio atual desta tarefa esta inativo. Escolha um dominio
+            <p className="feedback-panel" data-tone="warning">
+              O domínio atual desta tarefa está inativo. Escolha um domínio
               ativo ou Inbox antes de salvar.
             </p>
           ) : null}
@@ -220,17 +222,20 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
         </section>
       ) : null}
 
-      <section className="mt-8" id="task-form">
-        <div className="mb-3 flex items-center gap-2">
-          <h2 className="font-semibold text-zinc-950">
-            {defaultCreateProjectId ? "Nova proxima acao" : "Nova tarefa"}
-          </h2>
-          <StatusBadge label="manual" />
-        </div>
+      <section className="section-shell mt-8" id="task-form">
+        <SectionHeader
+          action={<StatusBadge label="manual" />}
+          description={
+            defaultCreateProjectId
+              ? "O projeto já está selecionado; falta definir a próxima ação concreta."
+              : "Capture uma ação clara e organize os detalhes que realmente importam."
+          }
+          title={defaultCreateProjectId ? "Nova próxima ação" : "Nova tarefa"}
+        />
         {defaultCreateProjectId ? (
-          <p className="mb-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
-            Projeto e dominio preenchidos a partir do link de proxima acao.
-            Escreva o titulo antes de criar.
+          <p className="feedback-panel" data-tone="info">
+            Projeto e domínio preenchidos a partir do link de próxima ação.
+            Escreva o título antes de criar.
           </p>
         ) : null}
         <TaskForm
@@ -242,10 +247,14 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
         />
       </section>
 
-      <section className="mt-10">
-        <h2 className="mb-3 font-semibold text-zinc-950">Tarefas abertas</h2>
+      <section className="section-shell mt-10">
+        <SectionHeader
+          action={<StatusBadge label={`${openTasksResult.data.length}`} tone="green" />}
+          description="Ações em andamento, aguardando ou ainda por começar."
+          title="Tarefas abertas"
+        />
         <TaskList
-          emptyDescription="Crie uma tarefa acima para comecar a validar o fluxo manual."
+          emptyDescription="Crie uma tarefa acima para começar a organizar seu trabalho."
           emptyTitle="Nenhuma tarefa aberta"
           returnTo="/tasks"
           tasks={decorateTasks(
@@ -256,10 +265,14 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
         />
       </section>
 
-      <section className="mt-10">
-        <h2 className="mb-3 font-semibold text-zinc-950">Fechadas recentes</h2>
+      <section className="section-shell mt-10">
+        <SectionHeader
+          action={<StatusBadge label={`${closedTasksResult.data.length}`} />}
+          description="Conclusões e cancelamentos recentes para manter contexto sem ocupar o foco."
+          title="Fechadas recentemente"
+        />
         <TaskList
-          emptyDescription="Tarefas concluidas ou canceladas aparecerao aqui."
+          emptyDescription="Tarefas concluídas ou canceladas aparecerão aqui."
           emptyTitle="Nenhuma tarefa fechada recentemente"
           returnTo="/tasks"
           showStatusActions={false}

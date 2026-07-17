@@ -35,6 +35,10 @@ const skippedMessages: Record<PushSkippedReason, string> = {
 };
 
 const failedMessages: Record<PushFailedReason, string> = {
+  vapid_configuration_error:
+    "A configuracao VAPID parece invalida ou incompativel. Revise as chaves Web Push no ambiente.",
+  vapid_subject_error:
+    "O subject VAPID parece invalido. Use um valor como mailto:voce@example.com.",
   web_push_bad_subscription:
     "A inscrição deste dispositivo está inválida. Resete e reative as notificações.",
   web_push_gone:

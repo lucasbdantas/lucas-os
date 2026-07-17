@@ -9,7 +9,7 @@ export default function ShareSavedPage() {
           Captura salva
         </h1>
         <p className="mt-3 text-sm leading-6 text-zinc-600">
-          O conteudo compartilhado foi salvo como pending capture para triagem.
+          O conteúdo compartilhado foi salvo como captura pendente para triagem.
         </p>
 
         <div className="mt-8 grid gap-3">
@@ -23,13 +23,13 @@ export default function ShareSavedPage() {
             className="soft-button min-h-12 px-4 py-3 text-center text-base font-semibold"
             href="/capture"
           >
-            Ver inbox
+            Ver Capturas
           </Link>
           <Link
             className="ghost-button min-h-12 px-4 py-3 text-center text-base font-semibold"
             href="/today"
           >
-            Voltar para Today
+            Voltar para Hoje
           </Link>
         </div>
       </section>

@@ -1,4 +1,13 @@
 import Link from "next/link";
+import {
+  BellRing,
+  ChevronRight,
+  Database,
+  DatabaseBackup,
+  HeartPulse,
+  Plug,
+  type LucideIcon,
+} from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { AppPreferencesForm } from "@/components/settings/app-preferences-form";
 import { CaptureTokenForm } from "@/components/settings/capture-token-form";
@@ -6,7 +15,9 @@ import {
   CaptureTokenList,
   type CaptureTokenListItem,
 } from "@/components/settings/capture-token-list";
+import { SamsungWatchCaptureSetup } from "@/components/settings/samsung-watch-capture-setup";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { SectionHeader } from "@/components/ui/section-header";
 import { getAppPreferencesForUser } from "@/lib/app-settings/server";
 import { requireSession } from "@/lib/supabase/require-session";
 
@@ -22,6 +33,33 @@ const curlExample =
 
 const requestBodyExample =
   '{ "text": "comprar pilha amanhã", "source": "android_shortcut" }';
+
+function SettingsDestinationCard({
+  description,
+  href,
+  icon: Icon,
+  title,
+}: {
+  description: string;
+  href: string;
+  icon: LucideIcon;
+  title: string;
+}) {
+  return (
+    <Link className="app-card app-card-interactive group flex min-h-32 items-start gap-4 p-5" href={href}>
+      <span className="empty-state-icon shrink-0" aria-hidden="true">
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold text-zinc-950">{title}</span>
+        <span className="mt-2 block text-sm leading-6 text-zinc-600">
+          {description}
+        </span>
+      </span>
+      <ChevronRight aria-hidden="true" className="mt-1 h-4 w-4 shrink-0 text-zinc-500" />
+    </Link>
+  );
+}
 
 export default async function SettingsPage({
   searchParams,
@@ -45,18 +83,18 @@ export default async function SettingsPage({
     <main className="app-page mx-auto max-w-6xl">
       <PageHeader
         eyebrow="Operacional"
-        title="Settings"
-        description="Informações básicas da sessão autenticada, preferências do app e captura externa."
+        title="Configurações"
+        description="Sua central de controle para preferências, integrações, segurança e captura externa."
       />
 
       {pageError ? (
-        <p className="mt-6 max-w-4xl rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="feedback-panel mt-6 max-w-4xl" data-tone="danger" role="alert">
           {pageError}
         </p>
       ) : null}
 
       {settings === "saved" ? (
-        <p className="mt-6 max-w-4xl rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+        <p className="feedback-panel mt-6 max-w-4xl" data-tone="success" role="status">
           Preferências salvas.
         </p>
       ) : null}
@@ -80,6 +118,46 @@ export default async function SettingsPage({
         </dl>
       </section>
 
+      <section className="section-shell mt-10">
+        <SectionHeader
+          description="Acesse rapidamente integrações, notificações, segurança e dados do workspace."
+          eyebrow="Central de controle"
+          title="Ajustes e manutenção"
+        />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <SettingsDestinationCard
+            description="Confira serviços, integrações opcionais e o checklist do setup."
+            href="/settings/health"
+            icon={HeartPulse}
+            title="Saúde do sistema"
+          />
+          <SettingsDestinationCard
+            description="Gerencie contas Google e calendários em modo somente leitura."
+            href="/settings/integrations"
+            icon={Plug}
+            title="Integrações"
+          />
+          <SettingsDestinationCard
+            description="Ative e teste lembretes push por dispositivo."
+            href="/settings/notifications"
+            icon={BellRing}
+            title="Notificações push"
+          />
+          <SettingsDestinationCard
+            description="Exporte seus dados e consulte o plano de recuperação."
+            href="/settings/backup"
+            icon={DatabaseBackup}
+            title="Backup e exportação"
+          />
+          <SettingsDestinationCard
+            description="Revise uma prévia antes de limpar dados operacionais."
+            href="/settings/data"
+            icon={Database}
+            title="Dados do workspace"
+          />
+        </div>
+      </section>
+
       <section className="app-card mt-8 max-w-4xl p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -87,70 +165,13 @@ export default async function SettingsPage({
               Preferências do app
             </h2>
             <p className="mt-1 text-sm text-zinc-600">
-              Ajustes básicos usados por Today, Weekly Review e navegação
-              inicial.
+              Ajustes de tema, fuso, página inicial e densidade do painel Hoje.
             </p>
           </div>
           <StatusBadge label="app_settings" tone="blue" />
         </div>
 
         <AppPreferencesForm preferences={preferences} />
-      </section>
-
-      <section className="app-card mt-8 max-w-4xl p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-semibold text-zinc-950">Integracoes</h2>
-            <p className="mt-1 text-sm text-zinc-600">
-              Conecte contas Google com OAuth seguro. Gmail e Calendar ainda nao
-              sao lidos nesta etapa.
-            </p>
-          </div>
-          <Link
-            className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
-            href="/settings/integrations"
-          >
-            Abrir integracoes
-          </Link>
-        </div>
-      </section>
-
-      <section className="app-card mt-8 max-w-4xl p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-semibold text-zinc-950">
-              Notificacoes push
-            </h2>
-            <p className="mt-1 text-sm text-zinc-600">
-              Ative push notifications por dispositivo para lembretes de tasks,
-              sempre com consentimento explicito.
-            </p>
-          </div>
-          <Link
-            className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
-            href="/settings/notifications"
-          >
-            Abrir notificacoes
-          </Link>
-        </div>
-      </section>
-
-      <section className="app-card mt-8 max-w-4xl p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-semibold text-zinc-950">Backup e export</h2>
-            <p className="mt-1 text-sm text-zinc-600">
-              Exporte seus dados em JSON e consulte o plano de recuperacao
-              manual. Secrets e tokens sensiveis ficam fora do arquivo.
-            </p>
-          </div>
-          <Link
-            className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
-            href="/settings/backup"
-          >
-            Abrir backup
-          </Link>
-        </div>
       </section>
 
       <section className="app-card mt-8 max-w-4xl p-4">
@@ -174,7 +195,9 @@ export default async function SettingsPage({
           <CaptureTokenList tokens={captureTokensResult.data} />
         </div>
 
-        <div className="mt-6 rounded-md border border-zinc-200 bg-zinc-50 p-3">
+        <SamsungWatchCaptureSetup />
+
+        <div className="app-card-muted mt-6 p-4">
           <h3 className="text-sm font-semibold text-zinc-950">
             Teste local com curl
           </h3>
@@ -183,7 +206,7 @@ export default async function SettingsPage({
           </code>
         </div>
 
-        <div className="mt-6 rounded-md border border-zinc-200 bg-zinc-50 p-4">
+        <div className="app-card-muted mt-6 p-4">
           <h3 className="text-sm font-semibold text-zinc-950">
             Como usar no celular
           </h3>
@@ -196,7 +219,7 @@ export default async function SettingsPage({
                 Se você estiver logado no celular, use a tela rápida sem token.
               </p>
               <Link
-                className="mt-2 inline-flex rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+                className="soft-button mt-2 min-h-11 px-4 py-2 text-sm font-semibold"
                 href="/quick-capture"
               >
                 Abrir Captura rápida
@@ -222,8 +245,8 @@ export default async function SettingsPage({
                 </li>
                 <li>Em produção futura, use o domínio real do Lucas OS.</li>
                 <li>
-                  Esta versão não promete modo offline e não usa notificações
-                  push.
+                  Esta versão não promete modo offline. Notificações push são
+                  opcionais e configuradas separadamente por dispositivo.
                 </li>
               </ul>
             </div>
